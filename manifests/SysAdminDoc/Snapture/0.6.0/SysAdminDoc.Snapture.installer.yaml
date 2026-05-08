@@ -20,7 +20,7 @@ ReleaseDate: 2026-05-08
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/SysAdminDoc/Snapture/releases/download/v0.6.0/Snapture-v0.6.0-win-x64.zip
-    # Compute via: (Get-FileHash .\Snapture-v0.6.0-win-x64.zip -Algorithm SHA256).Hash
-    InstallerSha256: REPLACE_WITH_SHA256_FROM_RELEASE_ASSET
+    # Pulled from the published release SHA256SUMS file at v0.6.0.
+    InstallerSha256: 11aa4fe7a43888eba1005840c5d5831f56a7f34c63f0bde96d5eedf68f35b6ef
 ManifestType: installer
 ManifestVersion: 1.7.0
