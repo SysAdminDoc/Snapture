@@ -21,6 +21,9 @@ public sealed class SnaptureSettings
 
     public bool LaunchAtStartup { get; set; } = false;
 
+    /// <summary>"system" | "light" | "dark".</summary>
+    public string ThemeMode { get; set; } = ThemeManager.SystemMode;
+
     /// <summary>"auto" | "winrt" | "gdi". <c>auto</c> picks WinRT on Win10 1809+, GDI otherwise.</summary>
     public string CaptureEngine { get; set; } = "auto";
 

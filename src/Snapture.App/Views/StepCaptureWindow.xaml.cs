@@ -66,13 +66,13 @@ public partial class StepCaptureWindow : Window
     {
         var card = new Border
         {
-            Background = (Brush)FindResource("Mantle"),
-            BorderBrush = (Brush)FindResource("Surface0"),
             BorderThickness = new Thickness(1),
             CornerRadius = new CornerRadius(6),
             Padding = new Thickness(12),
             Margin = new Thickness(0, 0, 0, 12)
         };
+        card.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+        card.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
@@ -88,22 +88,24 @@ public partial class StepCaptureWindow : Window
         grid.Children.Add(img);
 
         var stack = new StackPanel();
-        stack.Children.Add(new TextBlock
+        var stepTitle = new TextBlock
         {
-            Foreground = (Brush)FindResource("Mauve"),
             FontWeight = FontWeights.SemiBold,
             FontSize = 15,
             Text = $"Step {frame.Number}"
-        });
+        };
+        stepTitle.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+        stack.Children.Add(stepTitle);
         if (!string.IsNullOrWhiteSpace(frame.WindowTitle) || !string.IsNullOrWhiteSpace(frame.ProcessName))
         {
-            stack.Children.Add(new TextBlock
+            var sourceText = new TextBlock
             {
-                Foreground = (Brush)FindResource("Subtext"),
                 FontSize = 12,
                 Text = $"{frame.ProcessName ?? "?"} · {frame.WindowTitle ?? ""}",
                 TextTrimming = TextTrimming.CharacterEllipsis
-            });
+            };
+            sourceText.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+            stack.Children.Add(sourceText);
         }
         var captionBox = new TextBox
         {
@@ -112,11 +114,11 @@ public partial class StepCaptureWindow : Window
             MinHeight = 80,
             MaxHeight = 200,
             Margin = new Thickness(0, 8, 0, 0),
-            Background = (Brush)FindResource("Crust"),
-            Foreground = (Brush)FindResource("Text"),
-            BorderBrush = (Brush)FindResource("Surface0"),
             ToolTip = "Caption rendered above the screenshot in the exported Markdown."
         };
+        captionBox.SetResourceReference(Control.BackgroundProperty, "AppCanvas");
+        captionBox.SetResourceReference(Control.ForegroundProperty, "AppForeground");
+        captionBox.SetResourceReference(Control.BorderBrushProperty, "AppBorder");
         _captionBoxes[frame.Number] = captionBox;
         stack.Children.Add(captionBox);
         Grid.SetColumn(stack, 1);

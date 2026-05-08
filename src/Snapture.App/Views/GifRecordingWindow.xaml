@@ -7,8 +7,8 @@
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
-        Background="{StaticResource Mantle}"
-        Foreground="{StaticResource Text}"
+        Background="{DynamicResource Mantle}"
+        Foreground="{DynamicResource Text}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid Margin="16">
@@ -19,7 +19,7 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" LastChildFill="True">
-            <Ellipse Width="12" Height="12" Fill="#FF5555" Margin="0,0,8,0">
+            <Ellipse Width="12" Height="12" Fill="{DynamicResource AppDestructive}" Margin="0,0,8,0">
                 <Ellipse.Triggers>
                     <EventTrigger RoutedEvent="Loaded">
                         <BeginStoryboard>
@@ -32,18 +32,18 @@
                 </Ellipse.Triggers>
             </Ellipse>
             <TextBlock Text="REC"
-                       Foreground="#FF5555"
+                       Foreground="{DynamicResource AppDestructive}"
                        FontWeight="SemiBold"
                        FontSize="14" />
         </DockPanel>
         <TextBlock x:Name="ProgressText"
                    Grid.Row="1"
-                   Foreground="{StaticResource Subtext}"
+                   Foreground="{DynamicResource Subtext}"
                    FontFamily="Cascadia Code, Consolas, monospace"
                    Margin="0,8,0,0"
                    Text="0 frames · 00:00.00" />
         <TextBlock Grid.Row="2"
-                   Foreground="{StaticResource Overlay1}"
+                   Foreground="{DynamicResource Overlay1}"
                    FontSize="11"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"

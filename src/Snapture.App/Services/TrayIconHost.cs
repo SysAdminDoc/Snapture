@@ -36,9 +36,11 @@ public sealed class TrayIconHost : IDisposable
             var dv = new DrawingVisual();
             using (var dc = dv.RenderOpen())
             {
-                dc.DrawRoundedRectangle(Brushes.MediumPurple, null, new Rect(0, 0, 32, 32), 6, 6);
+                var accent = Application.Current.TryFindResource("AppAccent") as Brush ?? Brushes.MediumPurple;
+                var foreground = Application.Current.TryFindResource("AppAccentForeground") as Brush ?? Brushes.Black;
+                dc.DrawRoundedRectangle(accent, null, new Rect(0, 0, 32, 32), 6, 6);
                 var ft = new FormattedText("S", System.Globalization.CultureInfo.InvariantCulture,
-                    FlowDirection.LeftToRight, new Typeface("Segoe UI"), 22, Brushes.Black, 1.0);
+                    FlowDirection.LeftToRight, new Typeface("Segoe UI"), 22, foreground, 1.0);
                 dc.DrawText(ft, new Point(8, 2));
             }
             var rtb = new RenderTargetBitmap(32, 32, 96, 96, PixelFormats.Pbgra32);
@@ -128,6 +130,32 @@ public sealed class TrayIconHost : IDisposable
             }
         };
         m.Items.Add(settings);
+
+        var themeMenu = new MenuItem { Header = "_Theme" };
+        foreach (var (label, key) in new[]
+        {
+            ("System", ThemeManager.SystemMode),
+            ("Light", ThemeManager.LightMode),
+            ("Dark", ThemeManager.DarkMode)
+        })
+        {
+            var item = new MenuItem { Header = label, IsCheckable = true, Tag = key };
+            item.IsChecked = string.Equals(App.Host?.Settings.Current.ThemeMode, key, StringComparison.OrdinalIgnoreCase);
+            item.Click += (_, _) =>
+            {
+                if (App.Host is null) return;
+                App.Host.Settings.Current.ThemeMode = key;
+                App.Host.Settings.Save();
+                ThemeManager.Apply(key);
+                foreach (var it in themeMenu.Items.OfType<MenuItem>())
+                {
+                    var mode = (string)it.Tag!;
+                    it.IsChecked = string.Equals(App.Host.Settings.Current.ThemeMode, mode, StringComparison.OrdinalIgnoreCase);
+                }
+            };
+            themeMenu.Items.Add(item);
+        }
+        m.Items.Add(themeMenu);
 
         var tools = new MenuItem { Header = "_Tools" };
         var colorPicker = new MenuItem { Header = "Color picker" };

@@ -28,10 +28,10 @@ public partial class PluginsWindow : Window
             {
                 Text = "No plugins installed. Drop any DLL that references Snapture.Plugin.Abstractions " +
                        "and is annotated with [SnapturePlugin] into the plugins folder, then click Reload.",
-                Foreground = (Brush)FindResource("Subtext"),
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 8, 0, 0)
             };
+            empty.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
             PluginList.Children.Add(empty);
             return;
         }
@@ -40,63 +40,68 @@ public partial class PluginsWindow : Window
         {
             var card = new Border
             {
-                Background = (Brush)FindResource("Mantle"),
-                BorderBrush = (Brush)FindResource("Surface0"),
                 BorderThickness = new Thickness(1),
                 CornerRadius = new CornerRadius(6),
                 Padding = new Thickness(14),
                 Margin = new Thickness(0, 0, 0, 10),
             };
+            card.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+            card.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
             var stack = new StackPanel();
             var header = new TextBlock
             {
-                Foreground = (Brush)FindResource("Mauve"),
                 FontWeight = FontWeights.SemiBold,
                 FontSize = 15,
                 Text = $"{p.Info.Name}  ·  v{p.Info.Version}"
             };
+            header.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
             stack.Children.Add(header);
-            stack.Children.Add(new TextBlock
+            var author = new TextBlock
             {
-                Foreground = (Brush)FindResource("Subtext"),
                 Text = $"by {p.Info.Author}",
                 Margin = new Thickness(0, 2, 0, 6)
-            });
-            stack.Children.Add(new TextBlock
+            };
+            author.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+            stack.Children.Add(author);
+            var description = new TextBlock
             {
-                Foreground = (Brush)FindResource("Text"),
                 Text = string.IsNullOrWhiteSpace(p.Info.Description) ? "(no description)" : p.Info.Description,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 6)
-            });
-            stack.Children.Add(new TextBlock
+            };
+            description.SetResourceReference(TextBlock.ForegroundProperty, "AppForeground");
+            stack.Children.Add(description);
+            var capabilities = new TextBlock
             {
-                Foreground = (Brush)FindResource("Yellow"),
                 Text = $"Capabilities: {p.Info.Capabilities}",
                 FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
                 FontSize = 12,
                 Margin = new Thickness(0, 0, 0, 6)
-            });
+            };
+            capabilities.SetResourceReference(TextBlock.ForegroundProperty, "AppWarning");
+            stack.Children.Add(capabilities);
             if (p.Info.ContractTypes.Count > 0)
             {
-                stack.Children.Add(new TextBlock
+                var contributes = new TextBlock
                 {
-                    Foreground = (Brush)FindResource("Overlay1"),
                     Text = "Contributes: " + string.Join(", ", p.Info.ContractTypes),
                     FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
                     FontSize = 11,
                     TextWrapping = TextWrapping.Wrap
-                });
+                };
+                contributes.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleForeground");
+                stack.Children.Add(contributes);
             }
-            stack.Children.Add(new TextBlock
+            var path = new TextBlock
             {
-                Foreground = (Brush)FindResource("Overlay1"),
                 Text = p.Info.AssemblyPath,
                 FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
                 FontSize = 11,
                 TextTrimming = TextTrimming.CharacterEllipsis,
                 Margin = new Thickness(0, 6, 0, 0)
-            });
+            };
+            path.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleForeground");
+            stack.Children.Add(path);
             card.Child = stack;
             PluginList.Children.Add(card);
         }

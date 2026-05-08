@@ -41,6 +41,7 @@ The "more polish, less repeat work" pass. Sticky-strip detection, animated GIF r
 
 - All version strings synced to 0.6.0 across `Snapture.App` / `Snapture.Capture` / `Snapture.Plugin.Abstractions` csproj files, README badge, and the workflow default.
 - Tray Tools submenu now: Color picker · Pixel ruler · OCR region · Record GIF (window / all monitors) · Step Capture · Plugins · Capture history.
+- Theme infrastructure now supports persisted System / Light / Dark modes with Catppuccin Mocha and Latte palettes, shared semantic WPF control styles, and tray/settings theme switching.
 
 ### Architecture notes
 

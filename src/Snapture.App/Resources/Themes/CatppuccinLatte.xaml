@@ -1,61 +1,61 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- Catppuccin Mocha palette. Existing color keys remain for plugin/window compatibility. -->
-    <Color x:Key="BaseColor">#FF1E1E2E</Color>
-    <Color x:Key="MantleColor">#FF181825</Color>
-    <Color x:Key="CrustColor">#FF11111B</Color>
-    <Color x:Key="Surface0Color">#FF313244</Color>
-    <Color x:Key="Surface1Color">#FF45475A</Color>
-    <Color x:Key="Surface2Color">#FF585B70</Color>
-    <Color x:Key="Overlay0Color">#FF6C7086</Color>
-    <Color x:Key="Overlay1Color">#FF7F849C</Color>
-    <Color x:Key="Overlay2Color">#FF9399B2</Color>
-    <Color x:Key="SubtextColor">#FFA6ADC8</Color>
-    <Color x:Key="TextColor">#FFCDD6F4</Color>
-    <Color x:Key="LavenderColor">#FFB4BEFE</Color>
-    <Color x:Key="BlueColor">#FF89B4FA</Color>
-    <Color x:Key="SapphireColor">#FF74C7EC</Color>
-    <Color x:Key="SkyColor">#FF89DCEB</Color>
-    <Color x:Key="TealColor">#FF94E2D5</Color>
-    <Color x:Key="GreenColor">#FFA6E3A1</Color>
-    <Color x:Key="YellowColor">#FFF9E2AF</Color>
-    <Color x:Key="PeachColor">#FFFAB387</Color>
-    <Color x:Key="MaroonColor">#FFEBA0AC</Color>
-    <Color x:Key="RedColor">#FFF38BA8</Color>
-    <Color x:Key="MauveColor">#FFCBA6F7</Color>
-    <Color x:Key="PinkColor">#FFF5C2E7</Color>
-    <Color x:Key="FlamingoColor">#FFF2CDCD</Color>
-    <Color x:Key="RosewaterColor">#FFF5E0DC</Color>
+    <!-- Catppuccin Latte palette. Keys match Mocha so windows can switch dictionaries at runtime. -->
+    <Color x:Key="BaseColor">#FFEFF1F5</Color>
+    <Color x:Key="MantleColor">#FFE6E9EF</Color>
+    <Color x:Key="CrustColor">#FFDCE0E8</Color>
+    <Color x:Key="Surface0Color">#FFCCD0DA</Color>
+    <Color x:Key="Surface1Color">#FFBCC0CC</Color>
+    <Color x:Key="Surface2Color">#FFACB0BE</Color>
+    <Color x:Key="Overlay0Color">#FF9CA0B0</Color>
+    <Color x:Key="Overlay1Color">#FF8C8FA1</Color>
+    <Color x:Key="Overlay2Color">#FF7C7F93</Color>
+    <Color x:Key="SubtextColor">#FF6C6F85</Color>
+    <Color x:Key="TextColor">#FF4C4F69</Color>
+    <Color x:Key="LavenderColor">#FF7287FD</Color>
+    <Color x:Key="BlueColor">#FF1E66F5</Color>
+    <Color x:Key="SapphireColor">#FF209FB5</Color>
+    <Color x:Key="SkyColor">#FF04A5E5</Color>
+    <Color x:Key="TealColor">#FF179299</Color>
+    <Color x:Key="GreenColor">#FF40A02B</Color>
+    <Color x:Key="YellowColor">#FFDF8E1D</Color>
+    <Color x:Key="PeachColor">#FFFE640B</Color>
+    <Color x:Key="MaroonColor">#FFE64553</Color>
+    <Color x:Key="RedColor">#FFD20F39</Color>
+    <Color x:Key="MauveColor">#FF8839EF</Color>
+    <Color x:Key="PinkColor">#FFEA76CB</Color>
+    <Color x:Key="FlamingoColor">#FFDD7878</Color>
+    <Color x:Key="RosewaterColor">#FFDC8A78</Color>
 
-    <Color x:Key="AppBackgroundColor">#FF1E1E2E</Color>
-    <Color x:Key="AppForegroundColor">#FFCDD6F4</Color>
-    <Color x:Key="AppSurfaceColor">#FF181825</Color>
-    <Color x:Key="AppSurfaceRaisedColor">#FF313244</Color>
-    <Color x:Key="AppSurfaceHoverColor">#FF45475A</Color>
-    <Color x:Key="AppSurfacePressedColor">#FF585B70</Color>
-    <Color x:Key="AppCanvasColor">#FF11111B</Color>
-    <Color x:Key="AppBorderColor">#FF313244</Color>
-    <Color x:Key="AppBorderStrongColor">#FF585B70</Color>
-    <Color x:Key="AppMutedForegroundColor">#FFA6ADC8</Color>
-    <Color x:Key="AppSubtleForegroundColor">#FF7F849C</Color>
-    <Color x:Key="AppDisabledForegroundColor">#FF6C7086</Color>
-    <Color x:Key="AppAccentColor">#FFCBA6F7</Color>
-    <Color x:Key="AppAccentHoverColor">#FFDDB6FF</Color>
-    <Color x:Key="AppAccentPressedColor">#FFB989EF</Color>
-    <Color x:Key="AppAccentForegroundColor">#FF11111B</Color>
-    <Color x:Key="AppInputBackgroundColor">#FF181825</Color>
-    <Color x:Key="AppInputForegroundColor">#FFCDD6F4</Color>
-    <Color x:Key="AppSelectionColor">#66313B72</Color>
-    <Color x:Key="AppSelectionForegroundColor">#FFFFFFFF</Color>
-    <Color x:Key="AppFocusColor">#FF89B4FA</Color>
-    <Color x:Key="AppOverlayColor">#B3000000</Color>
-    <Color x:Key="AppShadowColor">#FF000000</Color>
-    <Color x:Key="AppDestructiveColor">#FFF38BA8</Color>
-    <Color x:Key="AppDestructiveForegroundColor">#FF11111B</Color>
-    <Color x:Key="AppSuccessColor">#FFA6E3A1</Color>
-    <Color x:Key="AppWarningColor">#FFF9E2AF</Color>
-    <Color x:Key="AppInfoColor">#FF89B4FA</Color>
+    <Color x:Key="AppBackgroundColor">#FFEFF1F5</Color>
+    <Color x:Key="AppForegroundColor">#FF4C4F69</Color>
+    <Color x:Key="AppSurfaceColor">#FFE6E9EF</Color>
+    <Color x:Key="AppSurfaceRaisedColor">#FFFFFFFF</Color>
+    <Color x:Key="AppSurfaceHoverColor">#FFE0E4EC</Color>
+    <Color x:Key="AppSurfacePressedColor">#FFD3D8E3</Color>
+    <Color x:Key="AppCanvasColor">#FFDCE0E8</Color>
+    <Color x:Key="AppBorderColor">#FFCCD0DA</Color>
+    <Color x:Key="AppBorderStrongColor">#FFACB0BE</Color>
+    <Color x:Key="AppMutedForegroundColor">#FF6C6F85</Color>
+    <Color x:Key="AppSubtleForegroundColor">#FF7C7F93</Color>
+    <Color x:Key="AppDisabledForegroundColor">#FF8C8FA1</Color>
+    <Color x:Key="AppAccentColor">#FF8839EF</Color>
+    <Color x:Key="AppAccentHoverColor">#FF6D21D8</Color>
+    <Color x:Key="AppAccentPressedColor">#FF5D19BD</Color>
+    <Color x:Key="AppAccentForegroundColor">#FFFFFFFF</Color>
+    <Color x:Key="AppInputBackgroundColor">#FFFFFFFF</Color>
+    <Color x:Key="AppInputForegroundColor">#FF4C4F69</Color>
+    <Color x:Key="AppSelectionColor">#338839EF</Color>
+    <Color x:Key="AppSelectionForegroundColor">#FF11111B</Color>
+    <Color x:Key="AppFocusColor">#FF1E66F5</Color>
+    <Color x:Key="AppOverlayColor">#99000000</Color>
+    <Color x:Key="AppShadowColor">#FF3B3F56</Color>
+    <Color x:Key="AppDestructiveColor">#FFD20F39</Color>
+    <Color x:Key="AppDestructiveForegroundColor">#FFFFFFFF</Color>
+    <Color x:Key="AppSuccessColor">#FF40A02B</Color>
+    <Color x:Key="AppWarningColor">#FFB86E00</Color>
+    <Color x:Key="AppInfoColor">#FF1E66F5</Color>
 
     <SolidColorBrush x:Key="Base" Color="{StaticResource BaseColor}" />
     <SolidColorBrush x:Key="Mantle" Color="{StaticResource MantleColor}" />
@@ -113,6 +113,6 @@
     <SolidColorBrush x:Key="Accent" Color="{StaticResource AppAccentColor}" />
     <SolidColorBrush x:Key="AccentSecondary" Color="{StaticResource BlueColor}" />
     <SolidColorBrush x:Key="SelectionStroke" Color="{StaticResource AppAccentColor}" />
-    <SolidColorBrush x:Key="SelectionFill" Color="#40CBA6F7" />
+    <SolidColorBrush x:Key="SelectionFill" Color="#338839EF" />
     <SolidColorBrush x:Key="DimBackdrop" Color="{StaticResource AppOverlayColor}" />
 </ResourceDictionary>

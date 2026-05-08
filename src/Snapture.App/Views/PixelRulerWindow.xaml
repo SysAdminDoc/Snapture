@@ -15,34 +15,34 @@
         FontFamily="{StaticResource UiFont}">
     <Grid x:Name="RootGrid">
         <Canvas x:Name="OverlayCanvas">
-            <Rectangle x:Name="DimRect" Fill="{StaticResource DimBackdrop}" />
+            <Rectangle x:Name="DimRect" Fill="{DynamicResource DimBackdrop}" />
             <Line x:Name="MeasureLine"
-                  Stroke="{StaticResource Accent}"
+                  Stroke="{DynamicResource Accent}"
                   StrokeThickness="2"
                   Visibility="Collapsed" />
             <Border x:Name="ReadoutBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Accent}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Accent}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,4"
                     Visibility="Collapsed">
                 <TextBlock x:Name="ReadoutText"
-                           Foreground="{StaticResource Text}"
+                           Foreground="{DynamicResource Text}"
                            FontFamily="Cascadia Code, Consolas, monospace"
                            FontSize="13" />
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Surface1}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Surface1}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="14,8">
-                <TextBlock Foreground="{StaticResource Subtext}" FontSize="13">
-                    <Run Foreground="{StaticResource Mauve}" Text="Drag" />
+                <TextBlock Foreground="{DynamicResource Subtext}" FontSize="13">
+                    <Run Foreground="{DynamicResource Mauve}" Text="Drag" />
                     <Run Text=" to measure pixels and angle " />
-                    <Run Foreground="{StaticResource Surface2}" Text="·" />
-                    <Run Foreground="{StaticResource Mauve}" Text=" Esc " />
+                    <Run Foreground="{DynamicResource Surface2}" Text="·" />
+                    <Run Foreground="{DynamicResource Mauve}" Text=" Esc " />
                     <Run Text="dismiss" />
                 </TextBlock>
             </Border>

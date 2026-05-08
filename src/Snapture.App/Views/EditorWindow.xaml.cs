@@ -143,10 +143,9 @@ public partial class EditorWindow : Window
         foreach (Button b in ToolStack.Children.OfType<Button>())
         {
             bool active = (EditorTool)b.Tag! == tool;
-            b.Background = active
-                ? (Brush)FindResource("Mauve")
-                : (Brush)FindResource("Surface0");
-            b.Foreground = active ? Brushes.Black : (Brush)FindResource("Text");
+            b.SetResourceReference(Control.BackgroundProperty, active ? "AppAccent" : "AppSurfaceRaised");
+            b.SetResourceReference(Control.ForegroundProperty, active ? "AppAccentForeground" : "AppForeground");
+            b.SetResourceReference(Control.BorderBrushProperty, active ? "AppAccent" : "AppBorderStrong");
             b.BorderThickness = new Thickness(active ? 0 : 1);
         }
         Canvas.Cursor = tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
@@ -166,10 +165,10 @@ public partial class EditorWindow : Window
                 Margin = new Thickness(2),
                 Background = new SolidColorBrush(ToWpfColor(argb)),
                 CornerRadius = new CornerRadius(4),
-                BorderBrush = new SolidColorBrush(ToWpfColor(0xFF45475A)),
                 BorderThickness = new Thickness(1),
                 Cursor = Cursors.Hand
             };
+            swatch.SetResourceReference(Border.BorderBrushProperty, "AppBorderStrong");
             swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
             ColorPalette.Children.Add(swatch);
         }
@@ -200,6 +199,8 @@ public partial class EditorWindow : Window
                 CornerRadius = new CornerRadius(3),
                 Cursor = Cursors.Hand
             };
+            swatch.SetResourceReference(Border.BorderBrushProperty, "AppBorderStrong");
+            swatch.BorderThickness = new Thickness(1);
             swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
             RecentColors.Children.Add(swatch);
         }
@@ -759,15 +760,16 @@ public sealed class TextInputDialog : Window
         Height = 160;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
-        Background = (Brush)Application.Current.Resources["Mantle"];
-        Foreground = (Brush)Application.Current.Resources["Text"];
         FontFamily = (FontFamily)Application.Current.Resources["UiFont"];
+        SetResourceReference(BackgroundProperty, "AppSurface");
+        SetResourceReference(ForegroundProperty, "AppForeground");
 
         var grid = new Grid { Margin = new Thickness(16) };
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var label = new TextBlock { Text = "Enter text:", Foreground = (Brush)Application.Current.Resources["Subtext"] };
+        var label = new TextBlock { Text = "Enter text:" };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
         Grid.SetRow(label, 0);
         _box = new TextBox { Margin = new Thickness(0, 6, 0, 6) };
         Grid.SetRow(_box, 1);

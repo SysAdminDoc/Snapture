@@ -32,7 +32,7 @@ The existing landscape on Windows in 2026:
 | **Snagit** | Polished editor (paid) | $63/yr, pushes you toward TechSmith cloud |
 | **CleanShot X** | Pinned overlay UX (paid) | Cloud-first, $29/yr |
 
-**Snapture's pitch:** the polish of Snagit, the no-cloud philosophy of Greenshot, modern WinRT-class capture, and a Catppuccin Mocha editor that doesn't look like it was designed in 2008.
+**Snapture's pitch:** the polish of Snagit, the no-cloud philosophy of Greenshot, modern WinRT-class capture, and a Catppuccin-themed editor that doesn't look like it was designed in 2008.
 
 ## What ships in v0.6.0
 
@@ -219,7 +219,10 @@ Snapture.sln
 │        ├─ PluginsWindow              ← Plugin inventory + reload
 │        ├─ StepCaptureWindow          ← Step Capture review + Markdown export
 │        └─ GifRecordingWindow         ← REC indicator + Stop & save
-└─ Resources/Themes/CatppuccinMocha.xaml
+└─ Resources/Themes/
+   ├─ CatppuccinMocha.xaml
+   ├─ CatppuccinLatte.xaml
+   └─ ThemeStyles.xaml
 ```
 
 ## Privacy

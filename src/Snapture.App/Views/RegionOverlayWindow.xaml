@@ -12,7 +12,7 @@
         WindowStartupLocation="Manual"
         UseLayoutRounding="True"
         SnapsToDevicePixels="True"
-        Foreground="{StaticResource Text}"
+        Foreground="{DynamicResource Text}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Window.Resources>
@@ -32,39 +32,39 @@
             <Rectangle x:Name="DimRect"
                        Width="0"
                        Height="0"
-                       Fill="{StaticResource DimBackdrop}" />
+                       Fill="{DynamicResource DimBackdrop}" />
             <Rectangle x:Name="SelectionRect"
-                       Stroke="{StaticResource Accent}"
+                       Stroke="{DynamicResource Accent}"
                        StrokeThickness="2"
-                       Fill="{StaticResource SelectionFill}"
+                       Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed"
                        SnapsToDevicePixels="True" />
             <Border x:Name="SizeBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Accent}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Accent}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="6,3"
                     Visibility="Collapsed">
                 <TextBlock x:Name="SizeText"
-                           Foreground="{StaticResource Text}"
+                           Foreground="{DynamicResource Text}"
                            FontSize="12"
                            FontFamily="Cascadia Code, Consolas, monospace" />
             </Border>
             <Border x:Name="LoupeBorder"
                     Width="120" Height="120"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Accent}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Accent}"
                     BorderThickness="2"
                     CornerRadius="60"
                     Visibility="Collapsed"
                     SnapsToDevicePixels="True">
                 <Grid ClipToBounds="True">
                     <Image x:Name="LoupeImage" Stretch="None" />
-                    <Path Stroke="{StaticResource Accent}" StrokeThickness="1" Data="M 0,60 H 120 M 60,0 V 120" Opacity="0.7" />
+                    <Path Stroke="{DynamicResource Accent}" StrokeThickness="1" Data="M 0,60 H 120 M 60,0 V 120" Opacity="0.7" />
                     <TextBlock x:Name="LoupeText"
-                               Foreground="{StaticResource Text}"
-                               Background="{StaticResource Mantle}"
+                               Foreground="{DynamicResource Text}"
+                               Background="{DynamicResource Mantle}"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                FontSize="11"
                                Padding="4,1"
@@ -74,21 +74,21 @@
                 </Grid>
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Surface1}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Surface1}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="14,8"
                     Opacity="0.95"
                     HorizontalAlignment="Center">
-                <TextBlock Foreground="{StaticResource Subtext}" FontSize="13">
-                    <Run Foreground="{StaticResource Mauve}" Text="Drag" />
+                <TextBlock Foreground="{DynamicResource Subtext}" FontSize="13">
+                    <Run Foreground="{DynamicResource Mauve}" Text="Drag" />
                     <Run Text=" to select region " />
-                    <Run Foreground="{StaticResource Surface2}" Text="·" />
-                    <Run Foreground="{StaticResource Mauve}" Text=" Esc " />
+                    <Run Foreground="{DynamicResource Surface2}" Text="·" />
+                    <Run Foreground="{DynamicResource Mauve}" Text=" Esc " />
                     <Run Text="cancel" />
-                    <Run Foreground="{StaticResource Surface2}" Text=" · " />
-                    <Run Foreground="{StaticResource Mauve}" Text="Enter " />
+                    <Run Foreground="{DynamicResource Surface2}" Text=" · " />
+                    <Run Foreground="{DynamicResource Mauve}" Text="Enter " />
                     <Run Text="confirm" />
                 </TextBlock>
             </Border>

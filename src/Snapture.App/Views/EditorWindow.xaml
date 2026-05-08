@@ -6,8 +6,8 @@
         Width="1280" Height="820"
         MinWidth="900" MinHeight="600"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Base}"
-        Foreground="{StaticResource Text}"
+        Background="{DynamicResource Base}"
+        Foreground="{DynamicResource Text}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid>
@@ -26,20 +26,20 @@
         <Border Grid.Row="0"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"
-                Background="{StaticResource Mantle}"
-                BorderBrush="{StaticResource Surface0}"
+                Background="{DynamicResource Mantle}"
+                BorderBrush="{DynamicResource Surface0}"
                 BorderThickness="0,0,0,1"
                 Padding="14,8">
             <DockPanel LastChildFill="True">
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
                     <TextBlock Text="✦ Snapture Editor"
-                               Foreground="{StaticResource Mauve}"
+                               Foreground="{DynamicResource Mauve}"
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"
                                Margin="0,0,16,0" />
                     <Button x:Name="OpenButton" Content="Open…" Click="OnOpenClicked" />
                     <Button x:Name="SaveProjectButton" Content="Save .snapture" Click="OnSaveProjectClicked" />
-                    <Separator Margin="6,0" Background="{StaticResource Surface0}" />
+                    <Separator Margin="6,0" Background="{DynamicResource Surface0}" />
                     <Button x:Name="ExportButton"
                             Content="Export PNG"
                             Style="{StaticResource AccentButton}"
@@ -48,7 +48,7 @@
                     <Button x:Name="ExportAsButton" Content="Export As…" Click="OnExportAsClicked" />
                     <Button x:Name="CopyButton" Content="Copy" Click="OnCopyClicked" />
                     <Button x:Name="PinButton" Content="Pin" Click="OnPinClicked" />
-                    <Separator Margin="6,0" Background="{StaticResource Surface0}" />
+                    <Separator Margin="6,0" Background="{DynamicResource Surface0}" />
                     <Button x:Name="AutoRedactButton"
                             Content="Auto-redact secrets"
                             Click="OnAutoRedactClicked"
@@ -64,7 +64,7 @@
                     <Button x:Name="UndoButton" Content="↶ Undo" Click="OnUndoClicked" />
                     <Button x:Name="RedoButton" Content="↷ Redo" Click="OnRedoClicked" />
                     <TextBlock x:Name="DimensionText"
-                               Foreground="{StaticResource Subtext}"
+                               Foreground="{DynamicResource Subtext}"
                                VerticalAlignment="Center"
                                Margin="12,0,0,0" />
                 </StackPanel>
@@ -74,8 +74,8 @@
         <!--  Tool palette (left rail)  -->
         <Border Grid.Row="1"
                 Grid.Column="0"
-                Background="{StaticResource Mantle}"
-                BorderBrush="{StaticResource Surface0}"
+                Background="{DynamicResource Mantle}"
+                BorderBrush="{DynamicResource Surface0}"
                 BorderThickness="0,0,1,0"
                 Padding="6,12">
             <StackPanel x:Name="ToolStack" />
@@ -84,7 +84,7 @@
         <!--  Canvas  -->
         <Border Grid.Row="1"
                 Grid.Column="1"
-                Background="{StaticResource Crust}"
+                Background="{DynamicResource Crust}"
                 Padding="12">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto"
@@ -104,23 +104,23 @@
         <!--  Right panel: properties + adjustments  -->
         <Border Grid.Row="1"
                 Grid.Column="2"
-                Background="{StaticResource Mantle}"
-                BorderBrush="{StaticResource Surface0}"
+                Background="{DynamicResource Mantle}"
+                BorderBrush="{DynamicResource Surface0}"
                 BorderThickness="1,0,0,0"
                 Padding="12">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
                     <TextBlock Text="Style"
-                               Foreground="{StaticResource Mauve}"
+                               Foreground="{DynamicResource Mauve}"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6" />
-                    <TextBlock Text="Color" Foreground="{StaticResource Subtext}" Margin="0,4,0,4" />
+                    <TextBlock Text="Color" Foreground="{DynamicResource Subtext}" Margin="0,4,0,4" />
                     <UniformGrid x:Name="ColorPalette" Columns="6" />
 
-                    <TextBlock Text="Recent" Foreground="{StaticResource Subtext}" Margin="0,8,0,4" />
+                    <TextBlock Text="Recent" Foreground="{DynamicResource Subtext}" Margin="0,8,0,4" />
                     <UniformGrid x:Name="RecentColors" Columns="6" Height="24" />
 
-                    <TextBlock Text="Stroke" Foreground="{StaticResource Subtext}" Margin="0,12,0,4" />
+                    <TextBlock Text="Stroke" Foreground="{DynamicResource Subtext}" Margin="0,12,0,4" />
                     <Slider x:Name="StrokeSlider"
                             Minimum="1" Maximum="24"
                             Value="3"
@@ -128,61 +128,61 @@
 
                     <CheckBox x:Name="DashedCheck"
                               Content="Dashed line/arrow"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,8,0,0" />
                     <CheckBox x:Name="BidirCheck"
                               Content="Bidirectional arrow"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0" />
                     <CheckBox x:Name="FilledCheck"
                               Content="Filled rectangle/ellipse"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0" />
                     <CheckBox x:Name="PixelateCheck"
                               Content="Pixelate (instead of blur)"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0" />
 
                     <TextBlock Text="Adjustments"
-                               Foreground="{StaticResource Mauve}"
+                               Foreground="{DynamicResource Mauve}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
-                    <TextBlock Text="Brightness" Foreground="{StaticResource Subtext}" />
+                    <TextBlock Text="Brightness" Foreground="{DynamicResource Subtext}" />
                     <Slider x:Name="BrightnessSlider" Minimum="-100" Maximum="100" Value="0" ValueChanged="OnAdjustmentChanged" />
-                    <TextBlock Text="Contrast" Foreground="{StaticResource Subtext}" Margin="0,4,0,0" />
+                    <TextBlock Text="Contrast" Foreground="{DynamicResource Subtext}" Margin="0,4,0,0" />
                     <Slider x:Name="ContrastSlider" Minimum="-100" Maximum="100" Value="0" ValueChanged="OnAdjustmentChanged" />
                     <CheckBox x:Name="GrayscaleCheck"
                               Content="Grayscale"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,8,0,0"
                               Click="OnAdjustmentClicked" />
                     <CheckBox x:Name="InvertCheck"
                               Content="Invert"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0"
                               Click="OnAdjustmentClicked" />
 
                     <TextBlock Text="Frame"
-                               Foreground="{StaticResource Mauve}"
+                               Foreground="{DynamicResource Mauve}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
                     <CheckBox x:Name="ShadowCheck"
                               Content="Drop shadow"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Click="OnFrameClicked" />
                     <CheckBox x:Name="RoundedCheck"
                               Content="Rounded corners"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0"
                               Click="OnFrameClicked" />
                     <CheckBox x:Name="GradientCheck"
                               Content="Gradient backdrop"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0"
                               Click="OnFrameClicked" />
                     <CheckBox x:Name="CodeChromeCheck"
                               Content="Code window chrome (Carbon-style)"
-                              Foreground="{StaticResource Subtext}"
+                              Foreground="{DynamicResource Subtext}"
                               Margin="0,4,0,0"
                               ToolTip="Wraps the image in a macOS-style window with red / yellow / green traffic-light dots."
                               Click="OnFrameClicked" />
@@ -194,16 +194,16 @@
         <Border Grid.Row="2"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"
-                Background="{StaticResource Mantle}"
-                BorderBrush="{StaticResource Surface0}"
+                Background="{DynamicResource Mantle}"
+                BorderBrush="{DynamicResource Surface0}"
                 BorderThickness="0,1,0,0"
                 Padding="14,6">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="StatusText"
-                           Foreground="{StaticResource Subtext}"
+                           Foreground="{DynamicResource Subtext}"
                            DockPanel.Dock="Left" />
                 <TextBlock x:Name="PathText"
-                           Foreground="{StaticResource Overlay1}"
+                           Foreground="{DynamicResource Overlay1}"
                            HorizontalAlignment="Right"
                            DockPanel.Dock="Right"
                            TextTrimming="CharacterEllipsis" />

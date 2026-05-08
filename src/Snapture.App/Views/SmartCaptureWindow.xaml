@@ -15,15 +15,15 @@
         FontFamily="{StaticResource UiFont}">
     <Grid x:Name="RootGrid">
         <Canvas x:Name="OverlayCanvas">
-            <Rectangle x:Name="DimRect" Fill="{StaticResource DimBackdrop}" />
+            <Rectangle x:Name="DimRect" Fill="{DynamicResource DimBackdrop}" />
             <Rectangle x:Name="HighlightRect"
-                       Stroke="{StaticResource Accent}"
+                       Stroke="{DynamicResource Accent}"
                        StrokeThickness="3"
-                       Fill="{StaticResource SelectionFill}"
+                       Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed" />
             <Border x:Name="DescBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Accent}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Accent}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,4"
@@ -31,33 +31,33 @@
                     Visibility="Collapsed">
                 <StackPanel>
                     <TextBlock x:Name="ElementType"
-                               Foreground="{StaticResource Mauve}"
+                               Foreground="{DynamicResource Mauve}"
                                FontSize="11"
                                FontWeight="SemiBold" />
                     <TextBlock x:Name="ElementName"
-                               Foreground="{StaticResource Text}"
+                               Foreground="{DynamicResource Text}"
                                FontSize="13"
                                TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="ElementDims"
-                               Foreground="{StaticResource Subtext}"
+                               Foreground="{DynamicResource Subtext}"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                FontSize="11" />
                 </StackPanel>
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Surface1}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Surface1}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="14,8">
-                <TextBlock Foreground="{StaticResource Subtext}" FontSize="13">
-                    <Run Foreground="{StaticResource Mauve}" Text="Hover" />
+                <TextBlock Foreground="{DynamicResource Subtext}" FontSize="13">
+                    <Run Foreground="{DynamicResource Mauve}" Text="Hover" />
                     <Run Text=" any control to highlight it · " />
-                    <Run Foreground="{StaticResource Mauve}" Text="click" />
+                    <Run Foreground="{DynamicResource Mauve}" Text="click" />
                     <Run Text=" to capture · " />
-                    <Run Foreground="{StaticResource Mauve}" Text="PgUp/PgDn" />
+                    <Run Foreground="{DynamicResource Mauve}" Text="PgUp/PgDn" />
                     <Run Text=" walks parent/child · " />
-                    <Run Foreground="{StaticResource Mauve}" Text="Esc" />
+                    <Run Foreground="{DynamicResource Mauve}" Text="Esc" />
                     <Run Text=" cancels" />
                 </TextBlock>
             </Border>

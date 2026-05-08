@@ -21,6 +21,7 @@ public sealed class AppHost : IDisposable
         Native.SetProcessDPIAware();
         AppIdentity.SetAumid();
         Settings.Load();
+        ThemeManager.Initialize(Settings.Current.ThemeMode);
         var (engine, name) = CaptureEngineFactory.Create(Settings.Current.CaptureEngine);
         Engine = engine;
         EngineName = name;

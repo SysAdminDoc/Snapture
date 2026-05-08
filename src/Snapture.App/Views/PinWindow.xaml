@@ -12,9 +12,9 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
     <Border x:Name="FrameBorder"
-            BorderBrush="{StaticResource Mauve}"
+            BorderBrush="{DynamicResource Mauve}"
             BorderThickness="2"
-            Background="{StaticResource Crust}"
+            Background="{DynamicResource Crust}"
             CornerRadius="4"
             Padding="2">
         <Border.Effect>
@@ -22,7 +22,7 @@
                               BlurRadius="14"
                               Opacity="0.55"
                               ShadowDepth="0"
-                              Color="Black" />
+                              Color="{DynamicResource AppShadowColor}" />
         </Border.Effect>
         <Image x:Name="PinnedImage" Stretch="None" />
     </Border>

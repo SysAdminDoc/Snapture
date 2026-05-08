@@ -16,38 +16,38 @@
         FontSize="13">
     <Grid x:Name="RootGrid">
         <Canvas x:Name="OverlayCanvas">
-            <Rectangle x:Name="DimRect" Fill="{StaticResource DimBackdrop}" />
+            <Rectangle x:Name="DimRect" Fill="{DynamicResource DimBackdrop}" />
             <Rectangle x:Name="HighlightRect"
-                       Stroke="{StaticResource Accent}"
+                       Stroke="{DynamicResource Accent}"
                        StrokeThickness="3"
-                       Fill="{StaticResource SelectionFill}"
+                       Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed" />
             <Border x:Name="TitleBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Accent}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Accent}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,4"
                     Visibility="Collapsed">
                 <TextBlock x:Name="TitleText"
-                           Foreground="{StaticResource Text}"
+                           Foreground="{DynamicResource Text}"
                            FontSize="13" />
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{StaticResource Mantle}"
-                    BorderBrush="{StaticResource Surface1}"
+                    Background="{DynamicResource Mantle}"
+                    BorderBrush="{DynamicResource Surface1}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="14,8"
                     Opacity="0.95">
-                <TextBlock Foreground="{StaticResource Subtext}" FontSize="13">
-                    <Run Foreground="{StaticResource Mauve}" Text="Click" />
+                <TextBlock Foreground="{DynamicResource Subtext}" FontSize="13">
+                    <Run Foreground="{DynamicResource Mauve}" Text="Click" />
                     <Run Text=" a window to capture " />
-                    <Run Foreground="{StaticResource Surface2}" Text="·" />
-                    <Run Foreground="{StaticResource Mauve}" Text=" PgUp/PgDn " />
+                    <Run Foreground="{DynamicResource Surface2}" Text="·" />
+                    <Run Foreground="{DynamicResource Mauve}" Text=" PgUp/PgDn " />
                     <Run Text="parent/child " />
-                    <Run Foreground="{StaticResource Surface2}" Text="·" />
-                    <Run Foreground="{StaticResource Mauve}" Text=" Esc " />
+                    <Run Foreground="{DynamicResource Surface2}" Text="·" />
+                    <Run Foreground="{DynamicResource Mauve}" Text=" Esc " />
                     <Run Text="cancel" />
                 </TextBlock>
             </Border>

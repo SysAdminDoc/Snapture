@@ -5,8 +5,8 @@
         Width="980" Height="640"
         MinWidth="700" MinHeight="480"
         WindowStartupLocation="CenterScreen"
-        Background="{StaticResource Base}"
-        Foreground="{StaticResource Text}"
+        Background="{DynamicResource Base}"
+        Foreground="{DynamicResource Text}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid>
@@ -17,13 +17,13 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{StaticResource Mantle}"
-                BorderBrush="{StaticResource Surface0}"
+                Background="{DynamicResource Mantle}"
+                BorderBrush="{DynamicResource Surface0}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <DockPanel LastChildFill="True">
                 <TextBlock Text="✦ Capture History"
-                           Foreground="{StaticResource Mauve}"
+                           Foreground="{DynamicResource Mauve}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"
                            Margin="0,0,16,0"
@@ -32,7 +32,7 @@
                          DockPanel.Dock="Left"
                          Width="280"
                          KeyUp="OnSearchKey"
-                         BorderBrush="{StaticResource Surface0}"
+                         BorderBrush="{DynamicResource Surface0}"
                          Padding="6"
                          ToolTip="Full-text search over OCR text + window title + process name. SQLite FTS5 syntax allowed." />
                 <Button x:Name="OcrAllButton"
@@ -41,7 +41,7 @@
                         Click="OnOcrAllClicked"
                         ToolTip="Run OCR on every entry that hasn't been indexed yet." />
                 <TextBlock x:Name="StatusText"
-                           Foreground="{StaticResource Subtext}"
+                           Foreground="{DynamicResource Subtext}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"
                            Margin="14,0,8,0" />
@@ -50,7 +50,7 @@
 
         <ListView x:Name="HistoryList"
                   Grid.Row="1"
-                  Background="{StaticResource Crust}"
+                  Background="{DynamicResource Crust}"
                   BorderThickness="0"
                   Margin="0"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -62,8 +62,8 @@
             </ListView.ItemsPanel>
             <ListView.ItemTemplate>
                 <DataTemplate>
-                    <Border Background="{StaticResource Mantle}"
-                            BorderBrush="{StaticResource Surface0}"
+                    <Border Background="{DynamicResource Mantle}"
+                            BorderBrush="{DynamicResource Surface0}"
                             BorderThickness="1"
                             CornerRadius="4"
                             Margin="6"
@@ -75,15 +75,15 @@
                                    Height="120"
                                    Margin="0,0,0,6" />
                             <TextBlock Text="{Binding TitleLine}"
-                                       Foreground="{StaticResource Text}"
+                                       Foreground="{DynamicResource Text}"
                                        FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding SubLine}"
-                                       Foreground="{StaticResource Subtext}"
+                                       Foreground="{DynamicResource Subtext}"
                                        FontSize="11"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding TimeLine}"
-                                       Foreground="{StaticResource Overlay1}"
+                                       Foreground="{DynamicResource Overlay1}"
                                        FontSize="11" />
                         </StackPanel>
                     </Border>
@@ -102,12 +102,12 @@
         </ListView>
 
         <Border Grid.Row="2"
-                Background="{StaticResource Mantle}"
-                BorderBrush="{StaticResource Surface0}"
+                Background="{DynamicResource Mantle}"
+                BorderBrush="{DynamicResource Surface0}"
                 BorderThickness="0,1,0,0"
                 Padding="14,8">
             <TextBlock x:Name="DbPathText"
-                       Foreground="{StaticResource Overlay1}"
+                       Foreground="{DynamicResource Overlay1}"
                        FontFamily="Cascadia Code, Consolas, monospace"
                        FontSize="11" />
         </Border>

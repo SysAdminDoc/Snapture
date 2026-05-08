@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         CopyClipboardCheck.IsChecked   = _draft.CopyToClipboard;
         ShowToastCheck.IsChecked       = _draft.ShowToastOnSave;
 
+        SelectComboByTag(ThemeCombo, ThemeManager.NormalizeMode(_draft.ThemeMode));
         SelectComboByTag(EngineCombo, _draft.CaptureEngine);
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
 
@@ -57,6 +58,7 @@ public partial class SettingsWindow : Window
             $"OS:        {Environment.OSVersion}\n" +
             $".NET:      {Environment.Version}\n" +
             $"Engine:    {App.Host?.EngineName ?? "n/a"} (active)\n" +
+            $"Theme:     {ThemeManager.DisplayName(_draft.ThemeMode)} ({ThemeManager.EffectiveMode})\n" +
             $"WinRT:     {(WinRtCaptureEngine.IsSupported ? "supported" : "unsupported")}\n" +
             $"Monitors:  {MonitorEnumerator.Enumerate().Count}\n" +
             $"AUMID:     {AppIdentity.AppUserModelId}";
@@ -206,18 +208,21 @@ public partial class SettingsWindow : Window
                 Tag = id
             };
             var sp = new StackPanel { Orientation = Orientation.Horizontal };
-            sp.Children.Add(new TextBlock
+            var idText = new TextBlock
             {
                 Text = $"{id}",
                 FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas, monospace"),
-                Foreground = (System.Windows.Media.Brush)FindResource("Mauve"),
                 Width = 200
-            });
-            sp.Children.Add(new TextBlock
+            };
+            idText.SetResourceReference(TextBlock.ForegroundProperty, "Mauve");
+            sp.Children.Add(idText);
+
+            var descriptionText = new TextBlock
             {
                 Text = rule.Description,
-                Foreground = (System.Windows.Media.Brush)FindResource("Text")
-            });
+            };
+            descriptionText.SetResourceReference(TextBlock.ForegroundProperty, "Text");
+            sp.Children.Add(descriptionText);
             cb.Content = sp;
             cb.Click += (_, _) =>
             {
@@ -351,17 +356,21 @@ public partial class SettingsWindow : Window
         _draft.OutputFolder           = OutputFolderBox.Text;
         _draft.FilenamePattern        = FilenameTemplateBox.Text;
         _draft.OutputFormat           = ((ComboBoxItem)FormatCombo.SelectedItem).Tag as string ?? "PNG";
+        var newTheme                  = ((ComboBoxItem)ThemeCombo.SelectedItem).Tag as string ?? ThemeManager.SystemMode;
         var newEngine                 = ((ComboBoxItem)EngineCombo.SelectedItem).Tag as string ?? "auto";
 
         bool engineChanged = !string.Equals(newEngine, _settings.Current.CaptureEngine, StringComparison.OrdinalIgnoreCase);
+        bool themeChanged = !string.Equals(newTheme, _settings.Current.ThemeMode, StringComparison.OrdinalIgnoreCase);
 
         SaveLanFieldsToDraft();
         bool lanWasEnabled = _settings.Current.LanShareEnabled;
 
         CopyInto(_draft, _settings.Current);
         _settings.Current.CaptureEngine = newEngine;
+        _settings.Current.ThemeMode = ThemeManager.NormalizeMode(newTheme);
         _settings.Save();
 
+        if (themeChanged) ThemeManager.Apply(_settings.Current.ThemeMode);
         if (engineChanged) App.Host?.SwitchEngine(newEngine);
 
         // LAN share lifecycle reacts to the toggle.
@@ -402,6 +411,7 @@ public partial class SettingsWindow : Window
         dst.OpenEditorAfterCapture = src.OpenEditorAfterCapture;
         dst.ShowToastOnSave = src.ShowToastOnSave;
         dst.LaunchAtStartup = src.LaunchAtStartup;
+        dst.ThemeMode = ThemeManager.NormalizeMode(src.ThemeMode);
         dst.CaptureEngine = src.CaptureEngine;
         dst.BorderlessConsentGiven = src.BorderlessConsentGiven;
         dst.PrintScreenHijackToastShown = src.PrintScreenHijackToastShown;
