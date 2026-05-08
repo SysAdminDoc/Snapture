@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Snapture.Capture;
+using DrawingPoint = System.Drawing.Point;
 
 namespace Snapture.App.Views;
 
@@ -73,8 +74,10 @@ public partial class RegionOverlayWindow : Window
 
     private void OnMove(object sender, MouseEventArgs e)
     {
-        if (!_isDragging) return;
         var p = e.GetPosition(OverlayCanvas);
+        UpdateLoupe(p);
+
+        if (!_isDragging) return;
         double x = Math.Min(_dragStart.X, p.X);
         double y = Math.Min(_dragStart.Y, p.Y);
         double w = Math.Abs(p.X - _dragStart.X);
@@ -87,6 +90,56 @@ public partial class RegionOverlayWindow : Window
         SizeText.Text = $"{(int)w} × {(int)h}";
         Canvas.SetLeft(SizeBadge, Math.Min(x + w + 8, ActualWidth - 90));
         Canvas.SetTop(SizeBadge, Math.Max(y - 26, 4));
+    }
+
+    private const int LoupeRegion = 20; // 20×20 source pixels
+    private const double LoupeZoom = 6.0;
+
+    private void UpdateLoupe(System.Windows.Point p)
+    {
+        try
+        {
+            int sx = (int)p.X - LoupeRegion / 2;
+            int sy = (int)p.Y - LoupeRegion / 2;
+            sx = Math.Clamp(sx, 0, _frozenScreen.Width - LoupeRegion);
+            sy = Math.Clamp(sy, 0, _frozenScreen.Height - LoupeRegion);
+
+            using var crop = new Bitmap(LoupeRegion, LoupeRegion, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(crop))
+            {
+                g.DrawImage(_frozenScreen,
+                    new System.Drawing.Rectangle(0, 0, LoupeRegion, LoupeRegion),
+                    new System.Drawing.Rectangle(sx, sy, LoupeRegion, LoupeRegion),
+                    GraphicsUnit.Pixel);
+            }
+            // Render scaled
+            int outSize = (int)(LoupeRegion * LoupeZoom);
+            using var scaled = new Bitmap(outSize, outSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            using (var g = Graphics.FromImage(scaled))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+                g.DrawImage(crop, 0, 0, outSize, outSize);
+            }
+            LoupeImage.Source = ToBitmapSource(scaled);
+            int cx = (int)p.X, cy = (int)p.Y;
+            cx = Math.Clamp(cx, 0, _frozenScreen.Width - 1);
+            cy = Math.Clamp(cy, 0, _frozenScreen.Height - 1);
+            var px = _frozenScreen.GetPixel(cx, cy);
+            LoupeText.Text = $"{cx},{cy} #{px.R:X2}{px.G:X2}{px.B:X2}";
+
+            double lx = p.X + 24;
+            double ly = p.Y + 24;
+            if (lx + 130 > ActualWidth) lx = p.X - 144;
+            if (ly + 130 > ActualHeight) ly = p.Y - 144;
+            Canvas.SetLeft(LoupeBorder, lx);
+            Canvas.SetTop(LoupeBorder, ly);
+            LoupeBorder.Visibility = Visibility.Visible;
+        }
+        catch
+        {
+            LoupeBorder.Visibility = Visibility.Collapsed;
+        }
     }
 
     private void OnUp(object sender, MouseButtonEventArgs e)

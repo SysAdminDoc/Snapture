@@ -121,6 +121,15 @@ public sealed class TrayIconHost : IDisposable
         };
         m.Items.Add(settings);
 
+        var tools = new MenuItem { Header = "_Tools" };
+        var colorPicker = new MenuItem { Header = "Color picker" };
+        colorPicker.Click += (_, _) => new Views.ColorPickerWindow().Show();
+        tools.Items.Add(colorPicker);
+        var pixelRuler = new MenuItem { Header = "Pixel ruler" };
+        pixelRuler.Click += (_, _) => new Views.PixelRulerWindow().Show();
+        tools.Items.Add(pixelRuler);
+        m.Items.Add(tools);
+
         var openFolder = new MenuItem { Header = "Open _Output Folder" };
         openFolder.Click += (_, _) =>
         {

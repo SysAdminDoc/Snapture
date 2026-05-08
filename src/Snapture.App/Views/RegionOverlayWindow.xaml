@@ -51,6 +51,28 @@
                            FontSize="12"
                            FontFamily="Cascadia Code, Consolas, monospace" />
             </Border>
+            <Border x:Name="LoupeBorder"
+                    Width="120" Height="120"
+                    Background="{StaticResource Mantle}"
+                    BorderBrush="{StaticResource Accent}"
+                    BorderThickness="2"
+                    CornerRadius="60"
+                    Visibility="Collapsed"
+                    SnapsToDevicePixels="True">
+                <Grid ClipToBounds="True">
+                    <Image x:Name="LoupeImage" Stretch="None" />
+                    <Path Stroke="{StaticResource Accent}" StrokeThickness="1" Data="M 0,60 H 120 M 60,0 V 120" Opacity="0.7" />
+                    <TextBlock x:Name="LoupeText"
+                               Foreground="{StaticResource Text}"
+                               Background="{StaticResource Mantle}"
+                               FontFamily="Cascadia Code, Consolas, monospace"
+                               FontSize="11"
+                               Padding="4,1"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Bottom"
+                               Margin="0,0,0,4" />
+                </Grid>
+            </Border>
             <Border x:Name="HintBadge"
                     Background="{StaticResource Mantle}"
                     BorderBrush="{StaticResource Surface1}"

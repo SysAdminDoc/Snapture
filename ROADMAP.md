@@ -102,19 +102,20 @@ Tabs: **General · Capture · Hotkeys · Output · Advanced** (Editor + Frame st
 
 ### v0.2.4 — Capture polish (parity table-stakes the existing roadmap missed)
 
-- [ ] **Color picker** standalone tool (eyedropper + magnifier loupe + palette panel) — HEX / RGB / HSL / OKLCH / **APCA contrast** readout [S2 Shottr §3, PowerToys reference S5 §14]
-- [ ] **Pixel ruler** — horizontal / vertical / measurement / angle (PicPick + Shottr + PowerToys parity) [S2, S4]
-- [ ] **Magnifier overlay** during region-select (CleanShot crosshair + magnifier UX) [S2]
-- [ ] **Pin window polish** [S2 §2, S1 ShareX v15.0.0]
-  - [ ] Opacity slider (today: Ctrl-scroll only)
-  - [ ] Border on/off + colour
-  - [ ] Drop shadow toggle
-  - [ ] Click-through mode (hold Alt while interacting)
-  - [ ] Multi-pin select + bulk move/close/opacity (Snipaste Pro pattern) [S2]
-  - [ ] **Hot-corner mass hide/show** of all pins (Snipaste Pro) [S2]
-  - [ ] **Solo mode** — pin focus, hide siblings (Snipaste Pro) [S2]
-- [ ] **Hide desktop icons before capture** toggle (CleanShot X) [S2]
-- [ ] **Hide notifications** during capture (CleanShot X — uses Focus Assist API on Windows) [S2]
+- [x] **Color picker** standalone tool — `ColorPickerWindow` shows HEX / RGB / HSL / APCA-Lc readout (vs white + vs black). Live cursor sample via `Graphics.CopyFromScreen`; click anywhere on screen to lock the colour and copy HEX (low-level mouse hook) [S2 Shottr §3, PowerToys reference S5 §14]
+  - [ ] OKLCH readout — v0.3 (need a calibrated OKLCH converter)
+  - [ ] Eyedropper as an editor tool (separate from this global picker) — v0.3
+- [x] **Pixel ruler** — `PixelRulerWindow` overlays the entire virtual screen, drag to measure Δx / Δy / pixel length / angle [S2, S4]
+- [x] **Magnifier loupe** during region-select — `RegionOverlayWindow.UpdateLoupe` shows a 6×-zoomed 20×20-pixel disk with crosshair, pixel coordinate and HEX readout. Auto-flips quadrant near the screen edges [S2]
+- [x] **Pin window polish** [S2 §2, S1 ShareX v15.0.0]
+  - [x] Opacity slider — context-menu submenu (25/50/75/100%) plus Ctrl-scroll
+  - [x] Border on/off + Drop shadow toggle — `B` and `S` keys, also in context menu
+  - [x] Click-through mode — Alt+click toggles `WS_EX_TRANSPARENT`
+  - [ ] Multi-pin select + bulk move/close/opacity — v0.3
+  - [x] **Hot-corner mass hide/show** of all pins — `H` key (works from any focused pin); hot-corner trigger ships in v0.3
+  - [x] **Solo mode** — `O` key hides every other pin
+- [ ] **Hide desktop icons before capture** toggle — v0.3 (needs SHELLDLL_DefView toggle and reliable restore-on-failure) [S2]
+- [ ] **Hide notifications** during capture — v0.3 (Focus Assist API requires `IUserNotificationListener` + capability declaration) [S2]
 - [x] **Self-timer / delay capture** 1/3/5/10s (universal) [S2]
 - [x] **Last-region recapture** (`Shift+PrintScreen`) — already in old roadmap, keep [self]
 
