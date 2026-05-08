@@ -1,0 +1,273 @@
+<Window x:Class="Snapture.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snapture — Settings"
+        Width="820" Height="640"
+        MinWidth="640" MinHeight="480"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource Base}"
+        Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13">
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource Mantle}"
+                BorderBrush="{StaticResource Surface0}"
+                BorderThickness="0,0,0,1"
+                Padding="16,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="✦"
+                           Foreground="{StaticResource Mauve}"
+                           FontSize="20"
+                           Margin="0,0,8,0" />
+                <TextBlock Text="Settings"
+                           Foreground="{StaticResource Text}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           FontSize="16" />
+            </StackPanel>
+        </Border>
+
+        <TabControl Grid.Row="1"
+                    Background="{StaticResource Base}"
+                    BorderThickness="0"
+                    Padding="0">
+            <TabItem Header="General">
+                <StackPanel Margin="20">
+                    <CheckBox x:Name="LaunchAtStartupCheck" Content="Launch Snapture at Windows startup" />
+                    <CheckBox x:Name="OpenEditorCheck"
+                              Content="Open editor after each capture"
+                              Margin="0,8,0,0" />
+                    <CheckBox x:Name="CopyClipboardCheck"
+                              Content="Copy each capture to the clipboard"
+                              Margin="0,8,0,0" />
+                    <CheckBox x:Name="ShowToastCheck"
+                              Content="Show a toast when a capture is saved"
+                              Margin="0,8,0,0" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Capture">
+                <StackPanel Margin="20">
+                    <TextBlock Text="Capture engine"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6" />
+                    <ComboBox x:Name="EngineCombo" Width="320" HorizontalAlignment="Left">
+                        <ComboBoxItem Tag="auto" Content="Auto (recommended)" />
+                        <ComboBoxItem Tag="winrt" Content="WinRT (Windows.Graphics.Capture)" />
+                        <ComboBoxItem Tag="gdi" Content="GDI (legacy)" />
+                    </ComboBox>
+                    <TextBlock x:Name="EngineCapsText"
+                               Foreground="{StaticResource Subtext}"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0" />
+
+                    <TextBlock Text="Borderless capture"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,16,0,6" />
+                    <TextBlock Foreground="{StaticResource Subtext}"
+                               TextWrapping="Wrap">
+                        Win11 22H2+ paints a yellow border around captured windows unless you grant
+                        Snapture borderless-capture access. The consent persists across reinstalls.
+                    </TextBlock>
+                    <Button x:Name="RequestBorderlessButton"
+                            Content="Request borderless capture access"
+                            HorizontalAlignment="Left"
+                            Margin="0,8,0,0"
+                            Click="OnRequestBorderlessClicked" />
+
+                    <TextBlock Text="Win11 PrintScreen"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,16,0,6" />
+                    <TextBlock x:Name="PrintScreenStatus"
+                               Foreground="{StaticResource Subtext}"
+                               TextWrapping="Wrap" />
+                    <Button x:Name="ReclaimPrintScreenButton"
+                            Content="Reclaim PrintScreen"
+                            HorizontalAlignment="Left"
+                            Margin="0,8,0,0"
+                            Click="OnReclaimPrintScreenClicked" />
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Hotkeys">
+                <StackPanel Margin="20">
+                    <TextBlock Foreground="{StaticResource Subtext}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,12">
+                        Click a field, then press the desired key combination. Modifiers
+                        (Ctrl, Alt, Shift, Win) and a single non-modifier key.
+                    </TextBlock>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="220" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Region capture"
+                                   Grid.Row="0" Grid.Column="0"
+                                   VerticalAlignment="Center" />
+                        <TextBox x:Name="RegionHotkeyBox"
+                                 Grid.Row="0" Grid.Column="1"
+                                 IsReadOnly="True"
+                                 Text="PrintScreen"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown"
+                                 Tag="region"
+                                 Margin="0,0,0,8" />
+
+                        <TextBlock Text="Window capture"
+                                   Grid.Row="1" Grid.Column="0"
+                                   VerticalAlignment="Center" />
+                        <TextBox x:Name="WindowHotkeyBox"
+                                 Grid.Row="1" Grid.Column="1"
+                                 IsReadOnly="True"
+                                 Text="Alt+PrintScreen"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown"
+                                 Tag="window"
+                                 Margin="0,0,0,8" />
+
+                        <TextBlock Text="Fullscreen capture"
+                                   Grid.Row="2" Grid.Column="0"
+                                   VerticalAlignment="Center" />
+                        <TextBox x:Name="FullscreenHotkeyBox"
+                                 Grid.Row="2" Grid.Column="1"
+                                 IsReadOnly="True"
+                                 Text="Ctrl+PrintScreen"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown"
+                                 Tag="fullscreen"
+                                 Margin="0,0,0,8" />
+
+                        <TextBlock Text="Last-region recapture"
+                                   Grid.Row="3" Grid.Column="0"
+                                   VerticalAlignment="Center" />
+                        <TextBox x:Name="LastRegionHotkeyBox"
+                                 Grid.Row="3" Grid.Column="1"
+                                 IsReadOnly="True"
+                                 Text="Shift+PrintScreen"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown"
+                                 Tag="lastRegion" />
+                    </Grid>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Output">
+                <StackPanel Margin="20">
+                    <TextBlock Text="Output folder"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6" />
+                    <DockPanel LastChildFill="True">
+                        <Button x:Name="BrowseFolderButton"
+                                DockPanel.Dock="Right"
+                                Content="Browse…"
+                                Click="OnBrowseFolderClicked"
+                                Margin="6,0,0,0" />
+                        <TextBox x:Name="OutputFolderBox" />
+                    </DockPanel>
+
+                    <TextBlock Text="Filename template"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,16,0,6" />
+                    <TextBox x:Name="FilenameTemplateBox" />
+                    <TextBlock Foreground="{StaticResource Subtext}"
+                               FontFamily="Cascadia Code, Consolas, monospace"
+                               FontSize="12"
+                               TextWrapping="Wrap"
+                               Margin="0,8,0,0">
+                        Placeholders inside <Run Foreground="{StaticResource Mauve}" Text="{}{ }" />
+                        use .NET DateTime format strings:
+                        <LineBreak />
+                        <Run Foreground="{StaticResource Yellow}" Text="{}{yyyy-MM-dd}" /> · date
+                        <LineBreak />
+                        <Run Foreground="{StaticResource Yellow}" Text="{}{HH-mm-ss}" /> · time
+                        <LineBreak />
+                        <Run Foreground="{StaticResource Yellow}" Text="{}{yyyy}" /> · year
+                        <LineBreak />
+                        <Run Foreground="{StaticResource Yellow}" Text="{}{MMM}" /> · month name
+                    </TextBlock>
+
+                    <TextBlock Text="Default format"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,16,0,6" />
+                    <ComboBox x:Name="FormatCombo" Width="200" HorizontalAlignment="Left">
+                        <ComboBoxItem Tag="PNG" Content="PNG (lossless)" />
+                        <ComboBoxItem Tag="JPG" Content="JPEG (smaller)" />
+                    </ComboBox>
+                </StackPanel>
+            </TabItem>
+
+            <TabItem Header="Advanced">
+                <StackPanel Margin="20">
+                    <TextBlock Text="Settings file"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,0,0,6" />
+                    <TextBlock x:Name="SettingsPathText"
+                               Foreground="{StaticResource Subtext}"
+                               FontFamily="Cascadia Code, Consolas, monospace"
+                               TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button Content="Import…" Click="OnImportClicked" />
+                        <Button Content="Export…" Click="OnExportClicked" />
+                        <Button Content="Reveal in Explorer" Click="OnRevealClicked" />
+                    </StackPanel>
+
+                    <TextBlock Text="Diagnostics"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,16,0,6" />
+                    <TextBlock x:Name="DiagnosticsText"
+                               Foreground="{StaticResource Subtext}"
+                               FontFamily="Cascadia Code, Consolas, monospace"
+                               FontSize="12"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </TabItem>
+        </TabControl>
+
+        <Border Grid.Row="2"
+                Background="{StaticResource Mantle}"
+                BorderBrush="{StaticResource Surface0}"
+                BorderThickness="0,1,0,0"
+                Padding="14,10">
+            <DockPanel LastChildFill="True">
+                <TextBlock x:Name="StatusText"
+                           Foreground="{StaticResource Subtext}"
+                           VerticalAlignment="Center"
+                           DockPanel.Dock="Left" />
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Right"
+                            DockPanel.Dock="Right">
+                    <Button x:Name="OkButton"
+                            Content="Save"
+                            Style="{StaticResource AccentButton}"
+                            Click="OnOkClicked"
+                            Padding="20,6"
+                            IsDefault="True" />
+                    <Button x:Name="CancelButton"
+                            Content="Cancel"
+                            Click="OnCancelClicked"
+                            IsCancel="True" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>

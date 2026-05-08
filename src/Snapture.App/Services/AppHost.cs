@@ -27,11 +27,7 @@ public sealed class AppHost : IDisposable
     {
         _tray = new TrayIconHost(Orchestrator);
         Hotkeys.Initialize();
-
-        TryRegister(Settings.Current.RegionHotkey,     () => Run(() => Orchestrator.CaptureRegionAsync()));
-        TryRegister(Settings.Current.WindowHotkey,     () => Run(() => Orchestrator.CaptureForegroundWindowAsync()));
-        TryRegister(Settings.Current.FullscreenHotkey, () => Run(() => Orchestrator.CaptureFullscreenAsync()));
-        TryRegister(Settings.Current.LastRegionHotkey, () => Run(() => Orchestrator.CaptureLastRegionAsync()));
+        RewireHotkeys();
 
         _tray?.ShowToast("Snapture is running",
             $"Engine: {EngineName.ToUpperInvariant()}. PrintScreen for region · Alt+PS for window · Ctrl+PS fullscreen · Shift+PS recapture last region.");
@@ -78,17 +74,22 @@ public sealed class AppHost : IDisposable
         Settings.Save();
     }
 
+    public void RewireHotkeys()
+    {
+        Hotkeys.UnregisterAll();
+        TryRegister(Settings.Current.RegionHotkey,     () => Run(() => Orchestrator.CaptureRegionAsync()));
+        TryRegister(Settings.Current.WindowHotkey,     () => Run(() => Orchestrator.CaptureForegroundWindowAsync()));
+        TryRegister(Settings.Current.FullscreenHotkey, () => Run(() => Orchestrator.CaptureFullscreenAsync()));
+        TryRegister(Settings.Current.LastRegionHotkey, () => Run(() => Orchestrator.CaptureLastRegionAsync()));
+    }
+
     private void TryRegister(HotkeyBinding b, Action handler)
     {
         try { Hotkeys.Register(b.Modifiers, KeyToVk(b.KeyName), handler); }
         catch { /* hotkey already in use; tray menu still works */ }
     }
 
-    private static uint KeyToVk(string keyName) => keyName switch
-    {
-        "PrintScreen" => Native.VK_SNAPSHOT,
-        _ => Native.VK_SNAPSHOT
-    };
+    private static uint KeyToVk(string keyName) => Native.NameToVirtualKey(keyName);
 
     private static void Run(Func<Task> action)
     {

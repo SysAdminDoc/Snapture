@@ -100,6 +100,27 @@ public sealed class TrayIconHost : IDisposable
 
         m.Items.Add(new Separator());
 
+        var settings = new MenuItem { Header = "_Settings…" };
+        settings.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var dlg = new Views.SettingsWindow(App.Host.Settings) { Owner = null };
+                if (dlg.ShowDialog() == true)
+                {
+                    // Re-register hotkeys with the new bindings
+                    App.Host.RewireHotkeys();
+                    ShowToast("Settings saved", "Snapture is using your updated configuration.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open settings:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        m.Items.Add(settings);
+
         var openFolder = new MenuItem { Header = "Open _Output Folder" };
         openFolder.Click += (_, _) =>
         {

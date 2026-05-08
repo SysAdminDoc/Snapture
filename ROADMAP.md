@@ -89,16 +89,16 @@ The release that retires GDI as primary and turns the editor from a viewer into 
 
 ### v0.2.3 — Settings dialog (replace JSON-only config)
 
-Tabs: **General · Capture · Hotkeys · Output · Editor · Frame · Advanced** [self / existing roadmap]
+Tabs: **General · Capture · Hotkeys · Output · Advanced** (Editor + Frame still in-line in the editor itself; we'll split them out once they accumulate enough toggles to deserve a tab)
 
-- [ ] CommunityToolkit.Mvvm + WPF-UI [S5 §7] for theming consistency with Catppuccin Mocha
-- [ ] **Live hotkey recorder** (click field → press combo → bound) [self]
-- [ ] **Per-action hotkey customization** beyond the three current globals
-- [ ] **NHotkey wrapper** around `RegisterHotKey` (cleaner than current direct P/Invoke) [S5 §8]
-- [ ] Output filename template **variable browser** with all Greenshot-style placeholders (`%YYYY% %MM% %WindowTitle% %ProcessName% %Counter%`) [S1]
-- [ ] **Engine selector with capability detection** (greys out WinRT on Win10 < 1809) [self]
-- [ ] **Import / export settings.json** (Greenshot pattern; useful for fleet rollout) [S1]
-- [ ] **Capture presets** — bundle `mode + post-action + save-target + filename-template + hotkey` into a named preset; ship "Bug-report", "Code-block", "Documentation", "Quick-share-LAN" defaults [S2 §1]
+- [x] CommunityToolkit.Mvvm wired in app csproj; WPF-UI deferred — Catppuccin Mocha already covers theming consistency without an extra dep [S5 §7]
+- [x] **Live hotkey recorder** (click field → press combo → bound) — `OnHotkeyPreviewKeyDown` in `SettingsWindow` [self]
+- [x] **Per-action hotkey customization** — region / window / fullscreen / last-region all editable
+- [ ] **NHotkey wrapper** around `RegisterHotKey` — direct P/Invoke is fine; revisit only if collision UX gets messy [S5 §8]
+- [x] Output filename template **variable browser** — `{yyyy-MM-dd}` / `{HH-mm-ss}` etc. shown in the Output tab; `%WindowTitle%` / `%ProcessName%` queued for v0.3 with the capture-context plumbing
+- [x] **Engine selector with capability detection** (greys out WinRT on Win10 < 1809 via `EngineCapsText`) [self]
+- [x] **Import / export settings.json** (Advanced tab) [S1]
+- [ ] **Capture presets** — "Bug-report" / "Code-block" / "Documentation" / "Quick-share-LAN" — v0.3 (needs the LAN-share endpoint from v0.4 and the per-app profile work in v0.5) [S2 §1]
 
 ### v0.2.4 — Capture polish (parity table-stakes the existing roadmap missed)
 

@@ -14,6 +14,22 @@ internal static class Native
 
     public const uint VK_SNAPSHOT = 0x2C; // PrintScreen
 
+    /// <summary>
+    /// Maps a key-name string (matching <see cref="System.Windows.Input.Key"/>'s ToString) to a Win32 VK.
+    /// Falls back to PrintScreen so a malformed setting doesn't drop the hotkey entirely.
+    /// </summary>
+    public static uint NameToVirtualKey(string keyName)
+    {
+        if (string.IsNullOrWhiteSpace(keyName)) return VK_SNAPSHOT;
+        if (keyName.Equals("PrintScreen", StringComparison.OrdinalIgnoreCase)) return VK_SNAPSHOT;
+        if (System.Enum.TryParse<System.Windows.Input.Key>(keyName, ignoreCase: true, out var key))
+        {
+            int vk = System.Windows.Input.KeyInterop.VirtualKeyFromKey(key);
+            if (vk != 0) return (uint)vk;
+        }
+        return VK_SNAPSHOT;
+    }
+
     [DllImport("user32.dll", SetLastError = true)]
     public static extern bool RegisterHotKey(nint hWnd, int id, uint fsModifiers, uint vk);
 

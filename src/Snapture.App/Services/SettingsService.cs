@@ -50,6 +50,8 @@ public sealed class SettingsService
 
     private static readonly string FilePath = Path.Combine(Dir, "settings.json");
 
+    public static string GetFilePath() => FilePath;
+
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
         WriteIndented = true,
