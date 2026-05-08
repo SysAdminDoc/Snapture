@@ -99,6 +99,18 @@ public sealed class CaptureOrchestrator
         await capture().ConfigureAwait(true);
     }
 
+    public async Task CaptureSmartElementAsync()
+    {
+        var picker = new SmartCaptureWindow();
+        picker.PickSync();
+        var bounds = picker.SelectedBounds;
+        if (bounds is null) return;
+        var result = await _engine.CaptureRegionAsync(bounds.Value).ConfigureAwait(true);
+        await DeliverCaptureAsync(new CaptureResult(
+            result.Bitmap, bounds.Value, DateTime.UtcNow,
+            $"Smart:{picker.SelectedDescription ?? "element"}")).ConfigureAwait(true);
+    }
+
     public async Task CaptureScrollingForegroundAsync()
     {
         var hwnd = Native2.GetForegroundWindow();
@@ -182,6 +194,35 @@ public sealed class CaptureOrchestrator
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
+        // Run any plugin capture-processors marked RunsByDefault. These can replace the
+        // bitmap (e.g. auto-redact / watermark / resize). Failures are non-fatal.
+        try
+        {
+            var host = App.Host;
+            if (host is not null)
+            {
+                foreach (var plugin in host.Plugins.All)
+                {
+                    foreach (var proc in plugin.CaptureProcessors)
+                    {
+                        if (!proc.RunsByDefault) continue;
+                        try
+                        {
+                            var pluginCapture = ToPluginCapture(result, savedPath);
+                            var processed = await proc.ProcessAsync(pluginCapture, host.PluginHost).ConfigureAwait(true);
+                            if (!ReferenceEquals(processed, pluginCapture))
+                                ApplyPluginCaptureBack(processed, result);
+                        }
+                        catch (Exception ex)
+                        {
+                            host.PluginHost.Log($"Processor failed ({proc.Id}): {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
         // Index in history (best-effort — never block the user)
         try
         {
@@ -232,6 +273,38 @@ public sealed class CaptureOrchestrator
             path = Path.Combine(s.OutputFolder, $"{baseName}_{n++}{ext}");
         }
         return path;
+    }
+
+    private static Snapture.Plugin.PluginCapture ToPluginCapture(CaptureResult r, string? path)
+    {
+        var bmp = r.Bitmap;
+        var rect = new Rectangle(0, 0, bmp.Width, bmp.Height);
+        var data = bmp.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            var pixels = new byte[data.Stride * bmp.Height];
+            System.Runtime.InteropServices.Marshal.Copy(data.Scan0, pixels, 0, pixels.Length);
+            return new Snapture.Plugin.PluginCapture(
+                pixels, bmp.Width, bmp.Height, data.Stride,
+                r.Source, r.CapturedAtUtc, path);
+        }
+        finally { bmp.UnlockBits(data); }
+    }
+
+    private static void ApplyPluginCaptureBack(Snapture.Plugin.PluginCapture src, CaptureResult dst)
+    {
+        // For now plugins can replace pixels but not change dimensions; if a plugin needs to
+        // resize, the v0.4.x roadmap will widen this contract. Drop the new pixels straight
+        // back into the existing managed bitmap.
+        if (src.Width != dst.Bitmap.Width || src.Height != dst.Bitmap.Height) return;
+        var rect = new Rectangle(0, 0, dst.Bitmap.Width, dst.Bitmap.Height);
+        var data = dst.Bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+        try
+        {
+            int copyLen = Math.Min(src.PixelsBgra.Length, data.Stride * dst.Bitmap.Height);
+            System.Runtime.InteropServices.Marshal.Copy(src.PixelsBgra, 0, data.Scan0, copyLen);
+        }
+        finally { dst.Bitmap.UnlockBits(data); }
     }
 
     public static BitmapSource ToBitmapSource(Bitmap bmp)

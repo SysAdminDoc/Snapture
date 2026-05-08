@@ -628,6 +628,38 @@ public partial class EditorWindow : Window
         new PinWindow(bs).Show();
     }
 
+    private void OnShareLanClicked(object sender, RoutedEventArgs e)
+    {
+        if (App.Host is null) return;
+        if (!App.Host.LanShare.IsRunning && !App.Host.TryStartLanShare())
+        {
+            StatusText.Text = "LAN share is off — open Settings → LAN share to configure it.";
+            return;
+        }
+        try
+        {
+            // Flatten current document with adjustments + frame to a temp PNG, then register.
+            using var flat = RenderForExport();
+            using var image = SkiaSharp.SKImage.FromBitmap(flat);
+            using var data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+            var dir = System.IO.Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Snapture", "share");
+            System.IO.Directory.CreateDirectory(dir);
+            var path = System.IO.Path.Combine(dir, $"share_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png");
+            using (var fs = System.IO.File.Create(path)) data.SaveTo(fs);
+
+            var ttl = TimeSpan.FromMinutes(App.Host.Settings.Current.LanShareTtlMinutes);
+            var url = App.Host.LanShare.Register(path, ttl);
+            try { Clipboard.SetText(url); } catch { }
+            StatusText.Text = $"LAN URL copied: {url} (expires in {ttl.TotalMinutes:F0}m)";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Share failed: {ex.Message}";
+        }
+    }
+
     private async void OnAutoRedactClicked(object sender, RoutedEventArgs e)
     {
         AutoRedactButton.IsEnabled = false;

@@ -64,6 +64,10 @@ public sealed class TrayIconHost : IDisposable
         pickWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureWindowPickerAsync);
         m.Items.Add(pickWin);
 
+        var smartPick = new MenuItem { Header = "Smart _Element Capture…" };
+        smartPick.Click += async (_, _) => await SafeRun(_orchestrator.CaptureSmartElementAsync);
+        m.Items.Add(smartPick);
+
         var window = new MenuItem { Header = "Capture Foreground _Window  (Alt+PrintScreen)" };
         window.Click += async (_, _) => await SafeRun(_orchestrator.CaptureForegroundWindowAsync);
         m.Items.Add(window);
@@ -135,6 +139,22 @@ public sealed class TrayIconHost : IDisposable
         var ocr = new MenuItem { Header = "OCR region…" };
         ocr.Click += async (_, _) => await SafeRun(_orchestrator.OcrRegionAsync);
         tools.Items.Add(ocr);
+        var stepCapture = new MenuItem { Header = "Step Capture…" };
+        stepCapture.Click += (_, _) =>
+        {
+            try { new Views.StepCaptureWindow().Show(); }
+            catch (Exception ex) { MessageBox.Show($"Could not open Step Capture: {ex.Message}", "Snapture"); }
+        };
+        tools.Items.Add(stepCapture);
+
+        var pluginsItem = new MenuItem { Header = "Plugins…" };
+        pluginsItem.Click += (_, _) =>
+        {
+            try { new Views.PluginsWindow().Show(); }
+            catch (Exception ex) { MessageBox.Show($"Plugins window failed: {ex.Message}", "Snapture"); }
+        };
+        tools.Items.Add(pluginsItem);
+
         var history = new MenuItem { Header = "Capture history…" };
         history.Click += (_, _) =>
         {

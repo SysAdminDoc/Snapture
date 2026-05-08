@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snapture.App", "src\Snaptur
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snapture.Capture", "src\Snapture.Capture\Snapture.Capture.csproj", "{A1A1A1A1-0002-0002-0002-000000000002}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Snapture.Plugin.Abstractions", "src\Snapture.Plugin.Abstractions\Snapture.Plugin.Abstractions.csproj", "{A1A1A1A1-0003-0003-0003-000000000003}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{A1A1A1A1-0002-0002-0002-000000000002}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1A1A1A1-0002-0002-0002-000000000002}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A1A1A1A1-0002-0002-0002-000000000002}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1A1A1A1-0003-0003-0003-000000000003}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1A1A1A1-0003-0003-0003-000000000003}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1A1A1A1-0003-0003-0003-000000000003}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1A1A1A1-0003-0003-0003-000000000003}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

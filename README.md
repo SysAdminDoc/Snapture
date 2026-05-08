@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version"  src="https://img.shields.io/badge/version-0.3.0-CBA6F7?style=for-the-badge">
+  <img alt="Version"  src="https://img.shields.io/badge/version-0.4.0-CBA6F7?style=for-the-badge">
   <img alt="License"  src="https://img.shields.io/badge/license-MIT-A6E3A1?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-89B4FA?style=for-the-badge&logo=windows&logoColor=white">
   <img alt=".NET 10"  src="https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">
@@ -33,6 +33,16 @@ The existing landscape on Windows in 2026:
 | **CleanShot X** | Pinned overlay UX (paid) | Cloud-first, $29/yr |
 
 **Snapture's pitch:** the polish of Snagit, the no-cloud philosophy of Greenshot, modern WinRT-class capture, and a Catppuccin Mocha editor that doesn't look like it was designed in 2008.
+
+## What ships in v0.4.0
+
+**The differentiator wave**
+
+- **Auto-redact secrets** — Editor button runs OCR + a Gitleaks-derived rule pack (AWS, GCP, GitHub, Stripe, Slack, JWT, npm) plus PII (Luhn-validated cards, SSN, IBAN, IPs, MACs, emails) and drops solid-fill redactions on every match. Each redaction is its own undo-stack entry so false positives are easy to back out.
+- **LAN-only share server** — Local Kestrel server, binds to a single user-chosen adapter (never `0.0.0.0`), serves single-fetch token URLs that expire after the TTL. Settings tab to toggle / configure / inspect; editor button to share the current document.
+- **Smart Element Capture** — Non-activating overlay highlights individual UIA controls in real time. PgUp climbs the parent chain, click captures the exact element rectangle. The capability no consumer screenshot tool currently ships during capture.
+- **Plugin SDK** — `Snapture.Plugin.Abstractions` ships as a separate multi-target library. Plugins drop into `%APPDATA%\Snapture\Plugins\`, load in collectible `AssemblyLoadContext`s, declare capabilities via `[SnapturePlugin]`. Plugins window in the tray lists what's installed and reloads on demand.
+- **Step Capture mode** — Records every click, snapshots the foreground window, presents a review window with per-step caption fields, exports a `steps.md` + `images/` Markdown bundle. The Snagit single-vendor feature with no OSS equivalent.
 
 ## What ships in v0.3.0
 
@@ -86,8 +96,8 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.4** — Image-stitch fallback (browsers, parallax pages), GIF / MP4 record, HDR tonemap (ACES) + AVIF / JPEG XR, UIA Smart Capture, auto-redact-secrets pass, LAN-only share server, plugin SDK
-- **v0.5** — MSIX + winget + Chocolatey + portable ZIP, code-signing via SignPath OSS, auto-update via Velopack
+- **v0.5** — Image-stitch fallback (browsers, parallax pages), GIF / MP4 record (Media Foundation SinkWriter), HDR tonemap (ACES) + AVIF / JPEG XR, RapidOCR bundle, DOCX / PPTX from Step Capture
+- **v0.6** — MSIX + winget + Chocolatey + portable ZIP, code-signing via SignPath OSS, auto-update via Velopack, code-aware Carbon-style beautify mode
 
 ## Install
 
@@ -154,6 +164,9 @@ Snapture.sln
 │  │  ├─ D3D11Interop                  ← D3D11 + IDirect3DDevice bridge (3 P/Invokes)
 │  │  ├─ MonitorEnumerator             ← Per-monitor DPI awareness
 │  │  └─ WindowEnumerator              ← Top-level window listing + hit-test
+│  ├─ Snapture.Plugin.Abstractions/    ← Public plugin surface (multi-target)
+│  │  ├─ PluginAttribute               ← [SnapturePlugin] + capability flags
+│  │  └─ Contracts                     ← IDestination / ICaptureProcessor / IEditorEffect / IPluginHost
 │  └─ Snapture.App/                    ← WPF shell
 │     ├─ App.xaml(.cs)                 ← Entry, AUMID, crash logging
 │     ├─ Services/
@@ -165,7 +178,14 @@ Snapture.sln
 │     │  ├─ TrayIconHost               ← NotifyIcon + context menu
 │     │  ├─ AppIdentity                ← Sets AUMID for borderless-consent persistence
 │     │  ├─ BorderlessConsent          ← Win11 22H2+ first-run prompt
-│     │  └─ PrintScreenHijackDetector  ← 24H2 registry probe + reclaim
+│     │  ├─ PrintScreenHijackDetector  ← 24H2 registry probe + reclaim
+│     │  ├─ OcrService                 ← Windows.Media.Ocr wrapper
+│     │  ├─ CaptureHistoryService      ← SQLite + FTS5 history index
+│     │  ├─ ScrollingCaptureService    ← UIA IScrollProvider driver (alpha)
+│     │  ├─ LanShareServer             ← Kestrel + token registry
+│     │  ├─ PluginLoader               ← AssemblyLoadContext-based plugin host
+│     │  ├─ PluginHostBridge           ← IPluginHost implementation
+│     │  └─ StepCaptureSession         ← Click-recorder + Markdown exporter
 │     ├─ Editor/
 │     │  ├─ AnnotationDocument         ← Background bitmap + ordered shape list
 │     │  ├─ Shapes                     ← Rect / Ellipse / Line / Arrow / Pen / Text / Highlight / Blur / Redact / Step (polymorphic JSON)
@@ -178,7 +198,12 @@ Snapture.sln
 │        ├─ PinWindow                  ← Always-on-top + opacity / shadow / click-through / solo / hide-all
 │        ├─ SettingsWindow             ← Tabbed dialog (General/Capture/Hotkeys/Output/Advanced)
 │        ├─ ColorPickerWindow          ← HEX / RGB / HSL / APCA-Lc + global click capture
-│        └─ PixelRulerWindow           ← Δx / Δy / length / angle across the virtual screen
+│        ├─ PixelRulerWindow           ← Δx / Δy / length / angle across the virtual screen
+│        ├─ SmartCaptureWindow         ← UIA element-level live highlight + click capture
+│        ├─ HistoryWindow              ← Thumbnail wall + FTS5 search
+│        ├─ OcrResultWindow            ← Recognised-text reviewer
+│        ├─ PluginsWindow              ← Plugin inventory + reload
+│        └─ StepCaptureWindow          ← Step Capture review + Markdown export
 └─ Resources/Themes/CatppuccinMocha.xaml
 ```
 

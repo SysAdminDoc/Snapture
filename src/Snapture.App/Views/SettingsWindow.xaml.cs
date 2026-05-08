@@ -60,6 +60,32 @@ public partial class SettingsWindow : Window
             $"Monitors:  {MonitorEnumerator.Enumerate().Count}\n" +
             $"AUMID:     {AppIdentity.AppUserModelId}";
 
+        // LAN share tab bindings
+        LanEnableCheck.IsChecked = _draft.LanShareEnabled;
+        LanPortBox.Text = _draft.LanSharePort.ToString();
+        LanTtlBox.Text = _draft.LanShareTtlMinutes.ToString();
+        LanAdapterCombo.Items.Clear();
+        var adapters = LanShareServer.EnumerateAdapters();
+        foreach (var (adapter, ip) in adapters)
+        {
+            LanAdapterCombo.Items.Add(new ComboBoxItem { Content = $"{adapter} — {ip}", Tag = ip });
+        }
+        // Pre-select the saved binding, else the first non-loopback IPv4.
+        var savedIp = _draft.LanShareBindIp;
+        bool selected = false;
+        foreach (ComboBoxItem item in LanAdapterCombo.Items.OfType<ComboBoxItem>())
+        {
+            if (string.Equals((string?)item.Tag, savedIp, StringComparison.OrdinalIgnoreCase))
+            {
+                LanAdapterCombo.SelectedItem = item;
+                selected = true;
+                break;
+            }
+        }
+        if (!selected && LanAdapterCombo.Items.Count > 0)
+            LanAdapterCombo.SelectedIndex = 0;
+        UpdateLanStatus();
+
         bool hijacked = PrintScreenHijackDetector.IsHijacked();
         PrintScreenStatus.Text = hijacked
             ? "Windows is currently sending PrintScreen to the Snipping Tool. Click Reclaim to send it back to apps."
@@ -163,6 +189,55 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OnLanStartClicked(object sender, RoutedEventArgs e)
+    {
+        SaveLanFieldsToDraft();
+        if (App.Host is null) return;
+        try
+        {
+            App.Host.Settings.Current.LanShareBindIp = _draft.LanShareBindIp;
+            App.Host.Settings.Current.LanSharePort = _draft.LanSharePort;
+            App.Host.LanShare.Stop();
+            App.Host.LanShare.Start(_draft.LanShareBindIp, _draft.LanSharePort);
+            UpdateLanStatus();
+        }
+        catch (Exception ex)
+        {
+            LanStatusText.Text = $"Failed to start: {ex.Message}";
+        }
+    }
+
+    private void OnLanStopClicked(object sender, RoutedEventArgs e)
+    {
+        App.Host?.LanShare.Stop();
+        UpdateLanStatus();
+    }
+
+    private void SaveLanFieldsToDraft()
+    {
+        _draft.LanShareEnabled = LanEnableCheck.IsChecked == true;
+        if (LanAdapterCombo.SelectedItem is ComboBoxItem item)
+            _draft.LanShareBindIp = (string)(item.Tag ?? "");
+        if (int.TryParse(LanPortBox.Text, out var port) && port > 0 && port < 65536)
+            _draft.LanSharePort = port;
+        if (int.TryParse(LanTtlBox.Text, out var ttl) && ttl > 0)
+            _draft.LanShareTtlMinutes = ttl;
+    }
+
+    private void UpdateLanStatus()
+    {
+        var lan = App.Host?.LanShare;
+        if (lan is null || !lan.IsRunning)
+        {
+            LanStatusText.Text = "Server is stopped.";
+            return;
+        }
+        LanStatusText.Text =
+            $"Running on {lan.BaseUrl}\n" +
+            $"Active tokens: {lan.ActiveEntries().Count} (single-fetch, expire after TTL)\n" +
+            $"Test: open {lan.BaseUrl}/ in any LAN browser";
+    }
+
     private void OnImportClicked(object sender, RoutedEventArgs e)
     {
         var dlg = new OpenFileDialog { Filter = "Snapture settings (*.json)|*.json|All files|*.*" };
@@ -226,11 +301,34 @@ public partial class SettingsWindow : Window
 
         bool engineChanged = !string.Equals(newEngine, _settings.Current.CaptureEngine, StringComparison.OrdinalIgnoreCase);
 
+        SaveLanFieldsToDraft();
+        bool lanWasEnabled = _settings.Current.LanShareEnabled;
+
         CopyInto(_draft, _settings.Current);
         _settings.Current.CaptureEngine = newEngine;
         _settings.Save();
 
         if (engineChanged) App.Host?.SwitchEngine(newEngine);
+
+        // LAN share lifecycle reacts to the toggle.
+        if (App.Host is not null)
+        {
+            if (_settings.Current.LanShareEnabled && !App.Host.LanShare.IsRunning)
+                App.Host.TryStartLanShare();
+            else if (!_settings.Current.LanShareEnabled && App.Host.LanShare.IsRunning)
+                App.Host.LanShare.Stop();
+            else if (lanWasEnabled && App.Host.LanShare.IsRunning)
+            {
+                // Adapter or port changed — restart.
+                if (App.Host.LanShare.BindAddress != _settings.Current.LanShareBindIp ||
+                    App.Host.LanShare.Port != _settings.Current.LanSharePort)
+                {
+                    App.Host.LanShare.Stop();
+                    App.Host.TryStartLanShare();
+                }
+            }
+        }
+
         DialogResult = true;
         Close();
     }
@@ -254,6 +352,10 @@ public partial class SettingsWindow : Window
         dst.BorderlessConsentGiven = src.BorderlessConsentGiven;
         dst.PrintScreenHijackToastShown = src.PrintScreenHijackToastShown;
         dst.LastRegion = src.LastRegion;
+        dst.LanShareEnabled = src.LanShareEnabled;
+        dst.LanShareBindIp = src.LanShareBindIp;
+        dst.LanSharePort = src.LanSharePort;
+        dst.LanShareTtlMinutes = src.LanShareTtlMinutes;
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;
         dst.FullscreenHotkey = src.FullscreenHotkey;

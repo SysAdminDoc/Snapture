@@ -11,6 +11,9 @@ public sealed class AppHost : IDisposable
     public CaptureOrchestrator Orchestrator { get; }
     public HotkeyService Hotkeys { get; } = new();
     public CaptureHistoryService History { get; }
+    public LanShareServer LanShare { get; } = new();
+    public PluginLoader Plugins { get; }
+    public PluginHostBridge PluginHost { get; }
     private TrayIconHost? _tray;
 
     public AppHost()
@@ -22,6 +25,13 @@ public sealed class AppHost : IDisposable
         Engine = engine;
         EngineName = name;
         History = new CaptureHistoryService();
+        var scratch = System.IO.Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Snapture", "plugin-scratch");
+        PluginHost = new PluginHostBridge(scratch,
+            toast: (t, m) => _tray?.ShowToast(t, m),
+            log: msg => System.Diagnostics.Debug.WriteLine($"[plugin] {msg}"));
+        Plugins = new PluginLoader(PluginHost);
         Orchestrator = new CaptureOrchestrator(Settings, Engine, History);
     }
 
@@ -39,6 +49,13 @@ public sealed class AppHost : IDisposable
         {
             TryRequestBorderlessConsent();
         }
+
+        // LAN share auto-start if user previously enabled it.
+        if (Settings.Current.LanShareEnabled)
+            TryStartLanShare();
+
+        // Discover and load plugins. Each lives in its own collectible context.
+        try { Plugins.LoadAll(); } catch { /* loader failures are user-facing logs only */ }
 
         // PrintScreen hijack detection — quietly check, toast once.
         if (!Settings.Current.PrintScreenHijackToastShown && PrintScreenHijackDetector.IsHijacked())
@@ -63,6 +80,30 @@ public sealed class AppHost : IDisposable
         Settings.Current.BorderlessConsentGiven = ok;
         Settings.Save();
     }
+
+    public bool TryStartLanShare()
+    {
+        try
+        {
+            string ip = Settings.Current.LanShareBindIp;
+            if (string.IsNullOrWhiteSpace(ip))
+            {
+                var first = LanShareServer.EnumerateAdapters().FirstOrDefault();
+                if (first.Ip is null) return false;
+                ip = first.Ip;
+                Settings.Current.LanShareBindIp = ip;
+                Settings.Save();
+            }
+            LanShare.Start(ip, Settings.Current.LanSharePort);
+            return LanShare.IsRunning;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public void StopLanShare() => LanShare.Stop();
 
     public void SwitchEngine(string name)
     {
@@ -114,6 +155,8 @@ public sealed class AppHost : IDisposable
     {
         Hotkeys.Dispose();
         History.Dispose();
+        LanShare.Dispose();
+        Plugins.Dispose();
         if (Engine is IDisposable d) d.Dispose();
         _tray?.Dispose();
     }

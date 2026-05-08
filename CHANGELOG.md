@@ -2,6 +2,70 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [v0.4.0] — 2026-05-08
+
+The differentiator wave: LAN-only share server, UIA Smart Capture, Plugin SDK, Step Capture mode, plus the auto-redact secrets pass that was committed-but-untagged after v0.3. Image-stitch fallback / GIF-MP4 / HDR explicitly deferred to v0.5.
+
+### Added — Auto-redact secrets (v0.4.1)
+
+- `Editor/SecretDetector` ports a Gitleaks-derived rule pack as compiled regex: AWS access + secret keys, Google API keys, GitHub PATs / app / oauth / refresh tokens, Stripe live + publishable, Slack tokens + webhooks, Twilio SIDs, JWTs, npm tokens, generic 40+ hex strings, plus PII (Luhn-validated credit cards, US SSN, IBAN, IPv4, MAC, email).
+- `Editor/AutoRedactor` re-runs `Windows.Media.Ocr` over the rendered document, walks every word, scans with the rule pack, and emits a `RedactShape` (solid-fill, blur is reversible) on each matched word-box.
+- Editor toolbar gains an "Auto-redact secrets" button. Each detected secret is pushed onto the command stack as a separate `AddShapeCommand` so the user can undo individually; the status bar surfaces the rule IDs that fired so false positives are visible.
+
+### Added — LAN-only share server (v0.4.2)
+
+- `LanShareServer` — Kestrel minimal API, binds to a single user-chosen adapter (never `0.0.0.0` by default). 24-byte URL-safe-base64 tokens, single-fetch by default, TTL-bounded.
+- New Settings tab "LAN share": toggle the server, pick the adapter from a list of live IPv4 interfaces, set port + TTL. Start / Stop buttons run the server out-of-band so the user can verify the URL before opting into auto-start.
+- Editor "Share to LAN" button — flattens the document with adjustments + frame, registers the file with the server, copies the single-fetch URL to the clipboard.
+- Server is opt-in only; off by default. No mDNS, no firewall mods (Windows Firewall may prompt on first run).
+
+### Added — UIA Smart Capture (v0.4.3)
+
+- `SmartCaptureWindow` — non-activating overlay that uses `AutomationElement.FromPoint` to pick the leaf UIA element under the cursor in real time. Highlights the element's bounding rectangle, shows control type / name / dimensions in a description badge.
+- `PgUp` walks the parent in `TreeWalker.RawViewWalker` (locks manual mode), `PgDn` releases back to live cursor tracking, click captures.
+- Captures the exact element pixel-rect via the active capture engine and routes through the standard editor-open flow.
+- Tray menu: "Smart Element Capture…".
+
+### Added — Plugin SDK (v0.4.4)
+
+- New project `Snapture.Plugin.Abstractions` (multi-target `netstandard2.0` + `net10.0`) — public surface for third-party authors. Contracts: `IDestination`, `ICaptureProcessor`, `IEditorEffect`, `IPluginHost`. Capability flags (`Network`, `FilesystemWrite`, `Clipboard`, `LaunchProcess`, `InteractWithApp`).
+- `[SnapturePlugin]` attribute carries name / author / version / description / capabilities.
+- `Services/PluginLoader` discovers `*.dll` under `%APPDATA%\Snapture\Plugins\`, loads each in its own collectible `AssemblyLoadContext`, registers `Resolving` so the host's `Snapture.Plugin.Abstractions` is the canonical reference (type-equal across plugins).
+- `Services/PluginHostBridge` exposes `IPluginHost` to plugins (scratch dir, toast, log).
+- `Views/PluginsWindow` lists installed plugins with capabilities + reload + open-folder.
+- Capture-processors marked `RunsByDefault=true` run after every capture in `CaptureOrchestrator.DeliverCaptureAsync` — failures are logged but never block delivery.
+
+### Added — Step Capture mode (v0.4.5)
+
+- `StepCaptureSession` — installs a low-level mouse hook (`WH_MOUSE_LL`); on every left-button click anywhere on screen, captures the foreground window after a 120ms settle delay, writes `step_NNN.png` into a session folder under `%LOCALAPPDATA%\Snapture\step-sessions\<timestamp>\`. 250ms debounce prevents duplicate frames on double-click.
+- `StepCaptureWindow` — review UI: Start / Stop, live thumbnail of every captured step, per-step caption text box (multi-line), document-title input.
+- `StepCaptureExporter` — emits a Markdown bundle: `steps.md` with a heading per step + caption + image reference, plus an `images/` subdirectory with renamed copies. DOCX / PPTX export ships in v0.5.
+- Tray menu: "Step Capture…".
+
+### Changed
+
+- `AppHost` gained four new owned services: `LanShareServer`, `PluginLoader`, `PluginHostBridge`, plus the existing `History` continues. Lifecycle: services start in the constructor, plugins load after settings, LAN share auto-starts only if the user previously opted in.
+- `CaptureOrchestrator` now runs plugin `ICaptureProcessor` instances post-capture and pre-history-index. Pixels can be replaced in-place but not resized in this version (resize ships in v0.5 with a wider plugin contract).
+- Tray Tools submenu now: Color picker · Pixel ruler · OCR region · Step Capture · Plugins · Capture history.
+- Solution gained a third project (`Snapture.Plugin.Abstractions`).
+
+### Architecture notes
+
+- LAN share tokens use 24 random bytes (192 bits) base64-URL-encoded. The server enforces single-fetch by removing the entry on first GET regardless of TTL.
+- Plugin loader registers `AssemblyLoadContext.Resolving` so plugins reference the host's `Snapture.Plugin.Abstractions` rather than loading their own copy — type identity matters because the host casts plugin instances through `IDestination` etc.
+- Step Capture's mouse hook is installed only while the session is running. Closing the review window stops it. The hook reads but never swallows clicks (the `CallNextHookEx` invocation is unconditional).
+- Smart Capture toggles `WS_EX_TRANSPARENT` on its overlay window for the duration of the `AutomationElement.FromPoint` call so the overlay itself doesn't intercept the hit-test.
+
+### Deferred to v0.5
+
+- Image-stitch fallback for scrolling capture (browsers, parallax, lazy-load)
+- GIF / MP4 recording (Media Foundation `SinkWriter`)
+- HDR tonemap (ACES via Win2D) + AVIF / JPEG XR export
+- RapidOCR ONNX bundle (model download flow)
+- DOCX / PPTX export from Step Capture
+- Plugin resize contract widening
+- Per-rule on/off settings for the auto-redact pack
+
 ## [v0.3.0] — 2026-05-08
 
 The capture-parity pass: built-in OCR, full-text searchable capture history, and a first-pass scrolling capture path. Three of the five v0.3.x sub-tracks shipped (OCR, history, scrolling). Image-stitching, GIF/MP4 recording and HDR tonemap explicitly deferred to v0.4.

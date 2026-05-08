@@ -53,6 +53,10 @@
                             Content="Auto-redact secrets"
                             Click="OnAutoRedactClicked"
                             ToolTip="Run OCR + Gitleaks rule pack and add solid-fill redactions to detected API keys, JWTs, AWS keys, JWTs, IPs, etc." />
+                    <Button x:Name="ShareLanButton"
+                            Content="Share to LAN"
+                            Click="OnShareLanClicked"
+                            ToolTip="Save the current document and copy a single-fetch LAN URL to the clipboard." />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"

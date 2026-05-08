@@ -33,6 +33,14 @@ public sealed class SnaptureSettings
     /// <summary>Stores the last region capture for Shift+PrintScreen recapture.</summary>
     public CaptureRect? LastRegion { get; set; }
 
+    /// <summary>LAN share server: opt-in only. Off by default.</summary>
+    public bool LanShareEnabled { get; set; } = false;
+    /// <summary>Adapter IP to bind. Empty = pick the first non-loopback IPv4.</summary>
+    public string LanShareBindIp { get; set; } = "";
+    public int LanSharePort { get; set; } = 9087;
+    /// <summary>Default TTL for shared files in minutes.</summary>
+    public int LanShareTtlMinutes { get; set; } = 15;
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");

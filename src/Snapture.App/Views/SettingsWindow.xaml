@@ -214,6 +214,53 @@
                 </StackPanel>
             </TabItem>
 
+            <TabItem Header="LAN share">
+                <StackPanel Margin="20">
+                    <TextBlock Foreground="{StaticResource Subtext}"
+                               TextWrapping="Wrap"
+                               Margin="0,0,0,8">
+                        Local-network only. Snapture binds Kestrel to the adapter you choose
+                        (never <Run Foreground="{StaticResource Mauve}" Text="0.0.0.0" />), serves
+                        single-fetch token URLs that expire after the TTL, and never phones home.
+                        Windows Firewall may prompt to allow the port on first run.
+                    </TextBlock>
+                    <CheckBox x:Name="LanEnableCheck"
+                              Content="Enable LAN share server (auto-start on app launch)"
+                              Margin="0,8,0,12" />
+                    <TextBlock Text="Bind adapter"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold" />
+                    <ComboBox x:Name="LanAdapterCombo"
+                              Width="360"
+                              HorizontalAlignment="Left"
+                              Margin="0,4,0,0" />
+                    <TextBlock Text="Port"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,12,0,4" />
+                    <TextBox x:Name="LanPortBox" Width="120" HorizontalAlignment="Left" />
+                    <TextBlock Text="Token TTL (minutes)"
+                               Foreground="{StaticResource Mauve}"
+                               FontWeight="SemiBold"
+                               Margin="0,12,0,4" />
+                    <TextBox x:Name="LanTtlBox" Width="120" HorizontalAlignment="Left" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button x:Name="LanStartButton"
+                                Content="Start now"
+                                Click="OnLanStartClicked" />
+                        <Button x:Name="LanStopButton"
+                                Content="Stop"
+                                Click="OnLanStopClicked" />
+                    </StackPanel>
+                    <TextBlock x:Name="LanStatusText"
+                               Foreground="{StaticResource Subtext}"
+                               TextWrapping="Wrap"
+                               FontFamily="Cascadia Code, Consolas, monospace"
+                               FontSize="12"
+                               Margin="0,12,0,0" />
+                </StackPanel>
+            </TabItem>
+
             <TabItem Header="Advanced">
                 <StackPanel Margin="20">
                     <TextBlock Text="Settings file"

@@ -9,9 +9,9 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>false</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>0.3.0</Version>
-    <AssemblyVersion>0.3.0.0</AssemblyVersion>
-    <FileVersion>0.3.0.0</FileVersion>
+    <Version>0.4.0</Version>
+    <AssemblyVersion>0.4.0.0</AssemblyVersion>
+    <FileVersion>0.4.0.0</FileVersion>
     <RootNamespace>Snapture.App</RootNamespace>
     <Product>Snapture</Product>
     <Company>SysAdminDoc</Company>
@@ -28,6 +28,10 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.10" />
   </ItemGroup>
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Snapture.Capture\Snapture.Capture.csproj" />
+    <ProjectReference Include="..\Snapture.Plugin.Abstractions\Snapture.Plugin.Abstractions.csproj" />
   </ItemGroup>
 </Project>

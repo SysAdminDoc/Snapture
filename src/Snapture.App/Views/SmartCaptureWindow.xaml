@@ -1,0 +1,66 @@
+<Window x:Class="Snapture.App.Views.SmartCaptureWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snapture Smart Capture"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Transparent"
+        Cursor="Cross"
+        WindowStartupLocation="Manual"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        FontFamily="{StaticResource UiFont}">
+    <Grid x:Name="RootGrid">
+        <Canvas x:Name="OverlayCanvas">
+            <Rectangle x:Name="DimRect" Fill="{StaticResource DimBackdrop}" />
+            <Rectangle x:Name="HighlightRect"
+                       Stroke="{StaticResource Accent}"
+                       StrokeThickness="3"
+                       Fill="{StaticResource SelectionFill}"
+                       Visibility="Collapsed" />
+            <Border x:Name="DescBadge"
+                    Background="{StaticResource Mantle}"
+                    BorderBrush="{StaticResource Accent}"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="8,4"
+                    MaxWidth="520"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock x:Name="ElementType"
+                               Foreground="{StaticResource Mauve}"
+                               FontSize="11"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="ElementName"
+                               Foreground="{StaticResource Text}"
+                               FontSize="13"
+                               TextTrimming="CharacterEllipsis" />
+                    <TextBlock x:Name="ElementDims"
+                               Foreground="{StaticResource Subtext}"
+                               FontFamily="Cascadia Code, Consolas, monospace"
+                               FontSize="11" />
+                </StackPanel>
+            </Border>
+            <Border x:Name="HintBadge"
+                    Background="{StaticResource Mantle}"
+                    BorderBrush="{StaticResource Surface1}"
+                    BorderThickness="1"
+                    CornerRadius="6"
+                    Padding="14,8">
+                <TextBlock Foreground="{StaticResource Subtext}" FontSize="13">
+                    <Run Foreground="{StaticResource Mauve}" Text="Hover" />
+                    <Run Text=" any control to highlight it · " />
+                    <Run Foreground="{StaticResource Mauve}" Text="click" />
+                    <Run Text=" to capture · " />
+                    <Run Foreground="{StaticResource Mauve}" Text="PgUp/PgDn" />
+                    <Run Text=" walks parent/child · " />
+                    <Run Foreground="{StaticResource Mauve}" Text="Esc" />
+                    <Run Text=" cancels" />
+                </TextBlock>
+            </Border>
+        </Canvas>
+    </Grid>
+</Window>

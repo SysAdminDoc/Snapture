@@ -1,0 +1,150 @@
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
+using Snapture.Capture;
+
+namespace Snapture.App.Services;
+
+public sealed record StepCaptureFrame(int Number, string FilePath, DateTime CapturedAtUtc, string? WindowTitle, string? ProcessName);
+
+/// <summary>
+/// Records every left-click anywhere on screen and snapshots the foreground window. Frames
+/// are written to a session folder so memory stays bounded; the review window reads them
+/// back lazily.
+/// </summary>
+public sealed class StepCaptureSession : IDisposable
+{
+    public string SessionFolder { get; }
+    public IReadOnlyList<StepCaptureFrame> Frames => _frames;
+    public bool IsRunning { get; private set; }
+    public event Action<StepCaptureFrame>? FrameAdded;
+
+    private readonly ICaptureEngine _engine;
+    private readonly List<StepCaptureFrame> _frames = new();
+    private nint _hookHandle;
+    private LowLevelMouseProc? _proc;
+    private DateTime _lastClick = DateTime.MinValue;
+    private bool _capturing;
+
+    public StepCaptureSession(ICaptureEngine engine)
+    {
+        _engine = engine;
+        var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        SessionFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Snapture", "step-sessions", stamp);
+        Directory.CreateDirectory(SessionFolder);
+    }
+
+    public void Start()
+    {
+        if (IsRunning) return;
+        _proc = HookCallback;
+        _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(null), 0);
+        IsRunning = _hookHandle != 0;
+    }
+
+    public void Stop()
+    {
+        if (_hookHandle != 0) UnhookWindowsHookEx(_hookHandle);
+        _hookHandle = 0;
+        IsRunning = false;
+    }
+
+    private nint HookCallback(int nCode, nint wParam, nint lParam)
+    {
+        if (nCode >= 0 && wParam.ToInt32() == WM_LBUTTONDOWN)
+        {
+            // Debounce: ignore clicks within 250ms (rapid double-click would otherwise add two
+            // identical frames).
+            var now = DateTime.UtcNow;
+            if ((now - _lastClick).TotalMilliseconds > 250)
+            {
+                _lastClick = now;
+                _ = CaptureFrameAsync();
+            }
+        }
+        return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+    }
+
+    private async Task CaptureFrameAsync()
+    {
+        if (_capturing) return;
+        _capturing = true;
+        try
+        {
+            var hwnd = GetForegroundWindow();
+            if (hwnd == 0) return;
+
+            // Resolve title + process for caption defaults
+            var (proc, title) = CaptureHistoryService.DescribeForeground(hwnd);
+
+            // Small delay so the click-action UI updates settle before we capture.
+            await Task.Delay(120).ConfigureAwait(false);
+            var result = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(false);
+            try
+            {
+                int next = _frames.Count + 1;
+                var path = Path.Combine(SessionFolder, $"step_{next:D3}.png");
+                result.Bitmap.Save(path, ImageFormat.Png);
+                var frame = new StepCaptureFrame(next, path, DateTime.UtcNow, title, proc);
+                _frames.Add(frame);
+                FrameAdded?.Invoke(frame);
+            }
+            finally { result.Bitmap.Dispose(); }
+        }
+        catch { /* swallow — step-capture must never crash the app */ }
+        finally { _capturing = false; }
+    }
+
+    public void Dispose() => Stop();
+
+    private const int WH_MOUSE_LL = 14;
+    private const int WM_LBUTTONDOWN = 0x0201;
+    private delegate nint LowLevelMouseProc(int nCode, nint wParam, nint lParam);
+
+    [DllImport("user32.dll", SetLastError = true)] private static extern nint SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, nint hMod, uint dwThreadId);
+    [DllImport("user32.dll", SetLastError = true)] private static extern bool UnhookWindowsHookEx(nint hhk);
+    [DllImport("user32.dll")] private static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern nint GetModuleHandle(string? lpModuleName);
+    [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
+}
+
+/// <summary>Markdown / HTML exporter for a finished session.</summary>
+public static class StepCaptureExporter
+{
+    public sealed record StepEntry(int Number, string FilePath, string Caption);
+
+    public static string ExportMarkdown(string outDir, string title, IEnumerable<StepEntry> entries)
+    {
+        Directory.CreateDirectory(outDir);
+        var imgsDir = Path.Combine(outDir, "images");
+        Directory.CreateDirectory(imgsDir);
+        var sw = new System.Text.StringBuilder();
+        sw.AppendLine($"# {title}");
+        sw.AppendLine();
+        sw.AppendLine($"_Generated by Snapture · {DateTime.Now:yyyy-MM-dd HH:mm}_");
+        sw.AppendLine();
+        int idx = 0;
+        foreach (var e in entries)
+        {
+            idx++;
+            string imgName = $"step_{idx:D3}{Path.GetExtension(e.FilePath)}";
+            string copied = Path.Combine(imgsDir, imgName);
+            try { File.Copy(e.FilePath, copied, overwrite: true); } catch { }
+            sw.AppendLine($"## Step {idx}");
+            sw.AppendLine();
+            if (!string.IsNullOrWhiteSpace(e.Caption))
+            {
+                sw.AppendLine(e.Caption.Trim());
+                sw.AppendLine();
+            }
+            sw.AppendLine($"![Step {idx}](images/{imgName})");
+            sw.AppendLine();
+        }
+        var mdPath = Path.Combine(outDir, "steps.md");
+        File.WriteAllText(mdPath, sw.ToString());
+        return mdPath;
+    }
+}
