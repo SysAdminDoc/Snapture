@@ -41,6 +41,13 @@ public sealed class SnaptureSettings
     /// <summary>Default TTL for shared files in minutes.</summary>
     public int LanShareTtlMinutes { get; set; } = 15;
 
+    /// <summary>
+    /// Auto-redact: rule IDs that are disabled. Empty list = all rules enabled (the default).
+    /// We persist disabled rather than enabled so a future rule pack expansion ships enabled
+    /// for existing users without forcing a settings migration.
+    /// </summary>
+    public List<string> DisabledRedactRules { get; set; } = new();
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");

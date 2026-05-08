@@ -177,6 +177,35 @@ public sealed class CaptureOrchestrator
 
     private async Task DeliverCaptureAsync(CaptureResult result)
     {
+        // Run plugin capture-processors first so any resize/redact lands in the saved file
+        // and the history index. Failures are non-fatal.
+        try
+        {
+            var host = App.Host;
+            if (host is not null)
+            {
+                foreach (var plugin in host.Plugins.All)
+                {
+                    foreach (var proc in plugin.CaptureProcessors)
+                    {
+                        if (!proc.RunsByDefault) continue;
+                        try
+                        {
+                            var pluginCapture = ToPluginCapture(result, path: null);
+                            var processed = await proc.ProcessAsync(pluginCapture, host.PluginHost).ConfigureAwait(true);
+                            if (!ReferenceEquals(processed, pluginCapture))
+                                result = ApplyPluginCaptureBack(processed, result);
+                        }
+                        catch (Exception ex)
+                        {
+                            host.PluginHost.Log($"Processor failed ({proc.Id}): {ex.Message}");
+                        }
+                    }
+                }
+            }
+        }
+        catch { }
+
         // Save to disk
         string? savedPath = null;
         try
@@ -193,35 +222,6 @@ public sealed class CaptureOrchestrator
             MessageBox.Show($"Could not save capture:\n{ex.Message}", "Snapture",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
-
-        // Run any plugin capture-processors marked RunsByDefault. These can replace the
-        // bitmap (e.g. auto-redact / watermark / resize). Failures are non-fatal.
-        try
-        {
-            var host = App.Host;
-            if (host is not null)
-            {
-                foreach (var plugin in host.Plugins.All)
-                {
-                    foreach (var proc in plugin.CaptureProcessors)
-                    {
-                        if (!proc.RunsByDefault) continue;
-                        try
-                        {
-                            var pluginCapture = ToPluginCapture(result, savedPath);
-                            var processed = await proc.ProcessAsync(pluginCapture, host.PluginHost).ConfigureAwait(true);
-                            if (!ReferenceEquals(processed, pluginCapture))
-                                ApplyPluginCaptureBack(processed, result);
-                        }
-                        catch (Exception ex)
-                        {
-                            host.PluginHost.Log($"Processor failed ({proc.Id}): {ex.Message}");
-                        }
-                    }
-                }
-            }
-        }
-        catch { }
 
         // Index in history (best-effort — never block the user)
         try
@@ -291,20 +291,46 @@ public sealed class CaptureOrchestrator
         finally { bmp.UnlockBits(data); }
     }
 
-    private static void ApplyPluginCaptureBack(Snapture.Plugin.PluginCapture src, CaptureResult dst)
+    private static CaptureResult ApplyPluginCaptureBack(Snapture.Plugin.PluginCapture src, CaptureResult dst)
     {
-        // For now plugins can replace pixels but not change dimensions; if a plugin needs to
-        // resize, the v0.4.x roadmap will widen this contract. Drop the new pixels straight
-        // back into the existing managed bitmap.
-        if (src.Width != dst.Bitmap.Width || src.Height != dst.Bitmap.Height) return;
-        var rect = new Rectangle(0, 0, dst.Bitmap.Width, dst.Bitmap.Height);
-        var data = dst.Bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+        // Same dimensions: copy pixels in place (cheap).
+        if (src.Width == dst.Bitmap.Width && src.Height == dst.Bitmap.Height)
+        {
+            var rect = new Rectangle(0, 0, dst.Bitmap.Width, dst.Bitmap.Height);
+            var data = dst.Bitmap.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
+            try
+            {
+                int copyLen = Math.Min(src.PixelsBgra.Length, data.Stride * dst.Bitmap.Height);
+                System.Runtime.InteropServices.Marshal.Copy(src.PixelsBgra, 0, data.Scan0, copyLen);
+            }
+            finally { dst.Bitmap.UnlockBits(data); }
+            return dst;
+        }
+
+        // Resized: build a new Bitmap and CaptureResult, dispose the old one. The plugin
+        // contract validated in PluginCapture: src.Stride may differ from src.Width*4 if the
+        // plugin packed rows tightly, so honour the reported stride.
+        var resized = new Bitmap(src.Width, src.Height, PixelFormat.Format32bppArgb);
+        var lock2 = resized.LockBits(new Rectangle(0, 0, src.Width, src.Height),
+            ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
         try
         {
-            int copyLen = Math.Min(src.PixelsBgra.Length, data.Stride * dst.Bitmap.Height);
-            System.Runtime.InteropServices.Marshal.Copy(src.PixelsBgra, 0, data.Scan0, copyLen);
+            int srcRow = src.Stride;
+            int dstRow = lock2.Stride;
+            int copyBytes = Math.Min(srcRow, dstRow);
+            for (int y = 0; y < src.Height; y++)
+            {
+                System.Runtime.InteropServices.Marshal.Copy(
+                    src.PixelsBgra, y * srcRow,
+                    lock2.Scan0 + y * dstRow,
+                    copyBytes);
+            }
         }
-        finally { dst.Bitmap.UnlockBits(data); }
+        finally { resized.UnlockBits(lock2); }
+
+        var newBounds = new Rectangle(0, 0, src.Width, src.Height);
+        dst.Bitmap.Dispose();
+        return new CaptureResult(resized, newBounds, dst.CapturedAtUtc, dst.Source, dst.SourceWindow);
     }
 
     public static BitmapSource ToBitmapSource(Bitmap bmp)

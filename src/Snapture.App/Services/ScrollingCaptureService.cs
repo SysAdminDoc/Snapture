@@ -129,7 +129,7 @@ public sealed class ScrollingCaptureService
         if (frames.Count == 1) return frames[0];
 
         // Use the seam-aligning stitcher. Falls back to naive concat for low-confidence pairs.
-        var (stitched, seams) = ImageStitcher.Stitch(frames);
+        var (stitched, _seams, _sticky) = ImageStitcher.Stitch(frames);
         // Stitcher returns a fresh bitmap when frames.Count > 1, so dispose the source frames.
         if (!ReferenceEquals(stitched, frames[0]))
             foreach (var f in frames) f.Dispose();

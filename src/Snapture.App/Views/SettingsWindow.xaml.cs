@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using Microsoft.Win32;
+using Snapture.App.Editor;
 using Snapture.App.Services;
 using Snapture.Capture;
 
@@ -85,6 +86,8 @@ public partial class SettingsWindow : Window
         if (!selected && LanAdapterCombo.Items.Count > 0)
             LanAdapterCombo.SelectedIndex = 0;
         UpdateLanStatus();
+
+        BuildRedactRulesList();
 
         bool hijacked = PrintScreenHijackDetector.IsHijacked();
         PrintScreenStatus.Text = hijacked
@@ -187,6 +190,57 @@ public partial class SettingsWindow : Window
         {
             StatusText.Text = "Could not write the registry value.";
         }
+    }
+
+    private void BuildRedactRulesList()
+    {
+        RedactRulesList.Children.Clear();
+        var disabled = new HashSet<string>(_draft.DisabledRedactRules, StringComparer.OrdinalIgnoreCase);
+        foreach (var rule in SecretDetector.Rules)
+        {
+            string id = rule.Id;
+            var cb = new CheckBox
+            {
+                IsChecked = !disabled.Contains(id),
+                Margin = new Thickness(0, 4, 0, 4),
+                Tag = id
+            };
+            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            sp.Children.Add(new TextBlock
+            {
+                Text = $"{id}",
+                FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas, monospace"),
+                Foreground = (System.Windows.Media.Brush)FindResource("Mauve"),
+                Width = 200
+            });
+            sp.Children.Add(new TextBlock
+            {
+                Text = rule.Description,
+                Foreground = (System.Windows.Media.Brush)FindResource("Text")
+            });
+            cb.Content = sp;
+            cb.Click += (_, _) =>
+            {
+                var ruleId = (string)cb.Tag!;
+                if (cb.IsChecked == true)
+                    _draft.DisabledRedactRules.Remove(ruleId);
+                else if (!_draft.DisabledRedactRules.Contains(ruleId))
+                    _draft.DisabledRedactRules.Add(ruleId);
+            };
+            RedactRulesList.Children.Add(cb);
+        }
+    }
+
+    private void OnRedactEnableAllClicked(object sender, RoutedEventArgs e)
+    {
+        _draft.DisabledRedactRules.Clear();
+        BuildRedactRulesList();
+    }
+
+    private void OnRedactDisableAllClicked(object sender, RoutedEventArgs e)
+    {
+        _draft.DisabledRedactRules = SecretDetector.Rules.Select(r => r.Id).ToList();
+        BuildRedactRulesList();
     }
 
     private void OnLanStartClicked(object sender, RoutedEventArgs e)
@@ -356,6 +410,7 @@ public partial class SettingsWindow : Window
         dst.LanShareBindIp = src.LanShareBindIp;
         dst.LanSharePort = src.LanSharePort;
         dst.LanShareTtlMinutes = src.LanShareTtlMinutes;
+        dst.DisabledRedactRules = new List<string>(src.DisabledRedactRules);
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;
         dst.FullscreenHotkey = src.FullscreenHotkey;

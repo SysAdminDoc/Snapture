@@ -18,7 +18,7 @@ public sealed record RedactionFinding(string RuleId, string Description, SKRect 
 [SupportedOSPlatform("windows10.0.17763.0")]
 public static class AutoRedactor
 {
-    public static async Task<IReadOnlyList<RedactionFinding>> ScanAsync(SKBitmap bitmap)
+    public static async Task<IReadOnlyList<RedactionFinding>> ScanAsync(SKBitmap bitmap, ISet<string>? disabledRuleIds = null)
     {
         var ocr = OcrEngine.TryCreateFromUserProfileLanguages();
         if (ocr is null) return Array.Empty<RedactionFinding>();
@@ -49,7 +49,7 @@ public static class AutoRedactor
         {
             foreach (var word in line.Words)
             {
-                foreach (var hit in SecretDetector.Scan(word.Text))
+                foreach (var hit in SecretDetector.Scan(word.Text, disabledRuleIds))
                 {
                     var r = word.BoundingRect;
                     // Pad the box slightly so character ascenders/descenders aren't clipped.

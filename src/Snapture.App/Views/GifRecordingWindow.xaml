@@ -1,0 +1,65 @@
+<Window x:Class="Snapture.App.Views.GifRecordingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snapture — GIF recording"
+        Width="320" Height="160"
+        WindowStartupLocation="Manual"
+        ResizeMode="NoResize"
+        Topmost="True"
+        ShowInTaskbar="False"
+        Background="{StaticResource Mantle}"
+        Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Row="0" LastChildFill="True">
+            <Ellipse Width="12" Height="12" Fill="#FF5555" Margin="0,0,8,0">
+                <Ellipse.Triggers>
+                    <EventTrigger RoutedEvent="Loaded">
+                        <BeginStoryboard>
+                            <Storyboard RepeatBehavior="Forever" AutoReverse="True">
+                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                 From="1.0" To="0.3" Duration="0:0:0.6" />
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </EventTrigger>
+                </Ellipse.Triggers>
+            </Ellipse>
+            <TextBlock Text="REC"
+                       Foreground="#FF5555"
+                       FontWeight="SemiBold"
+                       FontSize="14" />
+        </DockPanel>
+        <TextBlock x:Name="ProgressText"
+                   Grid.Row="1"
+                   Foreground="{StaticResource Subtext}"
+                   FontFamily="Cascadia Code, Consolas, monospace"
+                   Margin="0,8,0,0"
+                   Text="0 frames · 00:00.00" />
+        <TextBlock Grid.Row="2"
+                   Foreground="{StaticResource Overlay1}"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Margin="0,8,0,0"
+                   Text="Frames are kept in memory until you stop. Stop and pick a file to encode the GIF." />
+        <DockPanel Grid.Row="3" LastChildFill="True" Margin="0,8,0,0">
+            <Button x:Name="StopButton"
+                    DockPanel.Dock="Right"
+                    Content="Stop &amp; save"
+                    Style="{StaticResource AccentButton}"
+                    Click="OnStopClicked"
+                    Padding="12,4" />
+            <Button x:Name="DiscardButton"
+                    DockPanel.Dock="Right"
+                    Content="Discard"
+                    Click="OnDiscardClicked"
+                    Margin="0,0,6,0" />
+        </DockPanel>
+    </Grid>
+</Window>

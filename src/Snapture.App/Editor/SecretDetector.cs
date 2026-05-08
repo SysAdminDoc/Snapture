@@ -93,11 +93,12 @@ public static class SecretDetector
         };
     }
 
-    public static IEnumerable<DetectedSecret> Scan(string text)
+    public static IEnumerable<DetectedSecret> Scan(string text, ISet<string>? disabledRuleIds = null)
     {
         if (string.IsNullOrEmpty(text)) yield break;
         foreach (var rule in Rules)
         {
+            if (disabledRuleIds is not null && disabledRuleIds.Contains(rule.Id)) continue;
             foreach (Match m in rule.Pattern.Matches(text))
             {
                 if (rule.LuhnValidate && !LuhnValid(StripNonDigits(m.Value))) continue;

@@ -694,7 +694,10 @@ public partial class EditorWindow : Window
         try
         {
             using var flat = _doc.RenderToBitmap();
-            var findings = await AutoRedactor.ScanAsync(flat);
+            var disabled = App.Host?.Settings.Current.DisabledRedactRules is { Count: > 0 } d
+                ? new HashSet<string>(d, StringComparer.OrdinalIgnoreCase)
+                : null;
+            var findings = await AutoRedactor.ScanAsync(flat, disabled);
             if (findings.Count == 0)
             {
                 StatusText.Text = "No secrets detected.";

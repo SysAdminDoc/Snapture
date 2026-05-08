@@ -214,6 +214,36 @@
                 </StackPanel>
             </TabItem>
 
+            <TabItem Header="Auto-redact">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <StackPanel Grid.Row="0" Margin="20,20,20,8">
+                        <TextBlock Foreground="{StaticResource Subtext}"
+                                   TextWrapping="Wrap">
+                            Toggle individual detector rules. Disabled rules will not match
+                            during the editor's <Run Foreground="{StaticResource Mauve}" Text="Auto-redact secrets" />
+                            pass. New rules ship enabled — disabled state is the persisted set.
+                        </TextBlock>
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Button x:Name="RedactEnableAllButton"
+                                    Content="Enable all"
+                                    Click="OnRedactEnableAllClicked" />
+                            <Button x:Name="RedactDisableAllButton"
+                                    Content="Disable all"
+                                    Click="OnRedactDisableAllClicked" />
+                        </StackPanel>
+                    </StackPanel>
+                    <ScrollViewer Grid.Row="1"
+                                  Margin="20,0,20,20"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="RedactRulesList" />
+                    </ScrollViewer>
+                </Grid>
+            </TabItem>
+
             <TabItem Header="LAN share">
                 <StackPanel Margin="20">
                     <TextBlock Foreground="{StaticResource Subtext}"

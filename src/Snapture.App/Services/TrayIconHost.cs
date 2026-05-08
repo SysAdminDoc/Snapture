@@ -139,6 +139,33 @@ public sealed class TrayIconHost : IDisposable
         var ocr = new MenuItem { Header = "OCR region…" };
         ocr.Click += async (_, _) => await SafeRun(_orchestrator.OcrRegionAsync);
         tools.Items.Add(ocr);
+        var recordGif = new MenuItem { Header = "Record GIF" };
+        var recGifWindow = new MenuItem { Header = "…of foreground window" };
+        recGifWindow.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var rec = new GifRecorder(App.Host.Engine);
+                new Views.GifRecordingWindow(rec, Views.GifRecordingWindow.Mode.ForegroundWindow).Show();
+            }
+            catch (Exception ex) { MessageBox.Show($"Could not start GIF recorder: {ex.Message}", "Snapture"); }
+        };
+        var recGifFull = new MenuItem { Header = "…of all monitors" };
+        recGifFull.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var rec = new GifRecorder(App.Host.Engine);
+                new Views.GifRecordingWindow(rec, Views.GifRecordingWindow.Mode.VirtualScreen).Show();
+            }
+            catch (Exception ex) { MessageBox.Show($"Could not start GIF recorder: {ex.Message}", "Snapture"); }
+        };
+        recordGif.Items.Add(recGifWindow);
+        recordGif.Items.Add(recGifFull);
+        tools.Items.Add(recordGif);
+
         var stepCapture = new MenuItem { Header = "Step Capture…" };
         stepCapture.Click += (_, _) =>
         {

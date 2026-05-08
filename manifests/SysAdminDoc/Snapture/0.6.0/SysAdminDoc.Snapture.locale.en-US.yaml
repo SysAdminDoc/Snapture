@@ -1,0 +1,44 @@
+# yaml-language-server: $schema=https://aka.ms/winget-manifest.defaultLocale.1.7.0.schema.json
+PackageIdentifier: SysAdminDoc.Snapture
+PackageVersion: 0.6.0
+PackageLocale: en-US
+Publisher: SysAdminDoc
+PublisherUrl: https://github.com/SysAdminDoc
+PublisherSupportUrl: https://github.com/SysAdminDoc/Snapture/issues
+PrivacyUrl: https://github.com/SysAdminDoc/Snapture/blob/main/docs/PRIVACY.md
+Author: SysAdminDoc
+PackageName: Snapture
+PackageUrl: https://github.com/SysAdminDoc/Snapture
+License: MIT
+LicenseUrl: https://github.com/SysAdminDoc/Snapture/blob/main/LICENSE
+Copyright: Copyright (c) 2026 Matt Parker
+ShortDescription: All-in-one screenshot utility for Windows. Region, window, fullscreen, scrolling, OCR, GIF — local-first with no telemetry.
+Description: |-
+  Snapture is a desktop screenshot utility for Windows that combines the polish of Snagit with
+  the no-cloud philosophy of Greenshot. It ships a WinRT-first capture engine, a vector
+  annotation editor with .snapture project round-trip, full-text searchable capture history,
+  built-in OCR, scrolling capture with image-stitch alignment, animated GIF recording, a LAN-
+  only share server (no cloud account, no upload), Smart Element Capture via UIA, and an
+  auto-redact secrets pass that catches API keys / JWTs / AWS keys / cards before you share.
+Moniker: snapture
+Tags:
+  - screenshot
+  - capture
+  - annotation
+  - ocr
+  - scrolling-capture
+  - gif-recording
+  - editor
+  - local-first
+  - no-cloud
+  - no-telemetry
+ReleaseNotesUrl: https://github.com/SysAdminDoc/Snapture/releases/tag/v0.6.0
+Documentations:
+  - DocumentLabel: Privacy
+    DocumentUrl: https://github.com/SysAdminDoc/Snapture/blob/main/docs/PRIVACY.md
+  - DocumentLabel: Hotkeys
+    DocumentUrl: https://github.com/SysAdminDoc/Snapture/blob/main/docs/HOTKEYS.md
+  - DocumentLabel: Capture matrix
+    DocumentUrl: https://github.com/SysAdminDoc/Snapture/blob/main/docs/CAPTURE-MATRIX.md
+ManifestType: defaultLocale
+ManifestVersion: 1.7.0

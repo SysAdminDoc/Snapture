@@ -2,6 +2,63 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [v0.6.0] — 2026-05-08
+
+The "more polish, less repeat work" pass. Sticky-strip detection, animated GIF recording, per-rule auto-redact toggles, plugin-resize widening, and the docs / distribution items that round out a serious release.
+
+### Added — Sticky-header / sticky-footer detection (v0.6.1)
+
+- `ImageStitcher.DetectStickyStrips` finds rows from the top and bottom that are pixelwise stable across every frame (per-row mean-absolute-difference threshold of 8 against frame[0], capped at 240 source pixels). Sticky bars are emitted exactly once at the top and bottom of the stitched output.
+- `FindOverlap` now restricts the strip-search to the body region (sticky stripped off both ends) so navbars don't anchor the alignment to a wrong row.
+- Honest residuals: animation inside the sticky bar (clocks, carousels) breaks the row stability check and reverts to per-frame repeat.
+
+### Added — GIF recording (v0.6.4)
+
+- `Services/GifRecorder` captures the foreground window or the full virtual screen on a fixed cadence (default 10 fps), keeps frames in memory while recording, encodes via the `AnimatedGif` library on stop. Bit8 quality, frame delay configurable.
+- `Views/GifRecordingWindow` — small always-on-top REC-indicator parked top-right of the work area; live frame-count + elapsed timer; Stop & save / Discard.
+- Tray menu **Tools → Record GIF** with two entries: …of foreground window · …of all monitors.
+- Animated GIF output is saved through a standard SaveFileDialog; reveals in Explorer on success.
+
+### Added — Per-rule auto-redact toggles (v0.6.2)
+
+- New Settings tab **Auto-redact** lists every `SecretDetector.Rules` entry with a checkbox, plus Enable all / Disable all shortcut buttons.
+- Persisted as `DisabledRedactRules: string[]` in `settings.json`. New rules in future releases ship enabled for everyone — only the disabled set travels.
+- `SecretDetector.Scan` and `AutoRedactor.ScanAsync` accept an optional `disabledRuleIds` set. The editor's Auto-redact button reads from settings.
+
+### Added — Plugin contract widening (v0.6.3)
+
+- `ICaptureProcessor.ProcessAsync` may now return a `PluginCapture` of different dimensions than the input. `CaptureOrchestrator.ApplyPluginCaptureBack` constructs a fresh `Bitmap` and `CaptureResult` when the size changes, honouring the plugin's reported `Stride`.
+- Plugin processors now run **before** the on-disk save so resize / watermark / redact lands in the saved file and the history index. Order: capture → plugin processors → save → history → clipboard → editor.
+
+### Added — Docs & distribution (v0.6.5)
+
+- [`docs/HOTKEYS.md`](docs/HOTKEYS.md) — canonical reference for every hotkey across the global / tray / editor / pin / region / window-picker / Smart-capture / color-picker / ruler / Step-Capture surfaces.
+- [`docs/CAPTURE-MATRIX.md`](docs/CAPTURE-MATRIX.md) — engines table, per-Windows-build capability matrix, capture-mode × engine results, WGC limitations, cursor handling, DPI awareness, per-release verification matrix.
+- [`manifests/SysAdminDoc/Snapture/0.6.0/`](manifests/SysAdminDoc/Snapture/0.6.0/) — winget multi-file manifest set targeting schema 1.7.0 (version + installer + en-US locale). Portable-ZIP installer pointing at the GitHub release asset; SHA-256 placeholder for the submitter to fill in.
+- [`manifests/README.md`](manifests/README.md) — submission instructions for `microsoft/winget-pkgs`.
+
+### Changed
+
+- All version strings synced to 0.6.0 across `Snapture.App` / `Snapture.Capture` / `Snapture.Plugin.Abstractions` csproj files, README badge, and the workflow default.
+- Tray Tools submenu now: Color picker · Pixel ruler · OCR region · Record GIF (window / all monitors) · Step Capture · Plugins · Capture history.
+
+### Architecture notes
+
+- The sticky-strip detector reads a downsampled gray-luminance buffer for every frame's top and bottom region (`probeH = min(MaxStickyRows, height/3)`). For 10 frames at 1920×1080 with subsample factor 4, that's ~10 × 240 × 480 = ~1.15 MB of grayscale buffers — fits in L2.
+- `GifRecorder` keeps captured `Bitmap` instances in a `lock`-protected list so the UI thread can read frame counts safely. The capture loop runs on `Task.Run`; encoder runs synchronously on Stop.
+- The plugin resize path validates only `Width * Height` against the input. Stride mismatches (a plugin that returned tightly-packed rows from a resized source) are honoured by per-row `Marshal.Copy` rather than buffer-length checks.
+
+### Deferred to v0.7
+
+- MP4 / HEVC / AV1 recording (Media Foundation `SinkWriter` + hardware-encode discovery)
+- HDR tonemap (ACES via Win2D) + AVIF / JPEG XR export
+- RapidOCR ONNX bundle (model download flow)
+- DOCX / PPTX export from Step Capture
+- MSIX manifest (gated on SignPath OSS approval)
+- Magnification API fallback for layered overlays
+- Full transform handles for the Select editor tool
+- Right-click colour wheel / sloppiness slider / refresh-capture-preserving-annotations
+
 ## [v0.5.0] — 2026-05-08
 
 The "scrolling capture actually works for browsers now" pass, plus a Carbon-style code-window export wrapper.

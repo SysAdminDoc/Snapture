@@ -136,7 +136,7 @@ The release that closes the "real screenshot tool" gap. Validated by being the m
   - [ ] **Lazy-loaded content handling** — v0.4 [S4 capture-full-page.com]
 - [ ] **Live preview during scroll** — v0.4 [S1]
 - [ ] **Done flow with retake** — v0.4 [S2]
-- [ ] Sticky-header / sticky-footer detection — v0.4 [S4]
+- [x] Sticky-header / sticky-footer detection — `ImageStitcher.DetectStickyStrips` finds rows pixelwise-stable across every frame; `Stitch` emits the top sticky once at the very top, the bottom sticky once at the bottom, and excludes both from middle-frame contributions [S4]
 
 ### v0.3.2 — OCR
 
@@ -195,7 +195,7 @@ Items that move ahead of the field, not catch up.
   - [x] **Gitleaks rule pack (MIT)** ported as compiled regex
   - [x] **PII recognizers** (credit cards Luhn-validated, SSN, IBAN, IPs, MACs, emails)
   - [ ] **Single ONNX for OCR+redact** — v0.4.x with the RapidOCR bundle [S5 §4]
-  - [ ] **Per-rule on/off in settings** — v0.4.x (rules data structure already supports it)
+  - [x] **Per-rule on/off in settings** — Settings → Auto-redact tab lists every `SecretDetector.Rules` entry as a checkbox; the persisted set is `DisabledRedactRules` so newly-added rules ship enabled by default. `Enable all` / `Disable all` shortcut buttons
   - [x] **Solid-fill default** for matched secrets (blur is reversible) [S4]
 - [ ] **Smart Move-equivalent (post-capture object reposition)** — local OpenCvSharp4 detect-and-reposition UI rectangles in a flat PNG; matches Snagit's only single-vendor moat feature [S2 §1, S5 §2]
 - [ ] **LAN-only share server** [S5 §12]
@@ -232,7 +232,7 @@ The release that puts Snapture in front of the audience that already uses winget
   - [ ] `windows.startupTask` extension for "Launch at startup"
   - [ ] **No `broadFileSystemAccess`** — use `FileSavePicker` (cleaner, fewer prompts) [S3 §10]
 - [ ] **Portable ZIP** secondary — `--portable` flag switches settings root from `%LOCALAPPDATA%\Snapture\` to `<exedir>\portable\`. Sysinternals/NirSoft doctrine [S4]
-- [ ] **winget manifest** at `microsoft/winget-pkgs` (`SysAdminDoc.Snapture.*.yaml`) with both MSIX and portable installers [S3 §9.1, S5 §11]
+- [x] **winget manifest** at `manifests/SysAdminDoc/Snapture/0.6.0/` — three-file 1.7.0 schema (version + installer + en-US locale). Portable-ZIP path; MSIX path queued for v0.7 with the SignPath OSS cert [S3 §9.1, S5 §11]
 - [ ] **Chocolatey** package (`snapture` + `snapture.portable`, ScreenToGif pattern) [S2]
 - [ ] **Scoop manifest** (extras bucket) [S5 §11]
 - [ ] **MSI for enterprise** with MST transform (Snagit pattern — sysadmins want SCCM/GPO deploy with silent-install switches) [S2 §1]
@@ -340,10 +340,10 @@ These items came up in research and are deliberately **not** roadmap candidates.
 ### Documentation
 
 - [ ] **`docs/ARCHITECTURE.md`** — engine seams, settings surface, plugin contracts, threading model
-- [ ] **`docs/CAPTURE-MATRIX.md`** — what works under WGC vs GDI vs Magnification, per-Windows-build [S3 §1.9]
+- [x] **`docs/CAPTURE-MATRIX.md`** — engines table + per-Windows-build capability matrix + capture-mode × engine results + WGC limitations + cursor handling + DPI awareness + per-release verification matrix [S3 §1.9]
 - [ ] **`docs/PRIVACY.md`** — see Security track
 - [ ] **`docs/PLUGINS.md`** — interface reference, capability manifest, samples [S5 §9]
-- [ ] **`docs/HOTKEYS.md`** — full keybinding reference
+- [x] **`docs/HOTKEYS.md`** — full keybinding reference (global + tray + editor + pin + region overlay + window picker + Smart Capture + color picker + ruler + Step Capture)
 - [ ] **README screenshots** re-captured on every UI change — system is 125% DPI [self / global rule]
 - [ ] **Changelog policy** — every release lists Added/Changed/Fixed/Security; Security entries map to CVE IDs when applicable [self / global rule]
 
