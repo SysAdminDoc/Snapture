@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version"  src="https://img.shields.io/badge/version-0.2.0-CBA6F7?style=for-the-badge">
+  <img alt="Version"  src="https://img.shields.io/badge/version-0.3.0-CBA6F7?style=for-the-badge">
   <img alt="License"  src="https://img.shields.io/badge/license-MIT-A6E3A1?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-89B4FA?style=for-the-badge&logo=windows&logoColor=white">
   <img alt=".NET 10"  src="https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">
@@ -33,6 +33,14 @@ The existing landscape on Windows in 2026:
 | **CleanShot X** | Pinned overlay UX (paid) | Cloud-first, $29/yr |
 
 **Snapture's pitch:** the polish of Snagit, the no-cloud philosophy of Greenshot, modern WinRT-class capture, and a Catppuccin Mocha editor that doesn't look like it was designed in 2008.
+
+## What ships in v0.3.0
+
+**Capture parity pass — OCR, full-text searchable history, scrolling capture (alpha)**
+
+- **Built-in OCR** — `Windows.Media.Ocr`, zero install. Tray → Tools → "OCR region…" picks a region, recognised text lands in the clipboard, result window opens. The History window's "OCR all" button bulk-indexes everything past captures into FTS5.
+- **Capture history** with **SQLite + FTS5** at `%LOCALAPPDATA%\Snapture\history\index.db`. Every capture auto-tagged with foreground process + window title. The History window lets you search across OCR text, process name, and window title with FTS5 syntax. Right-click → Open in editor / Pin / Run OCR / Reveal / Delete.
+- **Scrolling capture (alpha)** via UIA `IScrollProvider`. Native scroll panes (Office side-panes, Explorer, WPF/WinForms apps) work; browsers fall through to a clear "this window doesn't expose UIA scroll" message. Image-stitching for browsers ships in v0.4.
 
 ## What ships in v0.2.0
 
@@ -78,8 +86,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.3** — Scrolling capture (UIA + image-stitch), built-in OCR (Windows.Media.Ocr), GIF / MP4 record, HDR tonemap (ACES) + AVIF / JPEG XR, capture history with FTS5
-- **v0.4** — UIA Smart Capture, auto-redact-secrets pass, LAN-only share server, plugin SDK
+- **v0.4** — Image-stitch fallback (browsers, parallax pages), GIF / MP4 record, HDR tonemap (ACES) + AVIF / JPEG XR, UIA Smart Capture, auto-redact-secrets pass, LAN-only share server, plugin SDK
 - **v0.5** — MSIX + winget + Chocolatey + portable ZIP, code-signing via SignPath OSS, auto-update via Velopack
 
 ## Install

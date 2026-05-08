@@ -2,6 +2,51 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [v0.3.0] — 2026-05-08
+
+The capture-parity pass: built-in OCR, full-text searchable capture history, and a first-pass scrolling capture path. Three of the five v0.3.x sub-tracks shipped (OCR, history, scrolling). Image-stitching, GIF/MP4 recording and HDR tonemap explicitly deferred to v0.4.
+
+### Added — OCR (v0.3.2)
+
+- `OcrService` wraps `Windows.Media.Ocr`. Zero-install on any modern Windows; uses the user's installed language packs.
+- "OCR region…" capture flow: select a region with the existing overlay, run OCR, recognised text lands in the clipboard automatically, full-text result opens in `OcrResultWindow`.
+- Settings deeplink (`ms-settings:regionlanguage-adddisplaylanguage`) helper for installing additional language packs.
+- History row context menu gains "Run OCR" — re-OCR a previously saved capture and index the text into FTS5.
+- "OCR all" button in the History window indexes every entry that hasn't been OCR'd yet.
+
+### Added — Capture history (v0.3.5)
+
+- `CaptureHistoryService` — SQLite database at `%LOCALAPPDATA%\Snapture\history\index.db` with FTS5 virtual table over OCR text + window title + process name.
+- Every capture is auto-tagged with the foreground window's `ProcessName` and title via `CaptureHistoryService.DescribeForeground`.
+- `HistoryWindow` — thumbnail wall, debounced search box (FTS5), context menu: Open in editor / Pin / Run OCR / Reveal in folder / Delete.
+- `Microsoft.Data.Sqlite` 9.0.0 + `SQLitePCLRaw.bundle_e_sqlite3` 2.1.10 added.
+
+### Added — Scrolling capture (v0.3.1)
+
+- `ScrollingCaptureService` drives `IScrollProvider` via `System.Windows.Automation` (no FlaUI dep needed for v0.3 scope).
+- Tray menu "Capture Scrolling Window (alpha)" — drives the foreground window's scroll pattern from top to bottom, captures each frame via the active engine, stacks vertically.
+- Honest about limitations: small visual duplicates at frame boundaries (UIA reports percent, not pixels), browsers that route scroll through their own hosts will fall through to a clean "this window doesn't expose UIA scroll" message. Phase-correlation stitch fallback ships in v0.4.
+
+### Changed
+
+- `CaptureOrchestrator` now takes an optional `CaptureHistoryService` and indexes every saved capture (best-effort — history failures never block the user).
+- Tray Tools submenu reorganised: Color picker · Pixel ruler · OCR region · Capture history.
+
+### Architecture notes
+
+- The OCR-result window is a normal `Window` not a dialog — multiple OCR results can stay open while the user keeps capturing.
+- `CaptureHistoryService` initialises `SQLitePCL.Batteries_V2` exactly once via an interlocked guard so multiple service instances (eg. tests) don't double-init.
+- `ScrollingCaptureService.FindScrollable` walks 200 elements breadth-first from the window root before giving up — chosen empirically as enough for real-world apps without making the search noticeably slow.
+
+### Deferred to v0.4
+
+- RapidOCR ONNX fallback (model download flow needed first)
+- Image-stitching (phase correlation + lazy-load handling + sticky-header detection)
+- QR/barcode extraction (ZXing.Net)
+- OCR table mode + text overlay anchored to image regions
+- GIF/MP4 recording (Media Foundation SinkWriter)
+- HDR tonemap + AVIF / JPEG XR export
+
 ## [v0.2.0] — 2026-05-08
 
 The "real screenshot tool" pass: WinRT capture engine, full annotation editor, settings dialog, and the polish features that competing OSS tools either paywall or skip entirely.

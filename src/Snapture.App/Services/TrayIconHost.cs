@@ -72,6 +72,10 @@ public sealed class TrayIconHost : IDisposable
         fs.Click += async (_, _) => await SafeRun(_orchestrator.CaptureFullscreenAsync);
         m.Items.Add(fs);
 
+        var scrollingWin = new MenuItem { Header = "Capture _Scrolling Window  (alpha)" };
+        scrollingWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureScrollingForegroundAsync);
+        m.Items.Add(scrollingWin);
+
         var monitorParent = new MenuItem { Header = "Capture _Monitor" };
         try
         {
@@ -128,6 +132,24 @@ public sealed class TrayIconHost : IDisposable
         var pixelRuler = new MenuItem { Header = "Pixel ruler" };
         pixelRuler.Click += (_, _) => new Views.PixelRulerWindow().Show();
         tools.Items.Add(pixelRuler);
+        var ocr = new MenuItem { Header = "OCR region…" };
+        ocr.Click += async (_, _) => await SafeRun(_orchestrator.OcrRegionAsync);
+        tools.Items.Add(ocr);
+        var history = new MenuItem { Header = "Capture history…" };
+        history.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var w = new Views.HistoryWindow(App.Host.History);
+                w.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open history:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        tools.Items.Add(history);
         m.Items.Add(tools);
 
         var openFolder = new MenuItem { Header = "Open _Output Folder" };

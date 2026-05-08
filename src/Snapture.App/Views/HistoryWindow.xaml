@@ -1,0 +1,115 @@
+<Window x:Class="Snapture.App.Views.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snapture — Capture History"
+        Width="980" Height="640"
+        MinWidth="700" MinHeight="480"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource Base}"
+        Foreground="{StaticResource Text}"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{StaticResource Mantle}"
+                BorderBrush="{StaticResource Surface0}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <DockPanel LastChildFill="True">
+                <TextBlock Text="✦ Capture History"
+                           Foreground="{StaticResource Mauve}"
+                           FontWeight="SemiBold"
+                           VerticalAlignment="Center"
+                           Margin="0,0,16,0"
+                           DockPanel.Dock="Left" />
+                <TextBox x:Name="SearchBox"
+                         DockPanel.Dock="Left"
+                         Width="280"
+                         KeyUp="OnSearchKey"
+                         BorderBrush="{StaticResource Surface0}"
+                         Padding="6"
+                         ToolTip="Full-text search over OCR text + window title + process name. SQLite FTS5 syntax allowed." />
+                <Button x:Name="OcrAllButton"
+                        DockPanel.Dock="Right"
+                        Content="OCR all"
+                        Click="OnOcrAllClicked"
+                        ToolTip="Run OCR on every entry that hasn't been indexed yet." />
+                <TextBlock x:Name="StatusText"
+                           Foreground="{StaticResource Subtext}"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Right"
+                           Margin="14,0,8,0" />
+            </DockPanel>
+        </Border>
+
+        <ListView x:Name="HistoryList"
+                  Grid.Row="1"
+                  Background="{StaticResource Crust}"
+                  BorderThickness="0"
+                  Margin="0"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  MouseDoubleClick="OnRowDoubleClick">
+            <ListView.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ListView.ItemsPanel>
+            <ListView.ItemTemplate>
+                <DataTemplate>
+                    <Border Background="{StaticResource Mantle}"
+                            BorderBrush="{StaticResource Surface0}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Margin="6"
+                            Padding="6"
+                            Width="220">
+                        <StackPanel>
+                            <Image Source="{Binding Thumbnail}"
+                                   Stretch="Uniform"
+                                   Height="120"
+                                   Margin="0,0,0,6" />
+                            <TextBlock Text="{Binding TitleLine}"
+                                       Foreground="{StaticResource Text}"
+                                       FontWeight="SemiBold"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding SubLine}"
+                                       Foreground="{StaticResource Subtext}"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding TimeLine}"
+                                       Foreground="{StaticResource Overlay1}"
+                                       FontSize="11" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+            <ListView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Open in editor" Click="OnOpenInEditor" />
+                    <MenuItem Header="Pin"             Click="OnPinSelected" />
+                    <MenuItem Header="Run OCR"         Click="OnRunOcr" />
+                    <MenuItem Header="Reveal in folder" Click="OnRevealInFolder" />
+                    <Separator />
+                    <MenuItem Header="Delete from history" Click="OnDeleteSelected" />
+                </ContextMenu>
+            </ListView.ContextMenu>
+        </ListView>
+
+        <Border Grid.Row="2"
+                Background="{StaticResource Mantle}"
+                BorderBrush="{StaticResource Surface0}"
+                BorderThickness="0,1,0,0"
+                Padding="14,8">
+            <TextBlock x:Name="DbPathText"
+                       Foreground="{StaticResource Overlay1}"
+                       FontFamily="Cascadia Code, Consolas, monospace"
+                       FontSize="11" />
+        </Border>
+    </Grid>
+</Window>

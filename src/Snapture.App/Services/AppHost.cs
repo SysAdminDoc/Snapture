@@ -10,6 +10,7 @@ public sealed class AppHost : IDisposable
     public string EngineName { get; private set; }
     public CaptureOrchestrator Orchestrator { get; }
     public HotkeyService Hotkeys { get; } = new();
+    public CaptureHistoryService History { get; }
     private TrayIconHost? _tray;
 
     public AppHost()
@@ -20,7 +21,8 @@ public sealed class AppHost : IDisposable
         var (engine, name) = CaptureEngineFactory.Create(Settings.Current.CaptureEngine);
         Engine = engine;
         EngineName = name;
-        Orchestrator = new CaptureOrchestrator(Settings, Engine);
+        History = new CaptureHistoryService();
+        Orchestrator = new CaptureOrchestrator(Settings, Engine, History);
     }
 
     public void Start()
@@ -111,6 +113,7 @@ public sealed class AppHost : IDisposable
     public void Dispose()
     {
         Hotkeys.Dispose();
+        History.Dispose();
         if (Engine is IDisposable d) d.Dispose();
         _tray?.Dispose();
     }

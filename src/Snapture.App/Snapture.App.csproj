@@ -9,9 +9,9 @@
     <UseWPF>true</UseWPF>
     <UseWindowsForms>false</UseWindowsForms>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Version>0.2.0</Version>
-    <AssemblyVersion>0.2.0.0</AssemblyVersion>
-    <FileVersion>0.2.0.0</FileVersion>
+    <Version>0.3.0</Version>
+    <AssemblyVersion>0.3.0.0</AssemblyVersion>
+    <FileVersion>0.3.0.0</FileVersion>
     <RootNamespace>Snapture.App</RootNamespace>
     <Product>Snapture</Product>
     <Company>SysAdminDoc</Company>
@@ -24,6 +24,8 @@
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.9" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.10" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Snapture.Capture\Snapture.Capture.csproj" />

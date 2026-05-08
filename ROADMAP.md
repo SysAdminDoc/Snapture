@@ -127,26 +127,26 @@ The release that closes the "real screenshot tool" gap. Validated by being the m
 
 ### v0.3.1 — Scrolling capture
 
-- [ ] **UIA `IScrollProvider` driver path** via FlaUI [S5 §2, S3 §5.2]
-  - [ ] Browser path tested on Chromium 130+ (UIA default backend), Firefox 122+, WebView2 [S3 §5.3]
-  - [ ] Native list/scroll path for Office, Explorer, WPF/WinForms apps
-  - [ ] Pre-warm UIA on app start (200–1500 ms first-attach lag on Chromium) [S3 §5.4]
-- [ ] **Image-stitch fallback** — phase-correlation alignment via Math.NET Numerics FFT [S5 §2]
-  - [ ] OpenCvSharp4 ORB/AKAZE feature-match for parallax-heavy pages where phase correlation fails [S5 §2]
-  - [ ] **Lazy-loaded content handling** — slow auto-scroll mode that pauses for image hydration (the DevTools "full size" failure mode) [S4 capture-full-page.com]
-- [ ] **Live preview during scroll** — compose images during scroll, not after (ShareX v16 pattern) [S1]
-- [ ] **Done flow with retake** (CleanShot X UX) [S2]
-- [ ] Sticky-header / sticky-footer detection — diff each new frame against the previous to identify static strips and exclude them from stitch [S4]
+- [x] **UIA `IScrollProvider` driver path** via `System.Windows.Automation` (no FlaUI dep — built-in WPF UIA client is sufficient for v0.3 scope) [S5 §2, S3 §5.2]
+  - [ ] Browser path on Chromium 130+ — UIA scroll detection works on the host frame but most pages route scroll through web content; deferred to v0.4 with the image-stitch fallback [S3 §5.3]
+  - [x] Native list/scroll path for Office side-panes, Explorer, WPF/WinForms apps that expose `ScrollPattern` directly
+  - [ ] Pre-warm UIA on app start — measured first-attach lag in our usage is acceptable; revisit only if user reports it [S3 §5.4]
+- [ ] **Image-stitch fallback** — phase-correlation alignment via Math.NET Numerics FFT — v0.4 [S5 §2]
+  - [ ] OpenCvSharp4 ORB/AKAZE feature-match for parallax-heavy pages — v0.4 [S5 §2]
+  - [ ] **Lazy-loaded content handling** — v0.4 [S4 capture-full-page.com]
+- [ ] **Live preview during scroll** — v0.4 [S1]
+- [ ] **Done flow with retake** — v0.4 [S2]
+- [ ] Sticky-header / sticky-footer detection — v0.4 [S4]
 
 ### v0.3.2 — OCR
 
-- [ ] **`Windows.Media.Ocr` default** — zero install, ~80–120ms / 1080p, ~25 in-box languages [S3 §4, S5 §3]
-- [ ] **Settings deeplink** (`ms-settings:regionlanguage-adddisplaylanguage`) when a user-picked language isn't installed [S3 §4.4]
-- [ ] **Bundled fallback: RapidOCR ONNX (~50 MB)** — drop the planned Tesseract bundle (RapidOCR is smaller, more accurate on screen UI text, MIT-equivalent) [S5 §3, S3 §4.3]
-- [ ] **OCR-region capture** — select region, return image AND text in clipboard simultaneously [self]
-- [ ] **Text overlay anchored to image regions** (Shottr / Snipping Tool / CleanShot UX) [S2]
-- [ ] **QR-code + barcode extraction** — ZXing.Net pass over capture, copy decoded payload (Snipping Tool 23H2 parity, Flameshot #511) [S1, S2]
-- [ ] **OCR table mode** — preserve column structure, paste as TSV (Snipping Tool 25H2 parity) [S2]
+- [x] **`Windows.Media.Ocr` default** — `OcrService.RecognizeAsync`, used everywhere [S3 §4, S5 §3]
+- [x] **Settings deeplink** (`ms-settings:regionlanguage-adddisplaylanguage`) — `OcrService.OpenLanguageInstallSettings()` exposed; called from the empty-result branch of `OcrResultWindow` [S3 §4.4]
+- [ ] **Bundled fallback: RapidOCR ONNX (~50 MB)** — v0.4 (needs the model-download flow built first) [S5 §3, S3 §4.3]
+- [x] **OCR-region capture** — `CaptureOrchestrator.OcrRegionAsync` selects a region, runs OCR, copies text to clipboard, opens `OcrResultWindow`. Tray Tools → "OCR region…" plus a History row context-menu "Run OCR" entry [self]
+- [ ] **Text overlay anchored to image regions** — v0.4 (needs SkiaCanvas overlay layer in the editor) [S2]
+- [ ] **QR-code + barcode extraction** — v0.4 (ZXing.Net pass over capture) [S1, S2]
+- [ ] **OCR table mode** — v0.4 (Windows.Media.Ocr returns word boxes; column reconstruction is non-trivial) [S2]
 
 ### v0.3.3 — GIF / MP4 recording
 
@@ -176,10 +176,11 @@ The release that closes the "real screenshot tool" gap. Validated by being the m
 
 - [ ] **Timed capture** — region first, countdown, then refresh-capture (for menus/tooltips/dropdowns) [self / existing roadmap]
 - [ ] **Freeze-screen-before-capture** — capture the entire virtual screen instantly, then let the user select on the frozen image (CleanShot X pattern; lets you snip menus that would dismiss on click) [S2, S4]
-- [ ] **Capture history thumbnail panel** at `%LOCALAPPDATA%\Snapture\history\` with **SQLite + FTS5 over OCR text** — first OSS Windows tool with full-text search of capture content [S5 §13, S2 §1, S4 Eagle pattern]
-  - [ ] Auto-tag by source app (`ProcessName`) and window-title
-  - [ ] Date / app / tag filters
-  - [ ] Right-click → "Re-edit", "Re-OCR", "Pin", "Reveal in folder", "Send to LAN-share"
+- [x] **Capture history thumbnail panel** at `%LOCALAPPDATA%\Snapture\history\index.db` with **SQLite + FTS5 over OCR text** — `CaptureHistoryService` + `HistoryWindow` (Tray → Tools → "Capture history…"). First OSS Windows tool with full-text search of capture content [S5 §13, S2 §1, S4 Eagle pattern]
+  - [x] Auto-tag by source app (`ProcessName`) and window-title — `CaptureHistoryService.DescribeForeground`
+  - [ ] Date / app / tag filters — v0.4 (UI exists but dropdown filters not yet wired; FTS5 search box covers the main path)
+  - [x] Right-click → "Re-edit" (Open in editor), "Re-OCR" (Run OCR), "Pin", "Reveal in folder", "Delete from history"
+  - [ ] "Send to LAN-share" — v0.4 with the LAN-share server
 
 ---
 

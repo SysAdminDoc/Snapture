@@ -11,12 +11,14 @@ namespace Snapture.App.Services;
 public sealed class CaptureOrchestrator
 {
     private readonly SettingsService _settings;
+    private readonly CaptureHistoryService? _history;
     private ICaptureEngine _engine;
 
-    public CaptureOrchestrator(SettingsService settings, ICaptureEngine engine)
+    public CaptureOrchestrator(SettingsService settings, ICaptureEngine engine, CaptureHistoryService? history = null)
     {
         _settings = settings;
         _engine = engine;
+        _history = history;
     }
 
     public void ReplaceEngine(ICaptureEngine engine) => _engine = engine;
@@ -97,6 +99,56 @@ public sealed class CaptureOrchestrator
         await capture().ConfigureAwait(true);
     }
 
+    public async Task CaptureScrollingForegroundAsync()
+    {
+        var hwnd = Native2.GetForegroundWindow();
+        if (hwnd == 0) return;
+        var svc = new ScrollingCaptureService(_engine);
+        var bmp = await svc.CaptureScrollingForegroundAsync(hwnd, new Progress<string>(_ => { })).ConfigureAwait(true);
+        if (bmp is null)
+        {
+            MessageBox.Show(
+                "Snapture could not drive a scrolling capture on the active window.\n\n" +
+                "This means the window does not expose a UIA scroll pattern. Most browsers, " +
+                "Word, Excel and PowerPoint route scroll through their own custom hosts; " +
+                "image-stitching fallback ships in v0.4.",
+                "Snapture", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+        await DeliverCaptureAsync(new CaptureResult(bmp, new Rectangle(0, 0, bmp.Width, bmp.Height),
+            DateTime.UtcNow, "Scrolling", hwnd)).ConfigureAwait(true);
+    }
+
+    public async Task OcrRegionAsync()
+    {
+        var virtualBounds = MonitorEnumerator.GetVirtualScreen();
+        var virtualCapture = await _engine.CaptureRegionAsync(virtualBounds).ConfigureAwait(true);
+        try
+        {
+            var overlay = new RegionOverlayWindow(virtualCapture.Bitmap, virtualBounds);
+            overlay.ShowDialog();
+            var sel = overlay.GetSelectedRegionAsRectangle();
+            if (sel is null) return;
+
+            var crop = CropFromVirtual(virtualCapture.Bitmap, virtualBounds, sel.Value);
+            try
+            {
+                var bs = ToBitmapSource(crop);
+                var result = await OcrService.RecognizeAsync(bs).ConfigureAwait(true);
+                string text = result?.Text ?? string.Empty;
+                try { if (!string.IsNullOrEmpty(text)) Clipboard.SetText(text); } catch { }
+                var win = new OcrResultWindow(text, OcrService.AvailableLanguages().FirstOrDefault());
+                win.Show();
+                win.Activate();
+            }
+            finally { crop.Dispose(); }
+        }
+        finally
+        {
+            virtualCapture.Bitmap.Dispose();
+        }
+    }
+
     private static Bitmap CropFromVirtual(Bitmap virtualBmp, Rectangle virtualBounds, Rectangle target)
     {
         int x = target.X - virtualBounds.X;
@@ -129,6 +181,20 @@ public sealed class CaptureOrchestrator
             MessageBox.Show($"Could not save capture:\n{ex.Message}", "Snapture",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+
+        // Index in history (best-effort — never block the user)
+        try
+        {
+            if (_history is not null && savedPath is not null)
+            {
+                var (proc, title) = result.SourceWindow is { } hwnd
+                    ? CaptureHistoryService.DescribeForeground(hwnd)
+                    : (null, null);
+                _history.Add(savedPath, result.Source, proc, title,
+                    result.Bitmap.Width, result.Bitmap.Height, ocrText: null);
+            }
+        }
+        catch { /* history failures must never block delivery */ }
 
         if (_settings.Current.CopyToClipboard)
         {
