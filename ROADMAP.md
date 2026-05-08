@@ -296,7 +296,7 @@ These items came up in research and are deliberately **not** roadmap candidates.
 
 ### Security & privacy
 
-- [ ] **Privacy doc** (`docs/PRIVACY.md`) — explicit "no telemetry, no analytics, no phone-home" statement; lists every network call the app could make and gates each behind an explicit user toggle [S5 §15, S4 Lightshot anti-pattern]
+- [x] **Privacy doc** (`docs/PRIVACY.md`) — explicit "no telemetry, no analytics, no phone-home" statement; lists every network call the app could make (LAN share, borderless consent, future opt-in update check, third-party plugins) and includes verification steps. Linked from README [S5 §15, S4 Lightshot anti-pattern]
 - [ ] **`WDA_EXCLUDEFROMCAPTURE` advisory** — when capturing a window the OS marks excluded, surface a clear toast (not a silent black PNG) [S3 §3.1]
 - [ ] **Gitleaks-rules-in-repo** with rule-pack version baked into settings so users see exactly which patterns are matched [S5 §4]
 - [ ] **Update check** — explicit user click; default off; resolves `https://api.github.com/repos/SysAdminDoc/Snapture/releases/latest` and stores nothing [S5 §15]

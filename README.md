@@ -213,6 +213,10 @@ Snapture.sln
 └─ Resources/Themes/CatppuccinMocha.xaml
 ```
 
+## Privacy
+
+**No telemetry, no analytics, no phone-home, no cloud account.** Every network feature is opt-in and explicitly user-triggered. See [docs/PRIVACY.md](docs/PRIVACY.md) for the audit-grade list of every place Snapture *could* talk to the network, with verification steps.
+
 ## License
 
 [MIT](LICENSE)
