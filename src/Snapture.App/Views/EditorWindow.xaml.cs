@@ -253,6 +253,7 @@ public partial class EditorWindow : Window
         bool gradient = GradientCheck.IsChecked == true;
         bool shadow = ShadowCheck.IsChecked == true;
         bool rounded = RoundedCheck.IsChecked == true;
+        bool codeChrome = CodeChromeCheck.IsChecked == true;
 
         if (gradient)
         {
@@ -272,6 +273,9 @@ public partial class EditorWindow : Window
         using var inner = _doc.RenderToBitmap();
         ApplyAdjustments(inner);
 
+        // Code-window chrome shows in the export only; in the canvas preview the SKElement is
+        // sized to the document, so adding a 36-pixel bar would be clipped. The status text
+        // hints at this when the toggle is on.
         var rect = new SKRect(0, 0, _doc.Width, _doc.Height);
         if (shadow)
         {
@@ -290,6 +294,8 @@ public partial class EditorWindow : Window
         canvas.ClipPath(clipPath, antialias: true);
         canvas.DrawBitmap(inner, rect);
         canvas.Restore();
+        if (codeChrome)
+            StatusText.Text = "Code window chrome will appear on export (preview omits it).";
 
         // Live preview of the shape currently being drawn
         if (_draftShape is not null)
@@ -568,10 +574,12 @@ public partial class EditorWindow : Window
         bool gradient = GradientCheck.IsChecked == true;
         bool shadow = ShadowCheck.IsChecked == true;
         bool rounded = RoundedCheck.IsChecked == true;
+        bool codeChrome = CodeChromeCheck.IsChecked == true;
 
-        int padding = (gradient || shadow) ? 80 : 0;
+        int chromeBar = codeChrome ? 36 : 0;
+        int padding = (gradient || shadow || codeChrome) ? 80 : 0;
         int outW = _doc.Width + padding * 2;
-        int outH = _doc.Height + padding * 2;
+        int outH = _doc.Height + chromeBar + padding * 2;
         var info = new SKImageInfo(outW, outH, SKColorType.Bgra8888, SKAlphaType.Premul);
         var output = new SKBitmap(info);
         using var canvas = new SKCanvas(output);
@@ -589,22 +597,41 @@ public partial class EditorWindow : Window
             canvas.DrawRect(0, 0, outW, outH, bg);
         }
 
-        var dst = new SKRect(padding, padding, padding + _doc.Width, padding + _doc.Height);
+        var contentRect = new SKRect(padding, padding + chromeBar, padding + _doc.Width, padding + chromeBar + _doc.Height);
+        var fullFrameRect = new SKRect(padding, padding, padding + _doc.Width, padding + chromeBar + _doc.Height);
+
         if (shadow)
         {
             using var shadowPaint = new SKPaint
             {
                 ImageFilter = SKImageFilter.CreateDropShadowOnly(0, 8, 16, 16, new SKColor(0, 0, 0, 180))
             };
-            canvas.DrawBitmap(doc, dst, shadowPaint);
+            canvas.DrawRect(fullFrameRect, shadowPaint);
         }
 
         using var clipPath = new SKPath();
-        if (rounded) clipPath.AddRoundRect(new SKRoundRect(dst, 18));
-        else clipPath.AddRect(dst);
+        if (rounded || codeChrome) clipPath.AddRoundRect(new SKRoundRect(fullFrameRect, 14));
+        else clipPath.AddRect(fullFrameRect);
         canvas.Save();
         canvas.ClipPath(clipPath, antialias: true);
-        canvas.DrawBitmap(doc, dst);
+
+        if (codeChrome)
+        {
+            // Carbon-style title bar: dark gray background + traffic-light dots.
+            var titleRect = new SKRect(fullFrameRect.Left, fullFrameRect.Top, fullFrameRect.Right, fullFrameRect.Top + chromeBar);
+            using var bar = new SKPaint { Style = SKPaintStyle.Fill, Color = new SKColor(40, 42, 54) };
+            canvas.DrawRect(titleRect, bar);
+            float r = 7, gap = 8;
+            float cx = titleRect.Left + 18, cy = titleRect.Top + chromeBar / 2f;
+            using var redDot    = new SKPaint { Style = SKPaintStyle.Fill, Color = new SKColor(255, 95, 86),  IsAntialias = true };
+            using var yellowDot = new SKPaint { Style = SKPaintStyle.Fill, Color = new SKColor(255, 189, 46), IsAntialias = true };
+            using var greenDot  = new SKPaint { Style = SKPaintStyle.Fill, Color = new SKColor(39, 201, 63),  IsAntialias = true };
+            canvas.DrawCircle(cx,                cy, r, redDot);
+            canvas.DrawCircle(cx + (r * 2 + gap), cy, r, yellowDot);
+            canvas.DrawCircle(cx + (r * 2 + gap) * 2, cy, r, greenDot);
+        }
+
+        canvas.DrawBitmap(doc, contentRect);
         canvas.Restore();
         return output;
     }

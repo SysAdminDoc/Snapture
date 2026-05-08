@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version"  src="https://img.shields.io/badge/version-0.4.0-CBA6F7?style=for-the-badge">
+  <img alt="Version"  src="https://img.shields.io/badge/version-0.5.0-CBA6F7?style=for-the-badge">
   <img alt="License"  src="https://img.shields.io/badge/license-MIT-A6E3A1?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-89B4FA?style=for-the-badge&logo=windows&logoColor=white">
   <img alt=".NET 10"  src="https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">
@@ -33,6 +33,11 @@ The existing landscape on Windows in 2026:
 | **CleanShot X** | Pinned overlay UX (paid) | Cloud-first, $29/yr |
 
 **Snapture's pitch:** the polish of Snagit, the no-cloud philosophy of Greenshot, modern WinRT-class capture, and a Catppuccin Mocha editor that doesn't look like it was designed in 2008.
+
+## What ships in v0.5.0
+
+- **Image-stitch fallback for scrolling capture** — pure-managed subsampled-SAD seam alignment. Browser pages that fell through to "no UIA scroll" in v0.3 now stack cleanly.
+- **Code-window chrome** — Carbon-style export wrapper with macOS traffic-light dots, dark titlebar, rounded corners. Pairs with the existing drop-shadow / gradient frame wrappers.
 
 ## What ships in v0.4.0
 
@@ -96,8 +101,8 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.5** — Image-stitch fallback (browsers, parallax pages), GIF / MP4 record (Media Foundation SinkWriter), HDR tonemap (ACES) + AVIF / JPEG XR, RapidOCR bundle, DOCX / PPTX from Step Capture
-- **v0.6** — MSIX + winget + Chocolatey + portable ZIP, code-signing via SignPath OSS, auto-update via Velopack, code-aware Carbon-style beautify mode
+- **v0.6** — GIF / MP4 record (Media Foundation SinkWriter), HDR tonemap (ACES) + AVIF / JPEG XR, RapidOCR bundle, DOCX / PPTX from Step Capture, sticky-header detection in stitcher
+- **v0.7** — MSIX + winget + Chocolatey + portable ZIP, code-signing via SignPath OSS, auto-update via Velopack
 
 ## Install
 
@@ -162,6 +167,7 @@ Snapture.sln
 │  │  ├─ WinRtCaptureEngine            ← Windows.Graphics.Capture (v0.2)
 │  │  ├─ CaptureItemFactory            ← IGraphicsCaptureItemInterop picker bypass
 │  │  ├─ D3D11Interop                  ← D3D11 + IDirect3DDevice bridge (3 P/Invokes)
+│  │  ├─ ImageStitcher                 ← Subsampled-SAD seam alignment for scrolling capture
 │  │  ├─ MonitorEnumerator             ← Per-monitor DPI awareness
 │  │  └─ WindowEnumerator              ← Top-level window listing + hit-test
 │  ├─ Snapture.Plugin.Abstractions/    ← Public plugin surface (multi-target)

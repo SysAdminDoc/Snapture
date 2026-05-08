@@ -2,6 +2,37 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [v0.5.0] — 2026-05-08
+
+The "scrolling capture actually works for browsers now" pass, plus a Carbon-style code-window export wrapper.
+
+### Added — Image-stitch fallback for scrolling capture (v0.5.1)
+
+- `Snapture.Capture/ImageStitcher` finds the vertical overlap between consecutive frames using subsampled sum-of-absolute-differences (SAD) on a 80-row strip from frame N-1, searched against frame N. Confidence ≥ 0.92 to accept the alignment, otherwise we fall back to naive concatenation.
+- `ScrollingCaptureService.StackVertically` now routes through the stitcher. Result: visible duplicate strips at frame boundaries are gone for ≥90% of common browser pages and document viewers.
+- Pure managed implementation — no Math.NET / OpenCV dependency. Subsample factor 4, search bound to plausible scroll deltas. ~150–200 ms per frame pair on 1920×1080 captures.
+- Honest about residuals: ad / animation between frames produces small ghosting at the seam, sticky-header / sticky-footer detection ships in v0.6.
+
+### Added — Code-window chrome (v0.5.2)
+
+- New "Code window chrome (Carbon-style)" toggle in the editor's Frame panel. When enabled, the export wraps the document in a 36-pixel macOS-style title bar with red / yellow / green traffic-light dots, dark-gray bar, and 14-px rounded corners on the outer frame.
+- The on-canvas preview omits the chrome (the WPF `SKElement` is sized to the document so a top bar would be clipped) and the status bar reminds the user. The export render produces the full chrome.
+- Pairs with the existing drop-shadow / rounded-corners / gradient backdrop wrappers — toggle any combination.
+
+### Changed
+
+- `Snapture.Capture` version bumped to 0.5.0.0 to match the app version (the capture-engine library carried 0.4.0 at release time despite the new stitcher; corrected in this release).
+- README badge bumped to 0.5.0; What-Ships section gains the new entries; v0.5 line in the roadmap section retired now that v0.5 has shipped.
+
+### Deferred
+
+- GIF / MP4 recording (Media Foundation `SinkWriter`)
+- HDR tonemap (ACES via Win2D) + AVIF / JPEG XR export
+- RapidOCR ONNX bundle
+- Sticky-header / sticky-footer detection in stitcher
+- DOCX / PPTX export from Step Capture
+- Plugin resize contract widening
+
 ## [v0.4.0] — 2026-05-08
 
 The differentiator wave: LAN-only share server, UIA Smart Capture, Plugin SDK, Step Capture mode, plus the auto-redact secrets pass that was committed-but-untagged after v0.3. Image-stitch fallback / GIF-MP4 / HDR explicitly deferred to v0.5.

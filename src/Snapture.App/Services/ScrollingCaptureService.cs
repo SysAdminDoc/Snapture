@@ -128,20 +128,11 @@ public sealed class ScrollingCaptureService
         if (frames.Count == 0) throw new InvalidOperationException("No frames to stack.");
         if (frames.Count == 1) return frames[0];
 
-        int width = frames.Max(f => f.Width);
-        int totalHeight = frames.Sum(f => f.Height);
-        var stacked = new Bitmap(width, totalHeight, PixelFormat.Format32bppArgb);
-        using (var g = Graphics.FromImage(stacked))
-        {
-            int y = 0;
-            foreach (var f in frames)
-            {
-                g.DrawImage(f, 0, y);
-                y += f.Height;
-            }
-        }
-        // Frames not returned to caller — dispose them.
-        foreach (var f in frames) f.Dispose();
-        return stacked;
+        // Use the seam-aligning stitcher. Falls back to naive concat for low-confidence pairs.
+        var (stitched, seams) = ImageStitcher.Stitch(frames);
+        // Stitcher returns a fresh bitmap when frames.Count > 1, so dispose the source frames.
+        if (!ReferenceEquals(stitched, frames[0]))
+            foreach (var f in frames) f.Dispose();
+        return stitched;
     }
 }

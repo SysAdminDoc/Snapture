@@ -180,6 +180,12 @@
                               Foreground="{StaticResource Subtext}"
                               Margin="0,4,0,0"
                               Click="OnFrameClicked" />
+                    <CheckBox x:Name="CodeChromeCheck"
+                              Content="Code window chrome (Carbon-style)"
+                              Foreground="{StaticResource Subtext}"
+                              Margin="0,4,0,0"
+                              ToolTip="Wraps the image in a macOS-style window with red / yellow / green traffic-light dots."
+                              Click="OnFrameClicked" />
                 </StackPanel>
             </ScrollViewer>
         </Border>
