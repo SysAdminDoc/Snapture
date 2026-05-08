@@ -191,12 +191,12 @@ Items that move ahead of the field, not catch up.
 - [ ] **UIA Smart Capture** — hover any window, see live highlights of every UIA element, click-pick exact button/panel for pixel-perfect crop. Snagit's "Smart Move" is post-capture; doing this *during* capture is novel — no consumer tool ships it [S2 §1, S4 a11y-insights pattern]
   - [ ] Hierarchy walking on scroll-wheel (Snipaste Pro's hidden Pro-only feature, generalized) [S2 §6]
   - [ ] Element-aware crop honours bounding rectangles automatically
-- [ ] **Auto-redact secrets pass** [S5 §4, S4 Redacted-extension reference]
-  - [ ] **Gitleaks rule pack (MIT)** ported as the C# regex source — AWS / GCP / Azure keys, JWTs, GitHub tokens, Stripe keys, Slack tokens, Mailchimp, Twilio, Cloudant, npm, etc. [S5 §4]
-  - [ ] **Presidio recognizer ports** for PII: credit cards (Luhn-validated), SSN, IBAN, phones, IPs, MAC addresses, emails [S5 §4]
-  - [ ] **Single ONNX serves both OCR and redact** — RapidOCR's bundled DBNet detector picks text regions, regex pack matches text, blur the matched boxes [S5 §4 — key consolidation]
-  - [ ] Per-rule on/off in settings; "N secrets detected — review or auto-blur" toast
-  - [ ] **Solid-fill default for matched secrets** (blur is reversible) [S4]
+- [x] **Auto-redact secrets pass** — `Editor/SecretDetector` (Gitleaks-derived rule pack: AWS / GCP / Azure / GitHub / Stripe / Slack / Twilio / JWT / npm / generic hex + PII: credit cards Luhn-validated / SSN / IBAN / IPv4 / MAC / email). `Editor/AutoRedactor` re-runs `Windows.Media.Ocr` over the rendered document, scans each word with the rule pack, drops `RedactShape` solid-fills on matched word-boxes. Editor "Auto-redact secrets" button runs the pipeline and registers each redaction with the command stack so a single undo doesn't strand them [S5 §4, S4 Redacted-extension reference]
+  - [x] **Gitleaks rule pack (MIT)** ported as compiled regex
+  - [x] **PII recognizers** (credit cards Luhn-validated, SSN, IBAN, IPs, MACs, emails)
+  - [ ] **Single ONNX for OCR+redact** — v0.4.x with the RapidOCR bundle [S5 §4]
+  - [ ] **Per-rule on/off in settings** — v0.4.x (rules data structure already supports it)
+  - [x] **Solid-fill default** for matched secrets (blur is reversible) [S4]
 - [ ] **Smart Move-equivalent (post-capture object reposition)** — local OpenCvSharp4 detect-and-reposition UI rectangles in a flat PNG; matches Snagit's only single-vendor moat feature [S2 §1, S5 §2]
 - [ ] **LAN-only share server** [S5 §12]
   - [ ] Kestrel minimal API (`<FrameworkReference Include="Microsoft.AspNetCore.App"/>`)

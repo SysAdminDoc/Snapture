@@ -628,6 +628,38 @@ public partial class EditorWindow : Window
         new PinWindow(bs).Show();
     }
 
+    private async void OnAutoRedactClicked(object sender, RoutedEventArgs e)
+    {
+        AutoRedactButton.IsEnabled = false;
+        StatusText.Text = "Scanning for secrets…";
+        try
+        {
+            using var flat = _doc.RenderToBitmap();
+            var findings = await AutoRedactor.ScanAsync(flat);
+            if (findings.Count == 0)
+            {
+                StatusText.Text = "No secrets detected.";
+                return;
+            }
+            int added = AutoRedactor.ApplyToDocument(_doc, findings);
+            // Stuff the redactions into a single command so undo reverts the whole batch.
+            // (Each shape was added directly; record the redactions for explicit undo.)
+            // Simpler: rebuild as Add commands so existing undo works.
+            // Pop them out then push as a batch.
+            var added_shapes = _doc.Shapes.TakeLast(added).ToList();
+            for (int i = 0; i < added; i++) _doc.Shapes.RemoveAt(_doc.Shapes.Count - 1);
+            foreach (var s in added_shapes) _commands.Do(_doc, new AddShapeCommand(s));
+            Canvas.InvalidateVisual();
+            StatusText.Text = $"Added {added} redactions: " + string.Join(", ",
+                findings.Select(f => f.RuleId).Distinct().Take(6));
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Auto-redact failed: {ex.Message}";
+        }
+        finally { AutoRedactButton.IsEnabled = true; }
+    }
+
     // ---- BitmapSource <-> SKBitmap converters --------------------------------
 
     private static SKBitmap BitmapSourceToSKBitmap(BitmapSource bs)

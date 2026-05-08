@@ -48,6 +48,11 @@
                     <Button x:Name="ExportAsButton" Content="Export As…" Click="OnExportAsClicked" />
                     <Button x:Name="CopyButton" Content="Copy" Click="OnCopyClicked" />
                     <Button x:Name="PinButton" Content="Pin" Click="OnPinClicked" />
+                    <Separator Margin="6,0" Background="{StaticResource Surface0}" />
+                    <Button x:Name="AutoRedactButton"
+                            Content="Auto-redact secrets"
+                            Click="OnAutoRedactClicked"
+                            ToolTip="Run OCR + Gitleaks rule pack and add solid-fill redactions to detected API keys, JWTs, AWS keys, JWTs, IPs, etc." />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
