@@ -53,35 +53,39 @@ The release that retires GDI as primary and turns the editor from a viewer into 
 
 ### v0.2.2 — Annotation editor (full)
 
-- [ ] **SkiaSharp.Views.WPF** as the canvas substrate (GPU-accelerated, 4K/8K-friendly, MIT) [S5 §1]
-- [ ] **Vector annotation document model** — every shape stays editable forever; flatten only on raster export [S5 §1, S1 Greenshot #375]
-- [ ] **Tools** (V/R/E/L/A/F/T/H/O/N/M/I/C hotkeys):
-  - [ ] Select / move / resize / rotate
-  - [ ] Rectangle (filled / outlined / rounded)
-  - [ ] Ellipse
-  - [ ] Line
-  - [ ] Arrow (straight / curved / bidirectional / dashed) — curved arrows specifically requested in Greenshot #311 [S1]
-  - [ ] Freehand pen with mouse-wheel thickness control [S1 Flameshot]
-  - [ ] Text with editable font/size/weight/colour
-  - [ ] Highlight (translucent rectangle, area-mode, text-mode, magnify-mode)
-  - [ ] Blur / pixelate / **solid-fill redact** (blur is reversible by adversaries; solid-fill is the only safe option for secrets) [S4]
-  - [ ] Step counter (1, 2, 3 / a, b, c / Roman) — Greenshot #103 [S1]
-  - [ ] Ruler (drop a measurement onto the canvas)
-  - [ ] Eyedropper (pulls a colour from the underlying capture into the active swatch)
-  - [ ] Crop (with snap-to-edge)
+- [x] **SkiaSharp.Views.WPF** as the canvas substrate (GPU-accelerated, 4K/8K-friendly, MIT) [S5 §1]
+- [x] **Vector annotation document model** — every shape stays editable forever; flatten only on raster export [S5 §1, S1 Greenshot #375]
+- [x] **Tools** (V/R/E/L/A/F/T/H/B/X/N/C hotkeys — `O`/`M`/`I` reserved for v0.2.4 polish):
+  - [ ] Select / move / resize / rotate — first-pass: tool exists but only edits-by-creation; full transform handles in v0.3
+  - [x] Rectangle (filled / outlined / rounded) — corner-radius via shape model, filled toggle on right panel
+  - [x] Ellipse
+  - [x] Line (straight / dashed)
+  - [x] Arrow (straight / bidirectional / dashed) — curved arrows pushed to v0.3 with the spline editor
+  - [x] Freehand pen with mouse-wheel thickness control [S1 Flameshot]
+  - [x] Text with editable font/size/weight/colour (basic — bold/italic flags wired in model, dialog plain for now)
+  - [x] Highlight (translucent rectangle area-mode) — text-mode + magnify-mode pushed to v0.3
+  - [x] Blur / pixelate / **solid-fill redact** as separate tools [S4]
+  - [x] Step counter (auto-increment 1, 2, 3) — letter / Roman variants pushed to v0.3
+  - [ ] Ruler (drop a measurement onto the canvas) — v0.2.4 polish (lives next to the global pixel-ruler)
+  - [ ] Eyedropper (pulls a colour from the underlying capture into the active swatch) — v0.2.4 polish
+  - [ ] Crop (with snap-to-edge) — wired to a tool slot, full crop pipeline ships in v0.2.4
 - [ ] **Hand-drawn aesthetic toggle** ("sloppiness slider", Excalidraw-style) — psychologically lowers bar-to-share [S4]
-- [ ] **Spacebar-toggled side panel** for tool options (Flameshot UX) [S1]
-- [ ] **Right-click colour wheel** on draw to recolour without leaving the canvas (Flameshot UX) [S1]
-- [ ] **Recent-colours bar** (Flameshot pattern) [S1]
-- [ ] **Open existing image into editor** — Flameshot #240 (171 +1, top-asked feature) and Greenshot #107 [S1]
-- [ ] **Undo/redo unlimited** per document [S1]
-- [ ] **Border / shadow / rounded-corner / gradient-bg "beautify" wrappers** (Shottr backdrop, CleanShot wrappers) [S2]
-- [ ] **Brightness / contrast / grayscale / invert adjustments** (raster pass)
-- [ ] **Export formats**: PNG, JPG, BMP, **WebP** [S1 ShareX#6090], **AVIF (HDR10 when AV1 Image Ext present)** [S3 §3.4], **JPEG XR (HDR archival)** [S3 §6.3], **SVG** (vector when no rasterized adjustments), **`.snapture` project file** (zip = `document.json` + `background.png` + `assets/`) [S5 §1]
-- [ ] **Open `.snapture` again** — the missing round-trip in every other OSS tool [S1 Greenshot's `.greenshot` is the model, refined]
-- [ ] **Refresh capture preserving annotations** — Snipaste Pro's killer feature, single-vendor today; recapture the source window/region, re-anchor existing shapes [S2 §6]
-- [ ] **Annotation Categories** (color tags: blocker / question / nit) for handoff workflows (Figma pattern) [S4]
-- [ ] **"Select all of type"** — pick every arrow, recolour in batch (Snagit 2026 + Snipaste Pro pattern) [S2 §1, §6]
+- [ ] **Spacebar-toggled side panel** for tool options (Flameshot UX) — right panel is always-on for first pass [S1]
+- [ ] **Right-click colour wheel** on draw to recolour without leaving the canvas (Flameshot UX) — v0.3 [S1]
+- [x] **Recent-colours bar** (Flameshot pattern) [S1]
+- [x] **Open existing image into editor** — File → Open accepts PNG/JPG/BMP and `.snapture` [S1]
+- [x] **Undo/redo unlimited** per document — Ctrl+Z / Ctrl+Y, command stack [S1]
+- [x] **Border / shadow / rounded-corner / gradient-bg "beautify" wrappers** — checkboxes in right panel apply to both preview and export [S2]
+- [x] **Brightness / contrast / grayscale / invert adjustments** (raster pass)
+- [x] **Export formats**: PNG, JPG, BMP, **WebP** (Skia native) [S1 ShareX#6090]
+  - [ ] AVIF + HDR10 (Win11 AV1 Image Ext) — v0.3.4 with HDR
+  - [ ] JPEG XR (HDR archival) — v0.3.4 with HDR
+  - [ ] SVG vector export — v0.3 (Skia.Svg writer integration) [S5 §1]
+- [x] **`.snapture` project file** (zip = `document.json` + `background.png` + `manifest.json`) [S5 §1]
+- [x] **Open `.snapture` again** — round-trip via `SnapFileFormat.Load`
+- [ ] **Refresh capture preserving annotations** — Snipaste Pro's killer feature; recapture source + re-anchor — v0.3 [S2 §6]
+- [ ] **Annotation Categories** (color tags: blocker / question / nit) — v0.3 (Figma pattern) [S4]
+- [ ] **"Select all of type"** — v0.3 (needs the Select tool first) [S2 §1, §6]
 
 ### v0.2.3 — Settings dialog (replace JSON-only config)
 

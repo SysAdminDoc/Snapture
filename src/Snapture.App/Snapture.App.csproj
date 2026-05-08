@@ -22,6 +22,8 @@
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.9" />
+    <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Snapture.Capture\Snapture.Capture.csproj" />
