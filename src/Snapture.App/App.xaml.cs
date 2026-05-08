@@ -11,6 +11,10 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Set the AUMID first — Win11 22H2+ pins the borderless-capture consent against
+        // this identifier, so anything that surfaces a taskbar entry must wait until it's set.
+        AppIdentity.SetAumid();
+
         base.OnStartup(e);
         AppDomain.CurrentDomain.UnhandledException += (_, args) => LogCrash(args.ExceptionObject as Exception);
         DispatcherUnhandledException += (_, args) => { LogCrash(args.Exception); args.Handled = true; };

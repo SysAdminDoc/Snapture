@@ -33,22 +33,23 @@ The release that retires GDI as primary and turns the editor from a viewer into 
 
 ### v0.2.1 — Capture engine: WinRT primary, GDI fallback
 
-- [ ] **`WinRtCaptureEngine`** using `Windows.Graphics.Capture` [S3 §1.1]
-  - [ ] Bump TFM to `net10.0-windows10.0.22621.0` so 22H2 toggles (`IsBorderRequired`, `IncludeSecondaryWindows`, `MinUpdateInterval`) compile [S3 §1.1]
-  - [ ] D3D11 device interop via Win2D `CanvasDevice.GetSharedDevice()` (saves ~150 lines of boilerplate vs hand-rolled CsWinRT) [S3 §1.8]
-  - [ ] `Direct3D11CaptureFramePool.CreateFreeThreaded` (UI-thread variant stutters) [S3 §1.5]
-  - [ ] BGRA8 path for SDR; FP16 (`R16G16B16A16Float`) path for HDR sources [S3 §1.3]
-  - [ ] Engine-selector in `SnaptureSettings` (`winrt` / `gdi` / `auto`) [self / existing roadmap]
-  - [ ] Auto-fallback to GDI on Win10 < 1809 or `GraphicsCaptureItem` creation failure [self]
-  - [ ] Picker bypass: `CreateForMonitor` for region-select (capture monitor → crop) and `CreateForWindow` for window mode — no UX prompt unless we genuinely need one [S3 §1.6]
-- [ ] **AppUserModelID** set on app start (`SetCurrentProcessExplicitAppUserModelID("SysAdminDoc.Snapture")`) so border-suppression consent persists across reinstalls [S3 §1.4]
-- [ ] **First-run consent** for `GraphicsCaptureAccess.RequestAccessAsync(Borderless)` with copy explaining why (the yellow border shows otherwise on Win11 22H2+) [S3 §1.4]
-- [ ] **HDR tone-mapping pass** — Win2D `HdrToneMapEffect` (ACES) for SDR PNG export of HDR captures; preserve raw FP16 as JPEG XR for "RAW" archival [S3 §6, S1 ShareX#6688]
+- [x] **`WinRtCaptureEngine`** using `Windows.Graphics.Capture` [S3 §1.1]
+  - [x] Bump TFM to `net10.0-windows10.0.22621.0` so 22H2 toggles (`IsBorderRequired`, `IncludeSecondaryWindows`, `MinUpdateInterval`) compile [S3 §1.1]
+  - [x] D3D11 device interop — hand-rolled (D3D11CreateDevice + CreateDirect3D11DeviceFromDXGIDevice + IDirect3DDxgiInterfaceAccess) instead of Win2D, to keep the dependency footprint at zero [S3 §1.8]
+  - [x] `Direct3D11CaptureFramePool.CreateFreeThreaded` (UI-thread variant stutters) [S3 §1.5]
+  - [x] BGRA8 path for SDR
+  - [ ] FP16 (`R16G16B16A16Float`) path for HDR sources — moved into v0.3.4 with the HDR tonemap work [S3 §1.3]
+  - [x] Engine-selector in `SnaptureSettings` (`winrt` / `gdi` / `auto`) [self / existing roadmap]
+  - [x] Auto-fallback to GDI on Win10 < 1809 or `GraphicsCaptureItem` creation failure [self]
+  - [x] Picker bypass: `CreateForMonitor` for region-select (capture monitor → crop) and `CreateForWindow` for window mode — no UX prompt unless we genuinely need one [S3 §1.6]
+- [x] **AppUserModelID** set on app start (`SetCurrentProcessExplicitAppUserModelID("SysAdminDoc.Snapture")`) so border-suppression consent persists across reinstalls [S3 §1.4]
+- [x] **First-run consent** for `GraphicsCaptureAccess.RequestAccessAsync(Borderless)` with copy explaining why (the yellow border shows otherwise on Win11 22H2+) [S3 §1.4]
+- [ ] **HDR tone-mapping pass** — Win2D `HdrToneMapEffect` (ACES) for SDR PNG export of HDR captures; preserve raw FP16 as JPEG XR for "RAW" archival [S3 §6, S1 ShareX#6688] — moved to v0.3.4
   - This is the single most-requested missing feature across ShareX (108 +1, 222 comments), Greenshot (#542), and Flameshot (#3151) [S1].
-- [ ] **`WDA_EXCLUDEFROMCAPTURE` aware** — when WGC returns black for a 1Password/Bitwarden/banking window, surface a toast ("This window is excluded by the OS") instead of saving a black PNG [S3 §3.1]
-- [ ] **Magnification API fallback** for layered/topmost overlays (Steam overlay, Spotify mini-player) that WGC misses [S3 §3.3]
-- [ ] **Window-pick mode with hover highlight** — overlay shows the bounds of the window under cursor; PgUp/PgDn walks the parent/child chain via UIA `TreeWalker` [S4]
-- [ ] **PrintScreen-on-Win11-24H2** detection — registry check for `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\PrintScreenKeyForSnippingEnabled`; if hijacked, prompt the user with a one-click toggle [S5 §8, S1 Flameshot v14 release notes]
+- [x] **`WDA_EXCLUDEFROMCAPTURE` aware** — when WGC returns black for a 1Password/Bitwarden/banking window, surface a toast ("This window is excluded by the OS") instead of saving a black PNG [S3 §3.1]
+- [ ] **Magnification API fallback** for layered/topmost overlays (Steam overlay, Spotify mini-player) that WGC misses [S3 §3.3] — moved to v0.3 (niche fallback, defer until WGC complaints land)
+- [x] **Window-pick mode with hover highlight** — overlay shows the bounds of the window under cursor; PgUp/PgDn walks the parent/child chain (Win32 `GetAncestor`; UIA `TreeWalker` is a v0.4 upgrade once Smart Capture lands) [S4]
+- [x] **PrintScreen-on-Win11-24H2** detection — registry check for `HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\PrintScreenKeyForSnippingEnabled`; tray surfaces a one-click "Reclaim PrintScreen" entry when the value is set [S5 §8, S1 Flameshot v14 release notes]
 
 ### v0.2.2 — Annotation editor (full)
 
@@ -110,8 +111,8 @@ Tabs: **General · Capture · Hotkeys · Output · Editor · Frame · Advanced**
   - [ ] **Solo mode** — pin focus, hide siblings (Snipaste Pro) [S2]
 - [ ] **Hide desktop icons before capture** toggle (CleanShot X) [S2]
 - [ ] **Hide notifications** during capture (CleanShot X — uses Focus Assist API on Windows) [S2]
-- [ ] **Self-timer / delay capture** 1/3/5/10s (universal) [S2]
-- [ ] **Last-region recapture** (`Shift+PrintScreen`) — already in old roadmap, keep [self]
+- [x] **Self-timer / delay capture** 1/3/5/10s (universal) [S2]
+- [x] **Last-region recapture** (`Shift+PrintScreen`) — already in old roadmap, keep [self]
 
 ---
 

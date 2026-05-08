@@ -11,13 +11,15 @@ namespace Snapture.App.Services;
 public sealed class CaptureOrchestrator
 {
     private readonly SettingsService _settings;
-    private readonly ICaptureEngine _engine;
+    private ICaptureEngine _engine;
 
     public CaptureOrchestrator(SettingsService settings, ICaptureEngine engine)
     {
         _settings = settings;
         _engine = engine;
     }
+
+    public void ReplaceEngine(ICaptureEngine engine) => _engine = engine;
 
     public async Task CaptureRegionAsync()
     {
@@ -31,12 +33,31 @@ public sealed class CaptureOrchestrator
             if (sel is null) return;
 
             var crop = CropFromVirtual(virtualCapture.Bitmap, virtualBounds, sel.Value);
+
+            // Persist last region for Shift+PrintScreen recapture
+            _settings.Current.LastRegion = new CaptureRect(sel.Value.X, sel.Value.Y, sel.Value.Width, sel.Value.Height);
+            _settings.Save();
+
             await DeliverCaptureAsync(new CaptureResult(crop, sel.Value, DateTime.UtcNow, "Region")).ConfigureAwait(true);
         }
         finally
         {
             virtualCapture.Bitmap.Dispose();
         }
+    }
+
+    public async Task CaptureLastRegionAsync()
+    {
+        var rect = _settings.Current.LastRegion;
+        if (rect is null)
+        {
+            // Fall back to the standard region picker if there's no remembered region yet.
+            await CaptureRegionAsync();
+            return;
+        }
+        var bounds = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
+        var result = await _engine.CaptureRegionAsync(bounds).ConfigureAwait(true);
+        await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
 
     public async Task CaptureFullscreenAsync()
@@ -53,23 +74,40 @@ public sealed class CaptureOrchestrator
         await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
 
+    public async Task CaptureWindowPickerAsync()
+    {
+        // Show the hover-highlight overlay; user picks the window with click.
+        var picker = new WindowPickerWindow();
+        var hwnd = picker.PickWindowSync();
+        if (hwnd == 0) return;
+        var result = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
+        await DeliverCaptureAsync(result).ConfigureAwait(true);
+    }
+
     public async Task CaptureMonitorAsync(MonitorInfo m)
     {
         var result = await _engine.CaptureMonitorAsync(m).ConfigureAwait(true);
         await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
 
-    private static Bitmap CropFromVirtual(Bitmap virtualBmp, System.Drawing.Rectangle virtualBounds, System.Drawing.Rectangle target)
+    public async Task CaptureWithDelayAsync(Func<Task> capture, int delaySeconds)
+    {
+        if (delaySeconds > 0)
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds)).ConfigureAwait(true);
+        await capture().ConfigureAwait(true);
+    }
+
+    private static Bitmap CropFromVirtual(Bitmap virtualBmp, Rectangle virtualBounds, Rectangle target)
     {
         int x = target.X - virtualBounds.X;
         int y = target.Y - virtualBounds.Y;
         x = Math.Max(0, x); y = Math.Max(0, y);
         int w = Math.Min(target.Width, virtualBmp.Width - x);
         int h = Math.Min(target.Height, virtualBmp.Height - y);
-        var src = new System.Drawing.Rectangle(x, y, w, h);
+        var src = new Rectangle(x, y, w, h);
         var crop = new Bitmap(w, h, PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(crop);
-        g.DrawImage(virtualBmp, new System.Drawing.Rectangle(0, 0, w, h), src, GraphicsUnit.Pixel);
+        g.DrawImage(virtualBmp, new Rectangle(0, 0, w, h), src, GraphicsUnit.Pixel);
         return crop;
     }
 
@@ -92,7 +130,6 @@ public sealed class CaptureOrchestrator
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
 
-        // Copy to clipboard
         if (_settings.Current.CopyToClipboard)
         {
             try
@@ -103,7 +140,6 @@ public sealed class CaptureOrchestrator
             catch { /* clipboard contention is not fatal */ }
         }
 
-        // Open editor
         if (_settings.Current.OpenEditorAfterCapture)
         {
             var bs = ToBitmapSource(result.Bitmap);
@@ -118,7 +154,6 @@ public sealed class CaptureOrchestrator
     private static string BuildOutputPath(SnaptureSettings s)
     {
         var now = DateTime.Now;
-        // Replace {tokens} in filename pattern
         string baseName = System.Text.RegularExpressions.Regex.Replace(
             s.FilenamePattern,
             @"\{([^}]+)\}",

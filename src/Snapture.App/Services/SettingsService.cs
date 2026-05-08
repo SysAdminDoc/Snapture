@@ -11,7 +11,7 @@ public sealed class SnaptureSettings
 
     public string FilenamePattern { get; set; } = "Snapture_{yyyy-MM-dd}_{HH-mm-ss}";
 
-    public string OutputFormat { get; set; } = "PNG"; // PNG, JPG
+    public string OutputFormat { get; set; } = "PNG"; // PNG, JPG, BMP, WEBP
 
     public bool CopyToClipboard { get; set; } = true;
 
@@ -21,10 +21,25 @@ public sealed class SnaptureSettings
 
     public bool LaunchAtStartup { get; set; } = false;
 
+    /// <summary>"auto" | "winrt" | "gdi". <c>auto</c> picks WinRT on Win10 1809+, GDI otherwise.</summary>
+    public string CaptureEngine { get; set; } = "auto";
+
+    /// <summary>Records whether the user has accepted the WGC borderless-capture access prompt.</summary>
+    public bool BorderlessConsentGiven { get; set; } = false;
+
+    /// <summary>Set after the user has been notified about Win11 24H2 PrintScreen hijack (one-shot toast).</summary>
+    public bool PrintScreenHijackToastShown { get; set; } = false;
+
+    /// <summary>Stores the last region capture for Shift+PrintScreen recapture.</summary>
+    public CaptureRect? LastRegion { get; set; }
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");
+    public HotkeyBinding LastRegionHotkey { get; set; } = new(4 /*Shift*/, "PrintScreen");
 }
+
+public sealed record CaptureRect(int X, int Y, int Width, int Height);
 
 public sealed record HotkeyBinding(uint Modifiers, string KeyName);
 
