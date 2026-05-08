@@ -1,0 +1,25 @@
+<Window x:Class="Snapture.App.Views.PinWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Pinned"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Topmost="True"
+        Background="Transparent"
+        SizeToContent="WidthAndHeight"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True">
+    <Border x:Name="FrameBorder"
+            BorderBrush="{StaticResource Mauve}"
+            BorderThickness="2"
+            Background="{StaticResource Crust}"
+            CornerRadius="4"
+            Padding="2">
+        <Border.Effect>
+            <DropShadowEffect BlurRadius="14" Opacity="0.55" ShadowDepth="0" Color="Black" />
+        </Border.Effect>
+        <Image x:Name="PinnedImage" Stretch="None" />
+    </Border>
+</Window>

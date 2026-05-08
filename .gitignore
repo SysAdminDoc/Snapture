@@ -1,0 +1,40 @@
+# Build outputs
+bin/
+obj/
+out/
+publish/
+*.user
+*.suo
+.vs/
+
+# Tool / IDE
+.idea/
+.vscode/
+*.swp
+*.bak
+*.tmp
+
+# Logs
+*.log
+
+# Test output
+TestResults/
+
+# Local-only AI agent files (never commit)
+CLAUDE.md
+CODEX_CHANGELOG.md
+.claude/
+
+# Runtime
+*.pdb
+*.dll.config
+appsettings.Local.json
+
+# NuGet
+*.nupkg
+*.snupkg
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
