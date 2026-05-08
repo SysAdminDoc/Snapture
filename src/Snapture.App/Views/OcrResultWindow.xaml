@@ -5,8 +5,8 @@
         Width="640" Height="480"
         MinWidth="420" MinHeight="320"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource Base}"
-        Foreground="{DynamicResource Text}"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid>
@@ -17,18 +17,18 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <DockPanel LastChildFill="True">
                 <TextBlock Text="✦ OCR"
-                           Foreground="{DynamicResource Mauve}"
+                           Foreground="{DynamicResource AppAccent}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"
                            DockPanel.Dock="Left" />
                 <TextBlock x:Name="LangText"
-                           Foreground="{DynamicResource Subtext}"
+                           Foreground="{DynamicResource AppMutedForeground}"
                            VerticalAlignment="Center"
                            HorizontalAlignment="Right"
                            DockPanel.Dock="Right" />
@@ -44,19 +44,19 @@
                  HorizontalScrollBarVisibility="Auto"
                  FontFamily="Cascadia Code, Consolas, monospace"
                  FontSize="13"
-                 Background="{DynamicResource Mantle}"
-                 BorderBrush="{DynamicResource Surface0}"
+                 Background="{DynamicResource AppSurface}"
+                 BorderBrush="{DynamicResource AppBorder}"
                  BorderThickness="1"
                  Padding="12" />
 
         <Border Grid.Row="2"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,1,0,0"
                 Padding="14,10">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="StatusText"
-                           Foreground="{DynamicResource Subtext}"
+                           Foreground="{DynamicResource AppMutedForeground}"
                            VerticalAlignment="Center"
                            DockPanel.Dock="Left" />
                 <StackPanel Orientation="Horizontal"

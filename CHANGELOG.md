@@ -2,6 +2,13 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [unreleased] — theme migration
+
+### Changed — Views switched to semantic theme tokens
+
+- All thirteen view XAMLs and their code-behinds now bind colors via the `App*` semantic tokens (`AppBackground`, `AppSurface`, `AppCanvas`, `AppBorder`, `AppBorderStrong`, `AppForeground`, `AppMutedForeground`, `AppSubtleForeground`, `AppAccent`, `AppWarning`) instead of the legacy Catppuccin palette names (`Base`, `Mantle`, `Crust`, `Surface0/1/2`, `Text`, `Subtext`, `Overlay0/1`, `Mauve`, `Accent`). Both palettes still export the legacy names for plugin-API compatibility, but Snapture's own surfaces no longer depend on a specific palette flavor — the same XAML reads correctly on Mocha (dark) and Latte (light). Two stale palette references in `SettingsWindow.xaml.cs` (the redact-rule list builder) and the tray theme menu's `IsChecked` comparison (now normalized via `ThemeManager.NormalizeMode`) were also fixed.
+- Tray About box pulls the version from the assembly instead of the hardcoded `v0.2.0` string and surfaces the active theme + effective mode for diagnostics.
+
 ## [v0.6.0] — 2026-05-08
 
 The "more polish, less repeat work" pass. Sticky-strip detection, animated GIF recording, per-rule auto-redact toggles, plugin-resize widening, and the docs / distribution items that round out a serious release.

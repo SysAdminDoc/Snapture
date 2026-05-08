@@ -18,36 +18,36 @@
         <Canvas x:Name="OverlayCanvas">
             <Rectangle x:Name="DimRect" Fill="{DynamicResource DimBackdrop}" />
             <Rectangle x:Name="HighlightRect"
-                       Stroke="{DynamicResource Accent}"
+                       Stroke="{DynamicResource AppAccent}"
                        StrokeThickness="3"
                        Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed" />
             <Border x:Name="TitleBadge"
-                    Background="{DynamicResource Mantle}"
-                    BorderBrush="{DynamicResource Accent}"
+                    Background="{DynamicResource AppSurface}"
+                    BorderBrush="{DynamicResource AppAccent}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,4"
                     Visibility="Collapsed">
                 <TextBlock x:Name="TitleText"
-                           Foreground="{DynamicResource Text}"
+                           Foreground="{DynamicResource AppForeground}"
                            FontSize="13" />
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{DynamicResource Mantle}"
-                    BorderBrush="{DynamicResource Surface1}"
+                    Background="{DynamicResource AppSurface}"
+                    BorderBrush="{DynamicResource AppBorderStrong}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="14,8"
                     Opacity="0.95">
-                <TextBlock Foreground="{DynamicResource Subtext}" FontSize="13">
-                    <Run Foreground="{DynamicResource Mauve}" Text="Click" />
+                <TextBlock Foreground="{DynamicResource AppMutedForeground}" FontSize="13">
+                    <Run Foreground="{DynamicResource AppAccent}" Text="Click" />
                     <Run Text=" a window to capture " />
-                    <Run Foreground="{DynamicResource Surface2}" Text="·" />
-                    <Run Foreground="{DynamicResource Mauve}" Text=" PgUp/PgDn " />
+                    <Run Foreground="{DynamicResource AppBorderStrong}" Text="·" />
+                    <Run Foreground="{DynamicResource AppAccent}" Text=" PgUp/PgDn " />
                     <Run Text="parent/child " />
-                    <Run Foreground="{DynamicResource Surface2}" Text="·" />
-                    <Run Foreground="{DynamicResource Mauve}" Text=" Esc " />
+                    <Run Foreground="{DynamicResource AppBorderStrong}" Text="·" />
+                    <Run Foreground="{DynamicResource AppAccent}" Text=" Esc " />
                     <Run Text="cancel" />
                 </TextBlock>
             </Border>

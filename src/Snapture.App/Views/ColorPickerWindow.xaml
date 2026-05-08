@@ -5,8 +5,8 @@
         Width="320" Height="380"
         WindowStartupLocation="CenterScreen"
         ResizeMode="CanMinimize"
-        Background="{DynamicResource Base}"
-        Foreground="{DynamicResource Text}"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid Margin="20">
@@ -20,14 +20,14 @@
 
         <TextBlock Grid.Row="0"
                    Text="Hover anywhere on screen — the swatch updates live."
-                   Foreground="{DynamicResource Subtext}"
+                   Foreground="{DynamicResource AppMutedForeground}"
                    TextWrapping="Wrap"
                    Margin="0,0,0,10" />
 
         <Border Grid.Row="1"
                 x:Name="SwatchBorder"
-                Background="{DynamicResource Mauve}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppAccent}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="1"
                 CornerRadius="6"
                 Height="80"
@@ -44,22 +44,22 @@
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Grid.Column="0" Text="HEX" Foreground="{DynamicResource Subtext}" />
+            <TextBlock Grid.Row="0" Grid.Column="0" Text="HEX" Foreground="{DynamicResource AppMutedForeground}" />
             <TextBlock x:Name="HexText"
                        Grid.Row="0" Grid.Column="1"
                        FontFamily="Cascadia Code, Consolas, monospace"
                        Text="#000000" />
-            <TextBlock Grid.Row="1" Grid.Column="0" Text="RGB" Foreground="{DynamicResource Subtext}" />
+            <TextBlock Grid.Row="1" Grid.Column="0" Text="RGB" Foreground="{DynamicResource AppMutedForeground}" />
             <TextBlock x:Name="RgbText"
                        Grid.Row="1" Grid.Column="1"
                        FontFamily="Cascadia Code, Consolas, monospace"
                        Text="0, 0, 0" />
-            <TextBlock Grid.Row="2" Grid.Column="0" Text="HSL" Foreground="{DynamicResource Subtext}" />
+            <TextBlock Grid.Row="2" Grid.Column="0" Text="HSL" Foreground="{DynamicResource AppMutedForeground}" />
             <TextBlock x:Name="HslText"
                        Grid.Row="2" Grid.Column="1"
                        FontFamily="Cascadia Code, Consolas, monospace"
                        Text="0°, 0%, 0%" />
-            <TextBlock Grid.Row="3" Grid.Column="0" Text="APCA" Foreground="{DynamicResource Subtext}" />
+            <TextBlock Grid.Row="3" Grid.Column="0" Text="APCA" Foreground="{DynamicResource AppMutedForeground}" />
             <TextBlock x:Name="ApcaText"
                        Grid.Row="3" Grid.Column="1"
                        FontFamily="Cascadia Code, Consolas, monospace"
@@ -69,11 +69,11 @@
 
         <TextBlock Grid.Row="3"
                    x:Name="HintText"
-                   Foreground="{DynamicResource Subtext}"
+                   Foreground="{DynamicResource AppMutedForeground}"
                    TextWrapping="Wrap"
                    VerticalAlignment="Center"
                    Margin="0,12,0,0">
-            <Run Foreground="{DynamicResource Mauve}" Text="Click anywhere" /> on screen to lock the colour and copy HEX to the clipboard. <Run Foreground="{DynamicResource Mauve}" Text="Esc" /> to dismiss.
+            <Run Foreground="{DynamicResource AppAccent}" Text="Click anywhere" /> on screen to lock the colour and copy HEX to the clipboard. <Run Foreground="{DynamicResource AppAccent}" Text="Esc" /> to dismiss.
         </TextBlock>
 
         <DockPanel Grid.Row="4" LastChildFill="True">

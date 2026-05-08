@@ -12,9 +12,9 @@
         UseLayoutRounding="True"
         SnapsToDevicePixels="True">
     <Border x:Name="FrameBorder"
-            BorderBrush="{DynamicResource Mauve}"
+            BorderBrush="{DynamicResource AppAccent}"
             BorderThickness="2"
-            Background="{DynamicResource Crust}"
+            Background="{DynamicResource AppCanvas}"
             CornerRadius="4"
             Padding="2">
         <Border.Effect>

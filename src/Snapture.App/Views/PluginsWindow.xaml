@@ -5,8 +5,8 @@
         Width="780" Height="540"
         MinWidth="540" MinHeight="380"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource Base}"
-        Foreground="{DynamicResource Text}"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid>
@@ -17,13 +17,13 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <DockPanel LastChildFill="True">
                 <TextBlock Text="✦ Plugins"
-                           Foreground="{DynamicResource Mauve}"
+                           Foreground="{DynamicResource AppAccent}"
                            FontWeight="SemiBold"
                            FontSize="16"
                            VerticalAlignment="Center"
@@ -45,12 +45,12 @@
         </ScrollViewer>
 
         <Border Grid.Row="2"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,1,0,0"
                 Padding="14,8">
             <TextBlock x:Name="StatusText"
-                       Foreground="{DynamicResource Subtext}"
+                       Foreground="{DynamicResource AppMutedForeground}"
                        FontFamily="Cascadia Code, Consolas, monospace"
                        FontSize="12"
                        TextWrapping="Wrap" />

@@ -5,8 +5,8 @@
         Width="820" Height="640"
         MinWidth="640" MinHeight="480"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource Base}"
-        Foreground="{DynamicResource Text}"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid Margin="0">
@@ -17,17 +17,17 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,0,0,1"
                 Padding="16,12">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="✦"
-                           Foreground="{DynamicResource Mauve}"
+                           Foreground="{DynamicResource AppAccent}"
                            FontSize="20"
                            Margin="0,0,8,0" />
                 <TextBlock Text="Settings"
-                           Foreground="{DynamicResource Text}"
+                           Foreground="{DynamicResource AppForeground}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center"
                            FontSize="16" />
@@ -35,13 +35,13 @@
         </Border>
 
         <TabControl Grid.Row="1"
-                    Background="{DynamicResource Base}"
+                    Background="{DynamicResource AppBackground}"
                     BorderThickness="0"
                     Padding="0">
             <TabItem Header="General">
                 <StackPanel Margin="20">
                     <TextBlock Text="Appearance"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6" />
                     <ComboBox x:Name="ThemeCombo"
@@ -52,7 +52,7 @@
                         <ComboBoxItem Tag="dark" Content="Dark" />
                     </ComboBox>
                     <TextBlock Text="System follows your Windows app theme setting."
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap"
                                Margin="0,6,0,16" />
                     <CheckBox x:Name="LaunchAtStartupCheck" Content="Launch Snapture at Windows startup" />
@@ -71,7 +71,7 @@
             <TabItem Header="Capture">
                 <StackPanel Margin="20">
                     <TextBlock Text="Capture engine"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6" />
                     <ComboBox x:Name="EngineCombo" Width="320" HorizontalAlignment="Left">
@@ -80,15 +80,15 @@
                         <ComboBoxItem Tag="gdi" Content="GDI (legacy)" />
                     </ComboBox>
                     <TextBlock x:Name="EngineCapsText"
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0" />
 
                     <TextBlock Text="Borderless capture"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
-                    <TextBlock Foreground="{DynamicResource Subtext}"
+                    <TextBlock Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap">
                         Win11 22H2+ paints a yellow border around captured windows unless you grant
                         Snapture borderless-capture access. The consent persists across reinstalls.
@@ -100,11 +100,11 @@
                             Click="OnRequestBorderlessClicked" />
 
                     <TextBlock Text="Win11 PrintScreen"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
                     <TextBlock x:Name="PrintScreenStatus"
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap" />
                     <Button x:Name="ReclaimPrintScreenButton"
                             Content="Reclaim PrintScreen"
@@ -116,7 +116,7 @@
 
             <TabItem Header="Hotkeys">
                 <StackPanel Margin="20">
-                    <TextBlock Foreground="{DynamicResource Subtext}"
+                    <TextBlock Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap"
                                Margin="0,0,0,12">
                         Click a field, then press the desired key combination. Modifiers
@@ -184,7 +184,7 @@
             <TabItem Header="Output">
                 <StackPanel Margin="20">
                     <TextBlock Text="Output folder"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6" />
                     <DockPanel LastChildFill="True">
@@ -197,16 +197,16 @@
                     </DockPanel>
 
                     <TextBlock Text="Filename template"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
                     <TextBox x:Name="FilenameTemplateBox" />
-                    <TextBlock Foreground="{DynamicResource Subtext}"
+                    <TextBlock Foreground="{DynamicResource AppMutedForeground}"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                FontSize="12"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0">
-                        Placeholders inside <Run Foreground="{DynamicResource Mauve}" Text="{}{ }" />
+                        Placeholders inside <Run Foreground="{DynamicResource AppAccent}" Text="{}{ }" />
                         use .NET DateTime format strings:
                         <LineBreak />
                         <Run Foreground="{DynamicResource Yellow}" Text="{}{yyyy-MM-dd}" /> · date
@@ -219,7 +219,7 @@
                     </TextBlock>
 
                     <TextBlock Text="Default format"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
                     <ComboBox x:Name="FormatCombo" Width="200" HorizontalAlignment="Left">
@@ -236,10 +236,10 @@
                         <RowDefinition Height="*" />
                     </Grid.RowDefinitions>
                     <StackPanel Grid.Row="0" Margin="20,20,20,8">
-                        <TextBlock Foreground="{DynamicResource Subtext}"
+                        <TextBlock Foreground="{DynamicResource AppMutedForeground}"
                                    TextWrapping="Wrap">
                             Toggle individual detector rules. Disabled rules will not match
-                            during the editor's <Run Foreground="{DynamicResource Mauve}" Text="Auto-redact secrets" />
+                            during the editor's <Run Foreground="{DynamicResource AppAccent}" Text="Auto-redact secrets" />
                             pass. New rules ship enabled — disabled state is the persisted set.
                         </TextBlock>
                         <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
@@ -261,11 +261,11 @@
 
             <TabItem Header="LAN share">
                 <StackPanel Margin="20">
-                    <TextBlock Foreground="{DynamicResource Subtext}"
+                    <TextBlock Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap"
                                Margin="0,0,0,8">
                         Local-network only. Snapture binds Kestrel to the adapter you choose
-                        (never <Run Foreground="{DynamicResource Mauve}" Text="0.0.0.0" />), serves
+                        (never <Run Foreground="{DynamicResource AppAccent}" Text="0.0.0.0" />), serves
                         single-fetch token URLs that expire after the TTL, and never phones home.
                         Windows Firewall may prompt to allow the port on first run.
                     </TextBlock>
@@ -273,19 +273,19 @@
                               Content="Enable LAN share server (auto-start on app launch)"
                               Margin="0,8,0,12" />
                     <TextBlock Text="Bind adapter"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold" />
                     <ComboBox x:Name="LanAdapterCombo"
                               Width="360"
                               HorizontalAlignment="Left"
                               Margin="0,4,0,0" />
                     <TextBlock Text="Port"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,12,0,4" />
                     <TextBox x:Name="LanPortBox" Width="120" HorizontalAlignment="Left" />
                     <TextBlock Text="Token TTL (minutes)"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,12,0,4" />
                     <TextBox x:Name="LanTtlBox" Width="120" HorizontalAlignment="Left" />
@@ -298,7 +298,7 @@
                                 Click="OnLanStopClicked" />
                     </StackPanel>
                     <TextBlock x:Name="LanStatusText"
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                TextWrapping="Wrap"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                FontSize="12"
@@ -309,11 +309,11 @@
             <TabItem Header="Advanced">
                 <StackPanel Margin="20">
                     <TextBlock Text="Settings file"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,0,0,6" />
                     <TextBlock x:Name="SettingsPathText"
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                TextWrapping="Wrap" />
                     <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
@@ -323,11 +323,11 @@
                     </StackPanel>
 
                     <TextBlock Text="Diagnostics"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontWeight="SemiBold"
                                Margin="0,16,0,6" />
                     <TextBlock x:Name="DiagnosticsText"
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                FontSize="12"
                                TextWrapping="Wrap" />
@@ -336,13 +336,13 @@
         </TabControl>
 
         <Border Grid.Row="2"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,1,0,0"
                 Padding="14,10">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="StatusText"
-                           Foreground="{DynamicResource Subtext}"
+                           Foreground="{DynamicResource AppMutedForeground}"
                            VerticalAlignment="Center"
                            DockPanel.Dock="Left" />
                 <StackPanel Orientation="Horizontal"

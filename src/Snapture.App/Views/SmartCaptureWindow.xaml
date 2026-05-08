@@ -17,13 +17,13 @@
         <Canvas x:Name="OverlayCanvas">
             <Rectangle x:Name="DimRect" Fill="{DynamicResource DimBackdrop}" />
             <Rectangle x:Name="HighlightRect"
-                       Stroke="{DynamicResource Accent}"
+                       Stroke="{DynamicResource AppAccent}"
                        StrokeThickness="3"
                        Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed" />
             <Border x:Name="DescBadge"
-                    Background="{DynamicResource Mantle}"
-                    BorderBrush="{DynamicResource Accent}"
+                    Background="{DynamicResource AppSurface}"
+                    BorderBrush="{DynamicResource AppAccent}"
                     BorderThickness="1"
                     CornerRadius="4"
                     Padding="8,4"
@@ -31,33 +31,33 @@
                     Visibility="Collapsed">
                 <StackPanel>
                     <TextBlock x:Name="ElementType"
-                               Foreground="{DynamicResource Mauve}"
+                               Foreground="{DynamicResource AppAccent}"
                                FontSize="11"
                                FontWeight="SemiBold" />
                     <TextBlock x:Name="ElementName"
-                               Foreground="{DynamicResource Text}"
+                               Foreground="{DynamicResource AppForeground}"
                                FontSize="13"
                                TextTrimming="CharacterEllipsis" />
                     <TextBlock x:Name="ElementDims"
-                               Foreground="{DynamicResource Subtext}"
+                               Foreground="{DynamicResource AppMutedForeground}"
                                FontFamily="Cascadia Code, Consolas, monospace"
                                FontSize="11" />
                 </StackPanel>
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{DynamicResource Mantle}"
-                    BorderBrush="{DynamicResource Surface1}"
+                    Background="{DynamicResource AppSurface}"
+                    BorderBrush="{DynamicResource AppBorderStrong}"
                     BorderThickness="1"
                     CornerRadius="6"
                     Padding="14,8">
-                <TextBlock Foreground="{DynamicResource Subtext}" FontSize="13">
-                    <Run Foreground="{DynamicResource Mauve}" Text="Hover" />
+                <TextBlock Foreground="{DynamicResource AppMutedForeground}" FontSize="13">
+                    <Run Foreground="{DynamicResource AppAccent}" Text="Hover" />
                     <Run Text=" any control to highlight it · " />
-                    <Run Foreground="{DynamicResource Mauve}" Text="click" />
+                    <Run Foreground="{DynamicResource AppAccent}" Text="click" />
                     <Run Text=" to capture · " />
-                    <Run Foreground="{DynamicResource Mauve}" Text="PgUp/PgDn" />
+                    <Run Foreground="{DynamicResource AppAccent}" Text="PgUp/PgDn" />
                     <Run Text=" walks parent/child · " />
-                    <Run Foreground="{DynamicResource Mauve}" Text="Esc" />
+                    <Run Foreground="{DynamicResource AppAccent}" Text="Esc" />
                     <Run Text=" cancels" />
                 </TextBlock>
             </Border>

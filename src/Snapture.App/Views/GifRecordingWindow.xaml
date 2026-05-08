@@ -7,8 +7,8 @@
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
-        Background="{DynamicResource Mantle}"
-        Foreground="{DynamicResource Text}"
+        Background="{DynamicResource AppSurface}"
+        Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid Margin="16">
@@ -38,12 +38,12 @@
         </DockPanel>
         <TextBlock x:Name="ProgressText"
                    Grid.Row="1"
-                   Foreground="{DynamicResource Subtext}"
+                   Foreground="{DynamicResource AppMutedForeground}"
                    FontFamily="Cascadia Code, Consolas, monospace"
                    Margin="0,8,0,0"
                    Text="0 frames · 00:00.00" />
         <TextBlock Grid.Row="2"
-                   Foreground="{DynamicResource Overlay1}"
+                   Foreground="{DynamicResource AppSubtleForeground}"
                    FontSize="11"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"

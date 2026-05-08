@@ -140,7 +140,7 @@ public sealed class TrayIconHost : IDisposable
         })
         {
             var item = new MenuItem { Header = label, IsCheckable = true, Tag = key };
-            item.IsChecked = string.Equals(App.Host?.Settings.Current.ThemeMode, key, StringComparison.OrdinalIgnoreCase);
+            item.IsChecked = ThemeManager.NormalizeMode(App.Host?.Settings.Current.ThemeMode) == key;
             item.Click += (_, _) =>
             {
                 if (App.Host is null) return;
@@ -150,7 +150,7 @@ public sealed class TrayIconHost : IDisposable
                 foreach (var it in themeMenu.Items.OfType<MenuItem>())
                 {
                     var mode = (string)it.Tag!;
-                    it.IsChecked = string.Equals(App.Host.Settings.Current.ThemeMode, mode, StringComparison.OrdinalIgnoreCase);
+                    it.IsChecked = ThemeManager.NormalizeMode(App.Host.Settings.Current.ThemeMode) == mode;
                 }
             };
             themeMenu.Items.Add(item);
@@ -285,8 +285,9 @@ public sealed class TrayIconHost : IDisposable
         var about = new MenuItem { Header = "_About Snapture" };
         about.Click += (_, _) =>
         {
+            var ver = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
             MessageBox.Show(
-                $"Snapture v0.2.0\n\nAll-in-one screenshot utility for Windows.\nEngine: {App.Host?.EngineName.ToUpperInvariant()}\nMIT License — github.com/SysAdminDoc/Snapture",
+                $"Snapture v{ver}\n\nAll-in-one screenshot utility for Windows.\nEngine: {App.Host?.EngineName.ToUpperInvariant()}\nTheme: {ThemeManager.DisplayName(App.Host?.Settings.Current.ThemeMode)} ({ThemeManager.EffectiveMode})\nMIT License — github.com/SysAdminDoc/Snapture",
                 "About Snapture", MessageBoxButton.OK, MessageBoxImage.Information);
         };
         m.Items.Add(about);

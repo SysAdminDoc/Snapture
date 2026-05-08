@@ -214,14 +214,14 @@ public partial class SettingsWindow : Window
                 FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas, monospace"),
                 Width = 200
             };
-            idText.SetResourceReference(TextBlock.ForegroundProperty, "Mauve");
+            idText.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
             sp.Children.Add(idText);
 
             var descriptionText = new TextBlock
             {
                 Text = rule.Description,
             };
-            descriptionText.SetResourceReference(TextBlock.ForegroundProperty, "Text");
+            descriptionText.SetResourceReference(TextBlock.ForegroundProperty, "AppForeground");
             sp.Children.Add(descriptionText);
             cb.Content = sp;
             cb.Click += (_, _) =>

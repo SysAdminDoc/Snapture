@@ -5,8 +5,8 @@
         Width="980" Height="680"
         MinWidth="700" MinHeight="500"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource Base}"
-        Foreground="{DynamicResource Text}"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
     <Grid>
@@ -17,13 +17,13 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <DockPanel LastChildFill="True">
                 <TextBlock Text="✦ Step Capture"
-                           Foreground="{DynamicResource Mauve}"
+                           Foreground="{DynamicResource AppAccent}"
                            FontWeight="SemiBold"
                            FontSize="16"
                            VerticalAlignment="Center"
@@ -35,7 +35,7 @@
                         Style="{StaticResource AccentButton}"
                         Click="OnStartStopClicked" />
                 <TextBlock x:Name="StatusText"
-                           Foreground="{DynamicResource Subtext}"
+                           Foreground="{DynamicResource AppMutedForeground}"
                            VerticalAlignment="Center"
                            Margin="14,0,0,0"
                            DockPanel.Dock="Left" />
@@ -59,12 +59,12 @@
         </ScrollViewer>
 
         <Border Grid.Row="2"
-                Background="{DynamicResource Mantle}"
-                BorderBrush="{DynamicResource Surface0}"
+                Background="{DynamicResource AppSurface}"
+                BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,1,0,0"
                 Padding="14,8">
             <TextBlock x:Name="FooterText"
-                       Foreground="{DynamicResource Subtext}"
+                       Foreground="{DynamicResource AppMutedForeground}"
                        FontFamily="Cascadia Code, Consolas, monospace"
                        FontSize="12"
                        TextWrapping="Wrap" />
