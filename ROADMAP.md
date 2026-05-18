@@ -1,9 +1,11 @@
 # Snapture Roadmap
 
-**Version:** 2026-05-08 (post-v0.6 research refresh) · **Tracks:** v0.1.0 → v1.0
-**Build philosophy:** WinRT-first · No cloud · No telemetry · Local-first as a feature, not an ideology footnote · Polish that beats Snagit · Knobs that beat ShareX · Modern AI surface (Copilot+ NPU when present) without ever leaving the device.
+**Version:** 2026-05-17 (post-v0.6 + 9-day delta refresh) · **Tracks:** v0.1.0 → v1.0
+**Build philosophy:** WinRT-first · No cloud · No telemetry · Local-first as a feature, not an ideology footnote · Polish that beats Snagit [S2 §1] · Knobs that beat ShareX [S1] · Modern AI surface (Copilot+ NPU when present) without ever leaving the device [S6 platform].
 
-Items use `[ ]` (open) / `[x]` (shipped). Each line carries a source bracket like `[S3]` or `[S6]` mapping to the Appendix. Tiers: **Shipped** → **Now (v0.7)** → **Next (v0.8)** → **Later (v0.9 / v1.0)** → **Stretch** → **Rejected** (with reasons). Cross-cutting tracks (Security, Accessibility, i18n, Observability, Testing, Docs, Distribution, Migration) live at the bottom and run alongside every release.
+Items use `[ ]` (open) / `[x]` (shipped). Each line carries a source bracket like `[S3]` or `[S6]` mapping to the Appendix. Tiers: **Shipped** → **Now (v0.7)** → **Next (v0.8)** → **Later (v0.9 / v1.0)** → **Stretch** → **Rejected** (with reasons). Cross-cutting tracks (Security, Accessibility, i18n, Observability, Testing, Performance/Power, Compliance, Docs, Distribution, Migration) live at the bottom and run alongside every release.
+
+**Delta since 2026-05-08 (this refresh):** May Patch Tuesday 2026-05-12 landed four .NET CVEs (rolled into 10.0.8) plus two Windows graphics RCEs (CVE-2026-40403 Win32K-GFX, CVE-2026-35421 GDI EMF) — both touch Snapture fallback paths [S6+9d sec]. WindowsAppSDK 1.8.8 shipped same day with three fixes that hit our editor preview + Windows AI gating [S6+9d platform]. 26H1 Release Preview hit 28000.2173 (KB5089570) with NPU task management improvements [S6+9d platform]. Snipping Tool gained "Perfect Screenshot" (AI auto-crop) + native color picker in the Insider channel, narrowing the v0.7 differentiator window; "Ask Copilot" was concurrently removed from Snipping Tool + Photos [S6+9d community]. Peekaboo v3.0→v3.2.0 landed pluggable local-model syntax (`ollama/<model>`, `lmstudio/<model>`) — directly applicable to v0.8.6 AI carve-out [S6+9d OSS]. Screenity v4.4.0→v4.4.7 pivoted recording to WebCodecs + OPFS direct-to-disk — architecture reference for v0.7.1 streaming [S6+9d OSS]. Raycast 2.0 hit Windows public beta (May 14) and started indexing screenshot folders — new adjacent competitor for the History track [S6+9d adjacent]. CVE-2026-33829 (Snipping Tool NTLM hash leak via `ms-screensketch` URI scheme) is the cautionary design tale for our planned `snapture://` URL handler [S6+9d sec]. This refresh also closes adversarial-audit gaps: ICC profile awareness, multi-GPU `WM_DISPLAYCHANGE` resilience, RDP / VM-guest capture matrix, secure-desktop / UAC dim / DPI-change behavior during record, log-redaction policy, Native AOT investigation, history-DB backup, HIPAA/PHI rule pack, settings/index migrations, performance/power budget, and a Compliance cross-cutting track for GDPR lawful basis.
 
 ---
 
@@ -59,6 +61,8 @@ All thirteen view XAMLs and code-behinds switched to `App*` semantic tokens (`Ap
 
 The release that turns Snapture from "snip + edit" into "snip + edit + record." Validated by the most-upvoted single feature ask across the entire OSS field (ShareX #6688 HDR — 108 reactions; Flameshot #172 GIF — 126 reactions; Cap's entire 18,733-star existence) [S6].
 
+**Competitive narrowing as of 2026-05-17:** Snipping Tool's Insider channel began rolling out "Perfect Screenshot" (AI auto-crop) + native HEX/RGB/HSL color picker — bumps the smart-crop and color-picker UX from "differentiator" to "parity-or-better" for Snapture. Snapture's APCA-Lc readout + Copilot+-independent smart-element capture (UIA, ships everywhere, not Copilot+ gated) remain ahead. "Ask Copilot" was also removed from Snipping Tool in the same wave — the OS-bundled tool just narrowed its AI surface, validating Snapture's local-only AI carve-out [S6+9d community].
+
 ### v0.7.1 — Video recording (MP4 / HEVC / AV1)
 
 - [ ] **Continuous WGC frames → `Direct3D11CaptureFramePool` queue depth 3** [S3 §1.5]
@@ -78,7 +82,11 @@ The release that turns Snapture from "snip + edit" into "snip + edit + record." 
 - [ ] **Cursor-telemetry auto-zoom suggestions** — magic-wand button infers zoom-to-clicks from recorded cursor activity (openscreen v1.2 pattern) [S6 OSS]
 - [ ] **Auto-tighten / "remove distractions"** — UIA-tree-driven detect-and-crop tabs/dock/taskbar from frames [S6 adjacent]
 - [ ] **Pause / resume / trim / segment-split** [S1, S2]
-- [ ] **Ring-buffer recording** — last 30/60/90s always available to save (gamer instant-replay style; ScreenToGif #1009) [S6 OSS]
+- [ ] **Ring-buffer recording** — last 30/60/90s always available to save (gamer instant-replay style; ScreenToGif #1009; direct competition with NVIDIA ShadowPlay Instant Replay, AMD ReLive, Xbox Game Bar Game DVR — first OSS Windows tool to ship this without a per-vendor driver dep) [S6 OSS, S6+9d adjacent]
+- [ ] **Streaming-to-disk recording** — frames flushed straight to the SinkWriter buffer instead of held in memory; OPFS-equivalent pattern validated by Screenity v4.4.0's WebCodecs + OPFS pivot (5/9 → 5/17 release cadence) for long captures + crash-recovery [S6+9d OSS]
+- [ ] **Recording resilience under environment changes** — DPI change mid-record (`WM_DPICHANGED`) re-resolves framepool size and emits a marker frame; secondary monitor hot-unplug pauses-and-continues on the remaining surface; lid-close / display sleep cleanly closes the segment instead of producing zero-byte frames; UAC secure-desktop transition pauses record and resumes after consent (WGC cannot capture secure desktop — documented limitation, not a crash) [S6 platform, audit-gap fill]
+- [ ] **Multi-GPU / hybrid graphics resilience** — `IDXGIAdapter` re-resolution on `WM_DISPLAYCHANGE`, Optimus / AMD switchable / Intel hybrid GPU swap survives without a black frame or stale `IDirect3DDevice`. Smoke test: Optimus laptop in mixed dGPU / iGPU mode with one monitor on each adapter [audit-gap fill, S6 platform]
+- [ ] **Orphan-file detector on app start** — sweeps `%LOCALAPPDATA%\Snapture\step-sessions\`, in-flight GIF temp frames, half-written `index.db` rows, stale `WH_MOUSE_LL` hooks left by previous crash; quarantines or cleans (user-configurable). Pairs with fragmented MP4 partial-recovery for end-to-end crash safety [audit-gap fill]
 - [ ] **Frame-by-frame editor** — delete / duplicate / set-delay / dither (ScreenToGif's killer feature) [S2 §7, S4]
 - [ ] **Aspect-ratio + dimension presets** — 1080p / 4K / 720p / 16:9 / 9:16 / 1:1 quick-pick (ScreenToGif #1447, ShareX bounty #4381) [S6 OSS]
 - [ ] **Export bitrate ladder + CRF mode** [S3 §7.3]
@@ -99,6 +107,7 @@ The release that turns Snapture from "snip + edit" into "snip + edit + record." 
 - [ ] **HDR Calibration deep-link** — `ms-settings:display` if `MaxLuminance` is suspiciously low; tells user "calibrate before capturing" [S6 platform]
 - [ ] **AV1 / HEVC / HEIF detection** — fall back gracefully if Store Codec extension pack is missing [S3 §3.4]
 - [ ] **HDR Color Corrector parity** — match Snipping Tool 24H2's toggle in Settings (lack of it is the universal complaint) [S2 §8, S4 HN, S6 community]
+- [ ] **ICC profile awareness (SDR + HDR)** — read the active monitor's ICC profile via `DXGI_OUTPUT_DESC1.ColorSpace` + `WCS` API, embed as PNG `iCCP` chunk on save (Skia exposes `SKImageInfo.ColorSpace` → `SKEncodedImageFormat.Png` writer carries the profile). Designer / photographer workflow target. Untagged-PNG default loses sRGB-vs-Display-P3 information; Snapture's the only OSS Windows screenshot tool that would ship correct colorspace tagging out of the box [audit-gap fill]
 
 ### v0.7.4 — Capture quality
 
@@ -113,12 +122,14 @@ The release that turns Snapture from "snip + edit" into "snip + edit + record." 
 - [ ] **Lazy-loaded content handling** in scroll capture [S4 capture-full-page.com]
 - [ ] **Live preview during scroll** [S1]
 - [ ] **Done flow with retake** [S2]
+- [ ] **RDP / RemoteApp / VM-guest capture matrix** — document and smoke-test behavior in (a) Snapture running inside an RDP session (WGC degrades to GDI-compositor fallback), (b) RemoteApp publishing Snapture to a remote desktop, (c) Hyper-V Enhanced Session guest (RDP-equivalent indirection), (d) VMware Workstation / Parallels Coherence guest. Add the per-scenario row to `docs/CAPTURE-MATRIX.md`. Enterprise audience real today — Snipping Tool documents nothing here either [audit-gap fill, S6 platform]
+- [ ] **Hardware-cursor inclusion override** — when WGC composites the cursor inconsistently (Steam overlay, hardware cursor on Win10 < 1809, fullscreen DX), surface a per-capture toggle to overlay the cursor from `GetCursorInfo` regardless of engine choice [S3, audit-gap fill]
 
 ### v0.7.5 — Distribution + Recording polish
 
 - [ ] **ARM64 build matrix** — `dotnet publish -r win-arm64`; ship arm64 ZIP + arm64 winget installer alongside x64. ShareX 20 (Apr 2026) confirmed ARM64 production-ready via MS Store [S6 OSS + community]
-- [ ] **Reclaim PrintScreen** UX — surface `ms-settings:easeofaccess-keyboard` deeplink so non-tech users can flip the toggle without regedit (Flameshot #3465 cross-references show most users don't know `PrintScreenKeyForSnippingEnabled` exists) [S6 community]
-- [ ] **Bump winget manifest schema** target 1.7.0 → 1.9.0 (or 1.10.0 if GA at release time) [S6 platform]
+- [ ] **Reclaim-PrintScreen ms-settings deeplink polish** — the v0.2 tray entry already toggles the registry directly; this adds an `ms-settings:easeofaccess-keyboard` deeplink alongside the silent flip so non-tech users can see what they just opted out of (Flameshot #3465 cross-references show most users don't know `PrintScreenKeyForSnippingEnabled` exists) [S6 community]
+- [ ] **Bump winget manifest schema** target 1.7.0 → 1.9.0 (or 1.10.0 if GA at release time); winget schema remained 1.12 through 2026-05-17 with no new release inside our delta window [S6 platform, S6+9d platform]
 - [ ] **Right-click colour wheel** on draw to recolour without leaving the canvas (Flameshot UX) [S1]
 - [ ] **Sloppiness slider** — hand-drawn aesthetic toggle (Excalidraw-style); psychologically lowers bar-to-share [S4]
 - [ ] **Refresh capture preserving annotations** — Snipaste Pro's killer feature; recapture source + re-anchor [S2 §6]
@@ -186,6 +197,8 @@ The release that closes the editor-polish gap with Snagit / Cap / openscreen and
 - [ ] **"Open in new floating pin"** from History row (Eagle pattern) [S6 adjacent]
 - [ ] **"Send to LAN-share"** History row context-menu (paired with v0.4 LAN share) [self / v0.3 stub]
 - [ ] **Organize mode** — group screenshots into folders / projects beyond raw chronological list (Capter v4 pattern) [S6 OSS]
+- [ ] **History DB backup / restore** — export `index.db` + `%USERPROFILE%\Pictures\Snapture\` thumbnails into one `.zip` (or `.snapture-library`), import on a fresh install. Months of FTS5 search are otherwise gone if the DB ever corrupts. Pairs with `index.db` schema-version migrator on the Migration cross-cutting track [audit-gap fill]
+- [ ] **History row "Verified-redacted"** marker — distinguish "user applied Auto-redact and saved" from "raw save"; surface in search filters. Direct positioning answer to CVE-2026-33829-class trust questions about Snipping Tool's Quick Redact [audit-gap fill, S6+9d sec]
 
 ### v0.8.5 — Filename + window-context tokens
 
@@ -195,10 +208,12 @@ The release that closes the editor-polish gap with Snagit / Cap / openscreen and
 
 ### v0.8.6 — Local-AI opt-in (resolves the v0.4 ONNX ambiguity)
 
-- [ ] **Foundry Local + Ollama provider discovery** in Settings — Snapture probes localhost endpoints; if found, surfaces an "AI tools" Settings tab. PowerToys 0.96 Advanced Paste set the precedent [S6 adjacent]
-- [ ] **"Send to local LLM"** editor button — sends flattened capture as base64 PNG to chosen local model. Default models: LLaVA via Ollama; Phi-3.5-vision via Foundry Local. Cloud endpoints **explicitly absent from the dropdown** [S6 OSS + adjacent]
+- [ ] **Foundry Local + Ollama + LM Studio provider discovery** in Settings — Snapture probes localhost endpoints; if found, surfaces an "AI tools" Settings tab. PowerToys 0.96 Advanced Paste set the precedent for Foundry / Ollama; Peekaboo v3.2.0 (2026-05-15) introduced the `ollama/<model>` + `lmstudio/<model>` provider-prefix syntax we'll adopt verbatim [S6 adjacent, S6+9d OSS]
+- [ ] **"Send to local LLM"** editor button — sends flattened capture as base64 PNG to chosen local model. Default models: LLaVA via Ollama; Phi-3.5-vision via Foundry Local; user picks any via `<provider>/<model>` string. Cloud endpoints **explicitly absent from the dropdown** [S6 OSS + adjacent, S6+9d OSS]
 - [ ] **`docs/AI-LOCAL.md`** — clarify the local-AI carve-out so the no-cloud anchor is unambiguous; cite the privacy-doc claim chain [self]
 - [ ] **Auto-redact Single ONNX path** — RapidOCR's bundled DBNet text-region detector serves both OCR + redact (collapses two model loads into one) [S5 §4]
+- [ ] **HIPAA / PHI rule pack for Auto-redact** — opt-in rule set: US Medical Record Number patterns (10-digit prefixed), NPI (Luhn-validated 10-digit), DEA (2-letter + 7-digit + Luhn-derived), ICD-10 code prefix context, DICOM PatientID / AccessionNumber / StudyInstanceUID, common PHI prose markers ("DOB:", "MRN:", "patient name:"). Off by default; surfaced under Settings → Auto-redact → "Healthcare". Snagit / Snipping Tool ship nothing equivalent locally. Domain-relevant: an existing audience of medical / clinical-imaging users captures EHR/PACS screenshots daily and currently has no privacy-respecting redact path [audit-gap fill]
+- [ ] **Daemon-mode metadata returns for plugins** — when an `ICaptureProcessor` is invoked by an external caller (CLI, URL handler, MCP), the host returns lightweight metadata (dimensions, hash, capture-source) instead of full PNG bytes unless explicitly requested. Peekaboo v3.1.0 (2026-05-10) validated this pattern; pairs with v0.9 MCP server work [S6+9d OSS]
 
 ### v0.8.7 — Clipboard + integration
 
@@ -223,6 +238,8 @@ The release that puts Snapture in front of the audience that already uses winget
   - [ ] `windows.startupTask` extension for "Launch at startup"
   - [ ] **No `broadFileSystemAccess`** — use `FileSavePicker` (cleaner, fewer prompts) [S3 §10]
   - [ ] `.appinstaller` URL on GitHub Pages for sideload + auto-update [S3 §9.1]
+  - [ ] **Clean-uninstall hygiene** — uninstaller (MSIX, MSI, winget portable) fully removes `%APPDATA%\Snapture`, `%LOCALAPPDATA%\Snapture`, `index.db`, plugin folder, AUMID, registered hotkeys, LAN-share firewall rule. Surface "Keep my settings" checkbox so the user explicitly opts to preserve state. Definition-of-Done check on every distribution channel [audit-gap fill]
+  - [ ] **Staged `.appinstaller` rollout** — pin-version + percentage-gated rings so a regression doesn't reach 100% of opted-in users instantly [audit-gap fill]
 - [ ] **Auto-update via Velopack** — modern Squirrel successor, MIT, .NET 10 + ARM64 supported, `#:package` directive validated [S5 §10, S6 dep]
 
 ### v0.9.2 — Distribution channels
@@ -233,8 +250,11 @@ The release that puts Snapture in front of the audience that already uses winget
 - [ ] **Microsoft Store ARM64 publish** (alongside ZIP + winget) [S6 OSS]
 - [ ] **Submit to `0PandaDEV/awesome-windows`** (under Screen Capture); Snapture not yet listed [S6 OSS]
 - [ ] **Context-menu shell integration** — "Open in Snapture editor" right-click for image files; "Resize / Convert" presets (PowerToys Image Resizer pattern) [S4]
-- [ ] **CLI mode** — `snapture --region 0,0,800,600 --out file.png --hold --block N --copy --clipboard --lan-share --profile <name>` (Snipaste Pro CLI parity) [S2 §6]
+- [ ] **CLI mode** — `snapture --region 0,0,800,600 --out file.png --hold --block N --copy --clipboard --lan-share --profile <name>` (Snipaste Pro CLI parity); enables Stream Deck / Loupedeck / AHK integration with no per-tool plugin [S2 §6, audit-gap fill]
 - [ ] **URL-scheme handler** — `snapture://capture?mode=region&autoscroll=true&dest=clipboard` (CleanShot pattern, single-vendor today) [S2 §2]
+  - [ ] **CVE-2026-33829 hardening contract** — the Snipping Tool's `ms-screensketch://` handler accepted arbitrary `filePath=` values including UNC paths, causing Windows to authenticate to attacker-controlled SMB shares and leak Net-NTLMv2 hashes (CVSS 4.3, patched Apr-2026). Snapture's `snapture://` handler **refuses** UNC paths, SMB references, `file://` URIs from external origins, and any path outside the user's profile. Validated by an explicit reject test in CI [S6+9d sec]
+- [ ] **MCP server (promoted from Stretch)** — expose region / window / monitor / element / scrolling capture, OCR, history search, and Auto-redact as MCP tools. Off by default; surfaced under Settings → Integrations as opt-in localhost-only bind (single-adapter rule per LAN-share policy). No other Windows OSS screenshot tool ships an MCP server. Local-agent audience (Claude Code / Cursor / Cline / Aider running locally) doubles in the next twelve months by every leading indicator. Peekaboo v3.x is the macOS reference but cannot serve Windows agents; Snapture fills the gap. Lightweight metadata returns by default (Peekaboo v3.1.0 pattern), full PNG only when explicitly requested [S6 OSS, S6+9d OSS]
+- [ ] **Native AOT publish investigation** — .NET 10 has been opening NativeAOT for WPF in stages (graphics-system-isolation, XAML compiler). Single-binary publish would be a real differentiator against ShareX/Greenshot's ZIP-and-runtime-deps model. Audit the P/Invoke surface (D3D11 vtable calls, COM activation), trim level (Skia + SQLite + Kestrel + plugin host), and document blockers — even a "not yet" finding is roadmap-valuable [audit-gap fill]
 - [ ] **Per-app capture profiles** — preset auto-applies based on foreground app classname [self / existing roadmap]
 - [ ] **`--portable` flag with `Snapture.ini` next to exe** formalized (Flameshot v14 portable binary mode) [S6 OSS]
 - [ ] **Win11 Jump List** — taskbar context-menu entries for "New region / window / full" (ScreenToGif #1385) [S6 OSS]
@@ -262,11 +282,12 @@ The release that puts Snapture in front of the audience that already uses winget
 - [ ] **Crowdin / Weblate** community translation pipeline
 - [ ] **Pluralization-aware strings + RTL-aware layout** (openscreen v1.3, ScreenToGif Arabic installer) [S6 OSS]
 
-### v0.9.5 — Drag-drop + import polish
+### v0.9.5 — Import polish
 
-- [ ] **Drag-and-drop import** — drop image from anywhere onto the tray icon → opens in editor (covers Flameshot #240 = 171 reactions and Greenshot #107) [S1, S6 OSS]
 - [ ] **Frozen-screen-before-capture** — capture entire virtual screen instantly, then let user select on the frozen image (CleanShot X pattern; lets user snip menus that would dismiss on click) [S2, S4]
 - [ ] **Detect and offer to claim PrintScreen from Snipping Tool first-run** — already shipped in v0.2; promote to first-run wizard (Flameshot v14 polish) [S6 OSS]
+- [ ] **Greenshot `.greenshot` file format import** — read Greenshot's tagged-image-with-layers format, project the layers into Snapture's vector `AnnotationDocument`. Greenshot has 4.9k★ and a slow maintenance cadence (no stable since 1.3.x) — `.greenshot` users are a natural import audience. File format is open ([S1 #375]); contrast Snagit's `.snag` which stays in Stretch as binary-reverse-risk. Builds a defection path for the largest single OSS user base in the space [S1, audit-gap fill]
+- [ ] **Submit Snapture to `0PandaDEV/awesome-windows`** under Screen Capture — list is actively maintained (commits inside the 2026-05-09→17 window); Snapture not yet listed [S6 OSS, S6+9d OSS]
 
 ---
 
@@ -309,11 +330,9 @@ Features that earn their place once the core is solid.
 - [ ] **Phone-screen mirror capture** via Phone Link integration **— architecturally blocked.** No public Phone Link Cross-Device frame API as of 2026-05; Microsoft has not signaled one. Workaround: WGC the Phone Link mirror window like any other window (works today, captures a UI layer not source frames) [S3 §8.3, S6 platform]
 - [ ] **Snagit `.snag` import** — best-effort, library schema only (file format undocumented; binary-reverse risk too high) [S2]
 - [ ] **Encrypted capture folder** — Win11 26H1 native; mirror it for older Windows [S3 §8.3]
-- [ ] **MCP server** (Peekaboo pattern) — expose region / window / screenshot capture as MCP tool so Claude Code / Cursor / local agents can request "screenshot the foreground window" or "capture region (x,y,w,h)" programmatically. **No other Windows OSS screenshot tool ships an MCP server today** — strong differentiator [S6 OSS]
 - [ ] **`screenshot-to-code` integration** — right-click destination "Send to local LLaVA → HTML/Tailwind" via Ollama only. Cloud variant rejected — local variant a v0.8.6 extension [S6 OSS]
 - [ ] **tldraw `make-real`-style sketch-to-HTML** — local-only via Phi-3.5-vision ONNX, opt-in [S6 adjacent]
 - [ ] **Screen Translation overlay** — eSearch pattern; replace image text in-place with translation; local model only (NLLB-200 ONNX or similar) [S6 OSS]
-- [ ] **Visual feedback option for capture sound (a11y)** — already on roadmap as v0.7; bumped here only if the 2026-05 v0.7 cut runs out of room
 
 ---
 
@@ -341,7 +360,8 @@ These items came up in research and are deliberately **not** roadmap candidates.
 
 - [x] **Privacy doc** (`docs/PRIVACY.md`) — explicit "no telemetry, no analytics, no phone-home" statement; lists every network call the app could make + verification steps. Linked from README [S5 §15, S4 Lightshot anti-pattern]
 - [x] **`WDA_EXCLUDEFROMCAPTURE` advisory** — capture surfaces a clear toast (not a silent black PNG) [S3 §3.1]
-- [ ] **GDI+ CVE mitigation** — migrate the "Open existing image" path off `System.Drawing.Common` decode to SkiaSharp-only, so user-supplied bytes never reach GdiPlus.dll. CVE-2025-30388 (May), CVE-2025-47984 (Jul), **CVE-2025-53766 (Aug, CVSS 9.8 RCE)** all hit GDI+. Patched OS DLL is the OS owner's job; Snapture's job is to not depend on the path [S6 sec]
+- [ ] **GDI+ + Win32K-GFX CVE mitigation** — migrate the "Open existing image" path off `System.Drawing.Common` decode to SkiaSharp-only, so user-supplied bytes never reach GdiPlus.dll. CVE-2025-30388 (May 2025), CVE-2025-47984 (Jul 2025), **CVE-2025-53766** (Aug 2025, CVSS 9.8 RCE), **CVE-2026-35421** (May 2026, GDI EMF heap overflow RCE — directly hits any clipboard EMF / paste-EMF path), and **CVE-2026-40403** (May 2026, Win32K-GFX heap overflow RCE, CVSS 9.8 — touches the GDI rendering stack that backs Magnification API fallback and any future GDI cursor-overlay drawing) [S6 sec, S6+9d sec]
+- [ ] **.NET 10.0.8 floor (May 2026 servicing)** — bump `<TargetFramework>` runtime minimum and the Velopack runtime prereq to .NET 10.0.8 (delivered 2026-05-12, rolls up CVE-2026-32175 tampering, CVE-2026-32177 EoP, CVE-2026-35433 EoP, CVE-2026-42899 DoS) [S6+9d sec]
 - [ ] **SQLite CVE mitigation** — bump `SQLitePCLRaw.bundle_e_sqlite3` to a version that bundles SQLite ≥ 3.51.x post **CVE-2025-6965 (CVSS 9.8) and CVE-2025-29088** (~3.50.2 / ~3.49.1 floors) [S6 sec]
 - [ ] **Magick.NET ≥ 14.12.0 floor** when introduced (v0.7.2 GIF palette opt) — CVE-2025-57803 (BMP encoder int-overflow, CVSS 9.8), CVE-2026-33902 (FX expression stack overflow), CVE-2026-33901 (MVG decoder heap overflow) all fixed [S6 sec]
 - [ ] **OpenCvSharp4 ≥ 4.12.0 floor** when introduced (v1.0 Smart Move) — CVE-2025-53644 (uninitialized-pointer JPEG heap-write) fixed at 4.12.0 [S6 sec]
@@ -356,10 +376,15 @@ These items came up in research and are deliberately **not** roadmap candidates.
 - [ ] **Plugin capability manifest enforced at load time** [S5 §9]
 - [x] **LAN share server** — bound to single adapter, private firewall profile only, no public default, single-fetch tokens [S5 §12]
 - [ ] **Encrypted-secrets-at-rest for plugin uploaders** — required for any plugin declaring `Network` capability that stores credentials (SnapX reference) [S6 OSS]
+- [ ] **URL-scheme handler hardening (CVE-2026-33829 lesson)** — when `snapture://` lands in v0.9.2, reject UNC paths, `file://` URIs originating outside the user's profile, SMB references, and any `..` traversal. Snipping Tool's `ms-screensketch://filePath=` accepted arbitrary UNC values, triggered transparent SMB authentication, and leaked Net-NTLMv2 hashes — patched April 2026, PoC published 22 Apr 2026. Snapture's reject test fixtures cover all known-malicious payloads from the PoC [S6+9d sec]
+- [ ] **WindowsAppSDK 1.8.8 fixes adopted** when XAML Islands lands (v1.0+) — popup `OverrideScale` clipping fix; `RenderTargetBitmap.RenderAsync` no longer ACCESS_VIOLATION when target leaves visual tree (relevant if editor preview adopts RTB); `GetReadyState` correctly returns `NotReady` when Windows AI packages missing (cleaner v0.8.6 gating for TextRecognizer / ImageScaler / Object Erase / Image Segmentation init) [S6+9d platform]
+- [ ] **NPU/OCR re-benchmark after KB5089549** — May 2026 Patch Tuesday refreshed built-in AI sub-components (Image Search, Content Extraction, Semantic Analysis, Settings Model → 1.2604.515.0) which share the on-device model surface `Microsoft.Windows.AI.Imaging` binds to. Re-run OCR perf tests post-update; KB5089570 (26H1 Release Preview 28000.2173) also reworked NPU/CPU scheduling and may regress hand-tuned thresholds [S6+9d platform]
 
 ### Accessibility
 
 - [ ] **WPF AutomationProperties** on every interactive control — keyboard nav + screen reader compatibility [S2 §1]
+- [ ] **Custom `AutomationPeer`** for the SkiaSharp editor canvas, region overlay, magnifier loupe, and pin window — these are custom-drawn surfaces that ship no UIA tree by default. Without peers, Narrator hits a wall at the WPF host and the user gets "unknown" announcements. Inspect.exe baseline included in CI [audit-gap fill]
+- [ ] **Narrator-friendly capture verbs** — Narrator + AccessKey combos for "Capture region under cursor", "Capture window under cursor", "Smart Element Capture", "OCR region". Parity with Win11 26H1 (KB5089548) Narrator "describe focused image / describe full screen" verbs — Snapture is the verb provider, Narrator's local image-description model is the consumer [S6+9d platform]
 - [ ] **Catppuccin Latte (light) + Windows high-contrast follow** [S2]
 - [ ] **Keyboard-only capture flow** — every action accessible from keyboard alone; Tab order audited
 - [ ] **Visual-feedback alternative to capture sound** (Greenshot #1172) [S6 OSS]
@@ -367,6 +392,7 @@ These items came up in research and are deliberately **not** roadmap candidates.
 - [ ] **Focus-not-stolen overlay** — capture overlay is non-activating (Raycast / Multi.app pattern); menus the user is screenshotting stay open [S4]
 - [x] **APCA contrast readout** in colour picker for designer / a11y workflows [S2 Shottr §3]
 - [ ] **`uiAccess=true` signing** — required if Snapture wants to capture elevated targets while running unelevated; PowerToys ColorPicker is the reference [S3 §5.4]
+- [ ] **Accessibility Insights / Inspect.exe smoke pass** every release — UIA tree, contrast, focus order, keyboard nav, screen-reader announcements. Definition-of-Done item [audit-gap fill]
 
 ### Internationalization (i18n / l10n)
 
@@ -375,6 +401,8 @@ Phase-1 locales (v0.9.4): en-US (canonical), de, fr, es, it, pt-BR, nl, pl, cs, 
 ### Observability (local-only)
 
 - [ ] **Serilog file + async sinks** at `%LOCALAPPDATA%\Snapture\logs\snapture-.log`, 7-day retention, never network [S5 §15]
+- [ ] **Log-redaction policy** — Serilog destructuring filter scrubs `WindowTitle`, `ProcessPath`, `FilePath`, `AdapterIp`, capture-folder paths from default log lines; only `--verbose` reinstates them and the diagnostic dump asks the user before bundling them. Without this, the log file is its own PII reservoir [audit-gap fill]
+- [ ] **Structured event names** — emit log events with stable verb/noun names (e.g., `Capture.Region.Completed`, `Plugin.Load.Failed`) so user-supplied logs are greppable for triage without exposing message details [audit-gap fill]
 - [ ] **Diagnostic dump button** in About dialog — bundles last 7d logs + scrubbed `settings.json` + system info (OS build, GPU, .NET, monitor topology, plugin list, **NPU engagement when smart features ran** — Win11 26H1 Task Manager NPU columns are the reference) + last 20 capture metadata records (no images). Saves to Desktop. PowerToys Bug Report Tool is the reference [S5 §15, S6 platform]
 - [ ] **`--verbose` flag** turns on Debug-level logs; default Information-level
 
@@ -384,8 +412,13 @@ Phase-1 locales (v0.9.4): en-US (canonical), de, fr, es, it, pt-BR, nl, pl, cs, 
 - [ ] **WPF integration tests** via FlaUI for `Snapture.App` smoke flow [S5 §2]
 - [ ] **Visual regression** via Chromatic-style image diff for the editor canvas
 - [ ] **Golden-file capture engine** tests — feed a synthetic D3D surface, assert pixel match
-- [ ] **CI matrix** — Win10 22H2, Win11 22H2, **Win11 24H2 (26100)**, **Win11 25H2 (26200)**, **Win11 26H1 Experimental (28020)**. Bump on each Insider flight [S6 platform]
-- [ ] **Multi-monitor mixed-DPI smoke row** — 100% primary + 125% secondary; the Snipping Tool Jan-2025 KB5050094 "fix" introduced a new regression that's still broken on 26100 [S6 community]
+- [ ] **`.snapture` file-format fuzz tests** — random / malformed zip bytes into `SnapFileFormat`; assert "clean reject, no crash, no path traversal" for every payload. The format accepts user input and is the most obvious open attack surface against an opt-in `Open existing` flow [audit-gap fill]
+- [ ] **Plugin loader adversarial suite** — malformed DLLs, plugins claiming capabilities they don't honor, plugins that throw in constructor / never return from `ProcessAsync`, plugins that leak the `AssemblyLoadContext` (verify collectible boundary). Plugin auth surface is the second largest attack vector after `.snapture` [audit-gap fill]
+- [ ] **OCR golden tests across language packs** — fixed input images for en-US, ja-JP, zh-Hans, ar-SA (RTL), de-DE; CI verifies recognised text matches a stored golden. Catches Windows.Media.Ocr drift after KB5089549-class AI-pack refreshes [S6+9d platform, audit-gap fill]
+- [ ] **URL-handler reject-test fixtures** — when `snapture://` lands, run every published CVE-2026-33829 PoC payload (UNC, `file://`, SMB, `..` traversal) against `snapture://` and assert rejection [S6+9d sec, audit-gap fill]
+- [ ] **CI matrix** — Win10 22H2, Win11 22H2, **Win11 24H2 (26100.8457 + 26100.8514 Release Preview May 14)**, **Win11 25H2 (26200.8457 + 26200.8514 Release Preview May 14)**, **Win11 26H1 (28000.2113 GA May 12, 28000.2173 Release Preview May 14)**. Bump on each Insider flight [S6 platform, S6+9d platform]
+- [ ] **Multi-monitor mixed-DPI smoke row** — 100% primary + 125% secondary; the Snipping Tool Jan-2025 KB5050094 "fix" introduced a new regression that's still broken on 26100, and May 2026 Patch Tuesday acknowledged fresh scaling failures across mixed-DPI displays. Snapture must not inherit either bug [S6 community, S6+9d community]
+- [ ] **RDP + Hyper-V Enhanced Session + VMware Unity smoke row** — Snapture launched inside each of those host scenarios completes region + window + fullscreen capture without GPU device loss [audit-gap fill]
 
 ### Documentation
 
@@ -418,6 +451,38 @@ Phase-1 locales (v0.9.4): en-US (canonical), de, fr, es, it, pt-BR, nl, pl, cs, 
 5. **Settings file forward-compat** — add fields with safe defaults; never break old `settings.json`. ✅
 6. **`.snapture` v1 format** locked at v0.2.2 release; v2 (when it comes) writes a `version` field and v0.2 reader rejects unknown versions cleanly.
 
+### Migration plan (data + state, audit-gap fill)
+
+1. **Settings schema-version field** — `settings.json` gains an integer `schemaVersion`; loader runs a migration chain (`v0 → v1 → v2 …`) for any older value. Plain re-serialize-with-defaults until shape changes; explicit migrator function once it does.
+2. **`index.db` schema-version migrator** — explicit `PRAGMA user_version` ramp; each migration is its own SQL script with up + down; tested by xUnit migration suite over fixture DBs from every prior release.
+3. **Orphan-detector on startup** — sweeps `%LOCALAPPDATA%\Snapture\step-sessions\*\`, in-flight GIF temp frames, half-written `index.db` rows (transaction journal not committed), stale `WH_MOUSE_LL` registrations. Quarantines or cleans per user prefs.
+4. **"Import from old install location" wizard** — if Snapture installs fresh and detects `%APPDATA%\Snapture\settings.json` from a previous machine / migration / reinstall, offers to import settings + history + plugins folder.
+5. **History DB backup / restore** — see v0.8.4 entry.
+6. **Settings sync without cloud** — `docs/SETTINGS-SYNC.md` documents the OneDrive-folder approach (point `%APPDATA%\Snapture\` at OneDrive symlink) + Syncthing approach + concurrent-write lockfile; explicit warning that two machines writing simultaneously will collide.
+
+### Performance & power budget (new track, audit-gap fill)
+
+A Snapture install runs WPF + Skia + SQLite + Kestrel + plugin host + tray + hotkey window. That's a non-trivial baseline. Competitors like wcap (1.2k★) emphasize a 10MB-class footprint and Snapture's feature delta is much wider; the trade-off must still be quantified.
+
+- [ ] **Idle CPU budget < 0.1%** measured over 5 minutes with no captures pending
+- [ ] **Idle RAM ceiling < 80 MB working set** post-warmup (history DB closed, no plugins loaded, tray icon active)
+- [ ] **Loaded RAM ceiling < 250 MB working set** with editor open on a 4K capture + every plugin loaded + history search active
+- [ ] **No wake-from-sleep events** — Snapture is in the user's machine, not running coalesced timers that resume the CPU on battery
+- [ ] **Capture latency < 50 ms** P95 from hotkey to frozen overlay shown (region) / file written (window, fullscreen)
+- [ ] **GIF encode < 2 s** for 30 frames at 1080p on a 2024-class laptop
+- [ ] **Battery impact ≤ 2 hours daily Snapture use must not measurably regress** a laptop's screen-on runtime — measured on a 28 Wh class device against a no-Snapture baseline
+- [ ] **`dotnet-counters` + `dotnet-trace`** profiling docs in `docs/PERF.md` so anyone can verify these numbers locally
+- [ ] **CI perf regression budget** — fail the build if a baseline benchmark regresses ≥ 15 %
+
+### Compliance (new track, audit-gap fill)
+
+The "no telemetry, local-first" anchor doesn't exempt Snapture from privacy law in every jurisdiction. State the legal posture explicitly rather than letting users guess.
+
+- [ ] **GDPR lawful-basis statement** added to `docs/PRIVACY.md` — for an EU data subject capturing screens of their own device with their own copy of Snapture, the lawful basis is consent (the user installed the software) plus legitimate interest (the user's own data processed on their own device, no controller-processor transfer). Auto-redact + OCR + history index process personal data only on the local device. No supervisory-authority notification required for local-only processing.
+- [ ] **HIPAA / PHI context** — pairs with v0.8.6 PHI rule pack. Snapture isn't a covered entity or business associate; the rule pack is a redaction aid for users who handle PHI under their own compliance program. Document this distinction explicitly so a hospital IT team can risk-assess without ambiguity.
+- [ ] **US state-law surface (CCPA / CPRA / VCDPA / CTDPA / UCPA)** — no triggering event because Snapture collects no data to "sell" or "share." Statement in `docs/PRIVACY.md` keeps the surface visible.
+- [ ] **Plugin compliance posture** — `docs/PLUGINS.md` reminds plugin authors that **their plugin's compliance posture is their own responsibility** if they ship one declaring `Network`. Snapture's posture covers Snapture's code, not arbitrary third-party DLLs.
+
 ---
 
 ## Competitive watch list
@@ -441,10 +506,24 @@ OSS reference baseline:
 - **SnapX** (SnapXL/SnapX, 919★, ShareX fork on .NET 10 + Avalonia) — direct .NET 10 competitor (track migration progress); **post-quantum-resistant secret encryption** for upload credentials; **RapidOCR over Tesseract** validation [S6 OSS]
 - **WinShot** (mrgoonie/winshot, 535★, Wails Go+React) — fast cadence, R2 upload first-class. Validates appetite for fresh Windows-screenshot tools [S6 OSS]
 - **NormCap** (dynobo/normcap, 2,602★) — OCR-first capture; "capture information instead of images" — validates Capture Text hotkey pattern [S6 OSS]
-- **Peekaboo** (openclaw/Peekaboo, 3,270★) — macOS CLI + **MCP server for AI agents** to request screenshots. **No Windows OSS equivalent** — Snapture's MCP-server path under Stretch is greenfield [S6 OSS]
+- **Peekaboo** (openclaw/Peekaboo, 3,270★) — macOS CLI + **MCP server for AI agents** to request screenshots. **No Windows OSS equivalent** — Snapture's MCP-server path (now in v0.9.2, promoted from Stretch this refresh) is greenfield [S6 OSS, S6+9d OSS]
 - **wcap** (mmozeiko/wcap, 1,194★) — minimalist C; **fragmented MP4 default**, **app-local audio capture**, AAC or FLAC, AV1 + HEVC 10-bit. Fragmented-MP4 pattern adopted in v0.7.1 [S6 OSS]
 - **OBS Studio** (72,237★, 32.1.2 2026-04-21) — graphics-hook is the inspiration for game capture; **plugin manager UI** (32.0) is the in-box-installer pattern; **opt-in crash-log upload** is the privacy-respecting telemetry pattern [S6 OSS]
 - **screenshot-to-code** (abi/, 72,476★) — drop screenshot → output HTML/Tailwind/React/Vue. Local-LLaVA-via-Ollama pairing under Stretch [S6 OSS]
+
+**Watch list — 2026-05-09 → 17 additions:**
+
+- **Peekaboo v3.0 → v3.2.0** (openclaw/Peekaboo, 3,270★, May 9-15 2026) — macOS-only screenshot + MCP-server-for-AI-agents. v3.0 unified screenshot + UI detection, v3.1.0 introduced daemon-backed lightweight-metadata returns, v3.2.0 (May 15) added pluggable local-model provider syntax `ollama/<model>` and `lmstudio/<model>` — directly applicable to Snapture v0.8.6 [S6+9d OSS]
+- **Screenity v4.4.0 → v4.4.7** (alyssaxuu/screenity, 18.2k★, May 9-17 2026) — Chrome extension; pivoted to **WebCodecs + OPFS direct-to-disk** writes for long recordings, with `MediaRecorder` fallback. Architecture reference for v0.7.1 streaming-to-disk + crash-recovery [S6+9d OSS]
+- **Greenshot continuous builds 1.4.187 → 1.4.191** (May 13-14 2026) — capture-correctness enhancement + startup-crash fix + DE/IT/FR translation updates. Still no stable 1.4 [S6+9d OSS]
+- **Cap v0.4.86 / v0.4.87** (CapSoftware/Cap, May 16 2026) — release-pipeline hotfix only; active-maintainership signal [S6+9d OSS]
+- **Raycast 2.0 Windows Public Beta** (May 14 2026) — first cross-OS Raycast version. v0.58 / v0.59 added "scan sub-directories for screenshots" (screenshot library indexing) and "Save as File" for clipboard images. Adjacent commercial competitor for Snapture's History track — different category (launcher) but same audience [S6+9d adjacent]
+- **snow-shot (mg-chao/snow-shot, 4,521★)** — **pre-abandonment signal**: 18-month tag silence despite active issue tracker. Watch for unmaintainer announcement; if it abandons, Snapture's plugin-architecture validation loses one data point and the snow-shot user base is in play [S6+9d OSS]
+- **Snipping Tool "Perfect Screenshot" + native Color Picker** rolling out via Insider 11.2504.38.0+ (May 8-17 2026) — AI auto-crop (Copilot+ only) + HEX/RGB/HSL picker. Incumbent moves onto Snapture's v0.7 smart-crop + v0.2.4 color-picker turf. Snapture still differentiates on APCA-Lc + Copilot+-independent UIA Smart Element Capture [S6+9d community]
+- **NVIDIA ShadowPlay / AMD ReLive / Xbox Game Bar Game DVR** — consumer game-clip recorders. Snapture's v0.7.1 ring-buffer competes directly with ShadowPlay Instant Replay. Per-vendor driver dep is the moat; Snapture's WGC-based path runs anywhere [S6+9d adjacent]
+- **Carnac / KeyCastr** — keystroke-overlay incumbents on Windows / macOS. Snapture's v0.7.1 keystroke overlay track is the integrated alternative; bundled with capture means no second tool to install [S6+9d adjacent]
+- **Pikka / Monosnap / Gyazo Pro** — Mac-first + cross-platform tools repeatedly surfaced in "CleanShot alternative" lists. Not Windows-priority but tracked for feature ideas (Gyazo's auto-OCR-on-upload pattern interesting if we ever ship the LAN-share OCR-index trick) [S6+9d adjacent]
+- **Skitch successor 2026** — Evernote-era annotator still has an active "what replaced Skitch" cohort. Snapture's editor, drag-image-to-tray, and pinned-overlay set match the lost-Skitch workflow more closely than any incumbent [S2 ref §3, S6+9d community]
 
 ---
 
@@ -646,6 +725,53 @@ Each `[Sn]` reference in the body maps to one of these dossier bundles. Every co
 - **Obsidian Web Clipper screenshot pain** — forum.obsidian.md/t/webclipper-screenshot/96741
 - **Joplin Web Clipper** — joplinapp.org/help/apps/clipper/
 
+### S6+9d — 2026-05-09 → 2026-05-17 delta dossier
+
+#### S6+9d sec — security advisories disclosed inside the window
+- **CVE-2026-40403 (CVSS 9.8)** — Win32K-GFX heap overflow RCE via crafted font/image rendering. Affects GDI/Magnification API path. Patched May 2026 Patch Tuesday. — windowsnews.ai/article/cve-2026-40403-win32k-grfx-rce-patch-the-may-2026-windows-graphics-bug.417978
+- **CVE-2026-35421** — Windows GDI EMF heap overflow RCE; affects GDI+/System.Drawing.Common decode path used by clipboard EMF paste. Patched May 2026. — blog.talosintelligence.com/microsoft-patch-tuesday-may-2026/
+- **CVE-2026-32175** — .NET tampering (arbitrary file write) for .NET 8/9/10. Patched in 10.0.8 servicing release 2026-05-12. — github.com/dotnet/announcements/issues/396
+- **CVE-2026-32177 / 35433 / 42899** — .NET EoP + DoS bundled with 10.0.8. — devblogs.microsoft.com/dotnet/dotnet-and-dotnet-framework-may-2026-servicing-updates/
+- **CVE-2026-33829** (disclosed April 2026, PoC Apr-22; active discussion in window) — Snipping Tool NTLMv2 hash leak via `ms-screensketch://filePath=<UNC>` deep-link triggering transparent SMB authentication. CVSS 4.3 information disclosure (CWE-200). Affects all Windows 10/11/Server pre-April-2026 patch. — socprime.com/active-threats/cve-2026-33829-snipping-tool-ntlm-leak/, exploit-db.com/exploits/52567, cryptika.com/poc-exploit-released-for-windows-snipping-tool-ntlm-hash-leak-vulnerability/
+- **May 2026 Patch Tuesday roundup** — bleepingcomputer.com/news/microsoft/microsoft-may-2026-patch-tuesday-fixes-120-flaws-no-zero-days/
+
+#### S6+9d platform — Microsoft platform deltas inside the window
+- **KB5089548 (OS Build 28000.2113, 2026-05-12)** — Windows 11 26H1 GA cumulative for Copilot+ hardware-only branch. Narrator now ships "rich image descriptions" via Copilot integration (Narrator + Ctrl + D for focused image, Narrator + Ctrl + S for full screen). — windowsnews.ai/article/windows-11-26h1-kb5089548-hardware-only-branch-not-an-upgrade-for-existing-pcs.418200, pureinfotech.com/kb5083806-windows-11-26h1-may-2026-update/
+- **KB5089549 (OS Builds 26100.8457 + 26200.8457, 2026-05-12)** — 24H2 + 25H2 cumulative. Refreshes built-in AI sub-components (Image Search, Content Extraction, Semantic Analysis, Settings Model → 1.2604.515.0). Same model surface `Microsoft.Windows.AI.Imaging` binds to. — support.microsoft.com/en-us/topic/may-12-2026-kb5089549-os-builds-26200-8457-and-26100-8457-28ec2a99-4bbe-481d-a340-5c6cf18d9acb
+- **KB5089573 (Release Preview, 2026-05-14)** — 24H2/25H2 builds 26100.8514 / 26200.8514. Begins AI actions in File Explorer (image edit / doc summarize). — elevenforum.com/t/kb5089573-windows-11-insider-release-preview-build-26100-8514-24h2-and-26200-8514-25h2-may-14.46833/
+- **KB5089570 (Release Preview, 2026-05-14)** — 26H1 build 28000.2173. First 26H1 RP flight; NPU task-management improvements that rework CPU/NPU dispatch for AI Imaging APIs. — elevenforum.com/t/kb5089570-windows-11-insider-release-preview-build-28000-2173-26h1-may-14.46834/
+- **Windows App SDK 1.8.8 / 1.8.260508005 (2026-05-12)** — Servicing: XAML Islands popup `OverrideScale` clipping fix; `RenderTargetBitmap.RenderAsync` ACCESS_VIOLATION fix when target leaves visual tree; `GetReadyState` returns correct `NotReady` when Windows AI packages missing. — github.com/microsoft/WindowsAppSDK/discussions/6475
+- **.NET 10.0.8 (2026-05-12)** — Runtime baseline. — devblogs.microsoft.com/dotnet/dotnet-and-dotnet-framework-may-2026-servicing-updates/
+- **Microsoft Build 2026 — June 2-3, San Francisco, Fort Mason** (NOT in window). No capture/imaging announcements leaked in delta window; session catalog live but no Windows-AI capture sessions. Re-run research after Build. — thurrott.com/microsoft/334704/microsofts-build-2026-session-catalog-is-now-live
+- **Windows Insider Dev — Build 15-May-2026** — Taskbar / Widgets / Search only; no screenshot relevance. — blogs.windows.com/windows-insider/2026/05/15/announcing-new-builds-for-15-may-2026/
+- **"Ask Copilot" removed from Snipping Tool + Photos (Insider rollout, 2026-05-08)** — Microsoft narrowing Snipping Tool's AI surface. — blogs.windows.com/windows-insider/2026/05/08/announcing-new-builds-for-8-may-2026/
+- **Snipping Tool "Perfect Screenshot" + native Color Picker in Insider 11.2504.38.0+** — laptopmag.com/laptops/windows-laptops/windows-11-snipping-tool-color-picker
+- **JPEG XL in Chrome 145 stable** — flag-gated `chrome://flags/#enable-jxl-image-format`, default-enabled expected H2 2026; Google switched to Rust-based `jxl-rs` decoder for memory safety. — phoronix.com/news/Chrome-145-Released, mochify.app/guides/chrome-145-jpeg-xl-default
+
+#### S6+9d OSS — release deltas inside the window
+- **Peekaboo v3.0 / v3.1.0 / v3.1.1 / v3.1.2 / v3.2.0 (2026-05-09 → 2026-05-15)** — macOS screenshot CLI + MCP server. v3.0 unified screenshot + UI detection; v3.1.0 daemon-backed lightweight-metadata returns; v3.2.0 `ollama/<model>` + `lmstudio/<model>` provider syntax. — github.com/openclaw/Peekaboo/releases
+- **Screenity v4.4.0 → v4.4.7 (2026-05-09 → 17)** — Chrome ext. v4.4.0 WebCodecs encoder + OPFS direct-to-disk + auto-update deferral; v4.4.1 MediaRecorder fallback; v4.4.2-5 editor routing / recovery / Linux Chrome WebCodecs / BT-USB headphone fixes; v4.4.7 back-to-back-recording + cloud-upload retry. — github.com/alyssaxuu/screenity/releases
+- **Greenshot 1.4.187 / 1.4.188 / 1.4.189 / 1.4.190 / 1.4.191 (2026-05-13 / 14)** — continuous pre-releases; capture-correctness + startup-crash + DE/IT/FR translations. — github.com/greenshot/greenshot/releases
+- **Cap v0.4.86 / v0.4.87 (2026-05-16)** — release-pipeline hotfix. — github.com/CapSoftware/Cap/releases/tag/cap-v0.4.87
+- **0PandaDEV/awesome-windows commits (2026-05-15 / 16)** — actively maintained; Snapture not yet submitted. — github.com/0pandadev/awesome-windows/commits/main
+- **No delta in window:** ShareX (last v20.1.0 May 6), Flameshot (v14.0 RC1), ScreenToGif (2.43.1 Mar 22), openscreen (v1.4.0 May 6), snow-shot (18-month tag silence — abandonment watch), eSearch (v15.2.3 Jan 4), SnapX (v0.4.0 Feb 20), WinShot, Capter, NormCap, wcap, xcap (v0.9.4 Apr 9), OBS Studio (32.1.2 Apr 21), screenshot-to-code (commits but no tag), ksnip, Captura.
+
+#### S6+9d adjacent — adjacent / new entrants inside the window
+- **Raycast 2.0 Windows Public Beta (2026-05-14)** — first cross-OS Raycast. — alternativeto.net/news/2026/5/raycast-launches-public-beta-with-new-ui-search-dictation-and-ai-upgrades/
+- **Raycast Windows Changelog v0.58 / v0.59 (2026-05-12 / 13)** — "Scan sub-directories for screenshots" treating screenshot folders as a first-class search index; "Save as File" action for clipboard images. — raycast.com/changelog/windows
+- **Adjacent quiet:** PowerToys (still 0.99); Excalidraw / tldraw / Snappify / PureRef / Eagle — no releases in window.
+
+#### S6+9d community — pain points + roundups inside the window
+- **Snipping Tool window-position-drift bug** — successive captures drift the window upward off-screen. — windows11forums.com/threads/new-snipping-tool-in-windows-11-is-complete-and-absolute-garbage.1344/
+- **Snipping Tool loses focus behind other windows post-capture** — workflow tax noted in elevenforum threads.
+- **Multi-monitor scaling broken on RDP-style dialogs (May 2026 Patch Tuesday acknowledgement)** — windowsforum.com/threads/patch-now-may-2026-patch-tuesday-fixes-critical-dns-and-netlogon-flaws.418160/
+- **Skitch successor 2026 cohort** — dev.to/tommy_worklab/the-day-skitch-stopped-working-which-screenshot-annotation-tool-should-you-use-in-2026-bm1
+- **No major HN / Reddit / Lobsters thread in window** — front-page checks for 2026-05-11 to 2026-05-16 surfaced nothing screenshot-specific. — news.ycombinator.com/front?day=2026-05-11
+
+#### S6+9d sec — secondary refs
+- **PoC + writeup for CVE-2026-33829** — exploit-db.com/exploits/52567, technochat.in/how-the-windows-snipping-tools-cve-2026-33829-opens-the-door-to-ntlm-hash-theft/, cyberpress.org/windows-snipping-tool-vulnerability/
+- **CVE-2026-41096 Windows DNS Client heap overflow (CVSS 9.8)** + **CVE-2026-34329 MSMQ heap overflow** — both bundled in KB5089549 prereq, not Snapture-direct deps but documentation hooks. — bleepingcomputer.com/news/microsoft/microsoft-may-2026-patch-tuesday-fixes-120-flaws-no-zero-days/
+
 ---
 
 ## Definition of Done — per release
@@ -653,15 +779,23 @@ Each `[Sn]` reference in the body maps to one of these dossier bundles. Every co
 A release is shippable only when:
 
 - [ ] Build clean across `Snapture.sln` (`dotnet build -c Release`)
-- [ ] WinRT engine smoke-test: region + window + fullscreen on Win11 22H2 + 24H2 + **25H2 (26200) + 26H1 Experimental (28020 if available)**; GDI fallback verified on Win10 22H2 [S6 platform]
-- [ ] **Multi-monitor mixed-DPI smoke** — 100% primary + 125% secondary; capture across the boundary with both engines [S6 community]
+- [ ] WinRT engine smoke-test: region + window + fullscreen on Win11 22H2 + 24H2 (26100.8457 + 26100.8514) + 25H2 (26200.8457 + 26200.8514) + **26H1 (28000.2113 GA + 28000.2173 Release Preview)**; GDI fallback verified on Win10 22H2 [S6 platform, S6+9d platform]
+- [ ] **Multi-monitor mixed-DPI smoke** — 100% primary + 125% secondary; capture across the boundary with both engines [S6 community, S6+9d community]
+- [ ] **RDP + Hyper-V Enhanced Session + VMware Unity smoke** — Snapture launched inside each scenario completes region + window + fullscreen [audit-gap fill]
+- [ ] **Multi-GPU smoke** — Optimus / AMD switchable / Intel hybrid laptop; capture survives a `WM_DISPLAYCHANGE` mid-session [audit-gap fill]
+- [ ] **Secure-desktop / UAC dim / DPI-change / lid-close behavior** — recording session pauses cleanly, no zero-byte frames, no orphaned hooks [audit-gap fill]
 - [ ] Editor smoke-test: every shipped tool drag-tested; undo/redo round-trips; **autosave-recovers-on-restart** path exercised once v0.8.1 lands
 - [ ] Settings dialog round-trip: every field reads, edits, saves, reloads
+- [ ] **Inspect.exe / Accessibility Insights smoke** — UIA tree complete on editor canvas + region overlay + magnifier loupe + pin window; Narrator announces tool buttons by name [audit-gap fill]
+- [ ] **Performance budget check** — idle CPU < 0.1 % over 5 min; idle RAM < 80 MB; capture latency P95 < 50 ms; GIF encode < 2 s for 30 frames @ 1080p [audit-gap fill]
+- [ ] **Orphan-cleanup check** — fresh launch finds + cleans (or quarantines) any stale `step-sessions\*`, GIF temp frames, half-written `index.db` rows, stale `WH_MOUSE_LL` hooks [audit-gap fill]
+- [ ] **Clean uninstall check** — uninstall path on every distribution channel verified to remove `%APPDATA%\Snapture`, `%LOCALAPPDATA%\Snapture`, AUMID, hotkeys, LAN-share firewall rule [audit-gap fill]
+- [ ] **URL-handler reject suite** (once `snapture://` lands) — every CVE-2026-33829 PoC payload rejected; logged once at warning level [S6+9d sec]
 - [ ] All version strings match (`Snapture.App.csproj`, `Snapture.Capture.csproj`, `Snapture.Plugin.Abstractions.csproj`, README badge, CHANGELOG header, About dialog)
 - [ ] CHANGELOG entry with Added/Changed/Fixed/Security; Security entries map to CVE IDs
 - [ ] CLAUDE.md status line + version-history line updated
 - [ ] README screenshots re-captured if UI changed (system is 125% DPI)
 - [ ] No telemetry added (grep for `HttpClient` / `WebRequest` / `Socket` / `TcpClient` / `WebSocket` and audit each call site against `docs/PRIVACY.md`)
 - [ ] **ARM64 binary published** alongside x64 once v0.7.5 lands [S6 OSS]
-- [ ] **CVE floor pin check** for any newly-introduced dependency (Magick.NET ≥ 14.12.0; OpenCvSharp4 ≥ 4.12.0; SQLitePCLRaw bundling 3.51.x or later) [S6 sec]
+- [ ] **CVE floor pin check** for any newly-introduced dependency (.NET ≥ 10.0.8 runtime baseline; Magick.NET ≥ 14.12.0; OpenCvSharp4 ≥ 4.12.0; SQLitePCLRaw bundling 3.51.x or later) [S6 sec, S6+9d sec]
 - [ ] Pushed, tagged `vX.Y.Z`, GitHub Release built via `release.yml`, ZIP+SHA256 round-trip verified
