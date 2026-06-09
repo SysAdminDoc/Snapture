@@ -38,3 +38,7 @@ appsettings.Local.json
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Markdown files local-only (except README)
+*.md
+!README.md
