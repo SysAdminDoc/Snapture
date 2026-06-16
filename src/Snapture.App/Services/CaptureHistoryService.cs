@@ -50,10 +50,16 @@ public sealed class CaptureHistoryService : IDisposable
         }
     }
 
+    private const int CurrentSchemaVersion = 1;
+
     private void Migrate()
     {
-        using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"
+        int version = GetUserVersion();
+
+        if (version < 1)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
 CREATE TABLE IF NOT EXISTS captures (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     file_path     TEXT NOT NULL,
@@ -85,6 +91,26 @@ CREATE TRIGGER IF NOT EXISTS captures_au AFTER UPDATE ON captures BEGIN
     VALUES (new.id, COALESCE(new.source_app,''), COALESCE(new.window_title,''), COALESCE(new.ocr_text,''));
 END;
 ";
+            cmd.ExecuteNonQuery();
+        }
+
+        // Future migrations go here:
+        // if (version < 2) { ... }
+
+        SetUserVersion(CurrentSchemaVersion);
+    }
+
+    private int GetUserVersion()
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "PRAGMA user_version;";
+        return Convert.ToInt32(cmd.ExecuteScalar() ?? 0);
+    }
+
+    private void SetUserVersion(int version)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = $"PRAGMA user_version = {version};";
         cmd.ExecuteNonQuery();
     }
 
