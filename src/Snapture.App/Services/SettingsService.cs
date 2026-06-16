@@ -51,7 +51,10 @@ public sealed class SnaptureSettings
     /// We persist disabled rather than enabled so a future rule pack expansion ships enabled
     /// for existing users without forcing a settings migration.
     /// </summary>
-    public List<string> DisabledRedactRules { get; set; } = new();
+    public List<string> DisabledRedactRules { get; set; } = new()
+    {
+        "phi-mrn", "phi-npi", "phi-dea", "phi-dicom-uid", "phi-dob-marker", "phi-patient-marker"
+    };
 
     /// <summary>Quick mode: copy to clipboard, skip editor entirely (ksnip #968).</summary>
     public bool QuickMode { get; set; } = false;

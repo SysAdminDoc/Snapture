@@ -95,6 +95,7 @@
                     <MenuItem Header="Pin"             Click="OnPinSelected" />
                     <MenuItem Header="Run OCR"         Click="OnRunOcr" />
                     <MenuItem Header="Reveal in folder" Click="OnRevealInFolder" />
+                    <MenuItem Header="Send to LAN-share"  Click="OnSendToLanShare" />
                     <Separator />
                     <MenuItem Header="Delete from history" Click="OnDeleteSelected" />
                 </ContextMenu>

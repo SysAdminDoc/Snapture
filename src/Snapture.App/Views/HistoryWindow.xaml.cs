@@ -125,6 +125,28 @@ public partial class HistoryWindow : Window
         }
     }
 
+    private void OnSendToLanShare(object sender, RoutedEventArgs e)
+    {
+        if (Selected is not { } row || !File.Exists(row.FilePath)) return;
+        if (App.Host is null) return;
+        if (!App.Host.LanShare.IsRunning && !App.Host.TryStartLanShare())
+        {
+            StatusText.Text = "LAN share is off — open Settings → LAN share to configure it.";
+            return;
+        }
+        try
+        {
+            var ttl = TimeSpan.FromMinutes(App.Host.Settings.Current.LanShareTtlMinutes);
+            var url = App.Host.LanShare.Register(row.FilePath, ttl);
+            try { System.Windows.Clipboard.SetText(url); } catch { }
+            StatusText.Text = $"LAN URL copied: {url}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Share failed: {ex.Message}";
+        }
+    }
+
     private void OnRevealInFolder(object sender, RoutedEventArgs e)
     {
         if (Selected is not { } row) return;
