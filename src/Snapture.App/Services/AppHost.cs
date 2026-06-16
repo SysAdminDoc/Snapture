@@ -75,6 +75,14 @@ public sealed class AppHost : IDisposable
         try { Plugins.LoadAll(); }
         catch (Exception ex) { Log.Warning(ex, "Plugin.LoadAll.Failed"); }
 
+        // Clean orphan files from previous crash
+        try
+        {
+            int orphans = OrphanFileDetector.Sweep();
+            if (orphans > 0) Log.Information("OrphanDetector.Cleaned {Count} orphan(s)", orphans);
+        }
+        catch (Exception ex) { Log.Warning(ex, "OrphanDetector.Failed"); }
+
         // Autosave recovery — check for leftover drafts from a crash.
         CheckForAutosaveRecovery();
 

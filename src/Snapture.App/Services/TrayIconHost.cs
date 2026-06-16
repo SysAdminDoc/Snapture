@@ -317,7 +317,11 @@ public sealed class TrayIconHost : IDisposable
             reclaim.Click += (_, _) =>
             {
                 if (PrintScreenHijackDetector.Reclaim())
-                    ShowToast("PrintScreen reclaimed", "Sign out and back in for the change to take full effect.");
+                {
+                    PrintScreenHijackDetector.OpenSettingsPage();
+                    ShowToast("PrintScreen reclaimed",
+                        "The registry toggle is set. The Settings page is open so you can verify. Sign out and back in for the change to take full effect.");
+                }
                 else
                     ShowToast("Could not reclaim", "Try opening Settings → Accessibility → Keyboard.");
             };
