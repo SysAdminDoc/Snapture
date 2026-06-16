@@ -5,6 +5,7 @@ using System.Runtime.Versioning;
 using Serilog;
 using Snapture.Capture;
 using Windows.Foundation;
+using Windows.Foundation.Metadata;
 using Windows.Graphics.Capture;
 using Windows.Graphics.DirectX;
 using Windows.Graphics.DirectX.Direct3D11;
@@ -28,13 +29,18 @@ public sealed class VideoRecorder : IDisposable
     public bool IsRecording { get; private set; }
     public bool IsPaused { get; private set; }
     public int FrameCount { get; private set; }
+    public int SkippedCleanFrameCount => _dirtyRegionFilter.SkippedFrameCount;
     public TimeSpan Elapsed => _sw.Elapsed;
     public string SelectedCodecName { get; private set; } = "H.264";
     public string SelectedCodecDescription { get; private set; } = "H.264";
+    public string DirtyRegionDescription => _dirtyRegionFilter.ReportingEnabled
+        ? "dirty-region skip enabled"
+        : "dirty-region skip unavailable";
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
     private readonly object _lock = new();
+    private readonly DirtyRegionFrameFilter _dirtyRegionFilter = new();
     private MFInterop.IMFSinkWriter? _writer;
     private uint _videoStreamIndex;
     private int _sourceWidth, _sourceHeight;
@@ -93,6 +99,7 @@ public sealed class VideoRecorder : IDisposable
         if (!IsRecording || !IsPaused) return;
         _pauseOffsetTicks += _sw.ElapsedTicks - _pauseStartTicks;
         IsPaused = false;
+        _dirtyRegionFilter.ForceNextFrame();
         _sw.Start();
         Log.Information("VideoRecorder.Resumed");
     }
@@ -125,7 +132,8 @@ public sealed class VideoRecorder : IDisposable
             _mfStarted = false;
         }
 
-        Log.Information("VideoRecorder.Stopped {Frames} {Duration}", FrameCount, Elapsed);
+        Log.Information("VideoRecorder.Stopped {Frames} {SkippedCleanFrames} {Duration}",
+            FrameCount, SkippedCleanFrameCount, Elapsed);
         return _outputPath;
     }
 
@@ -176,6 +184,7 @@ public sealed class VideoRecorder : IDisposable
         _session = _framePool.CreateCaptureSession(item);
         TrySetBorderRequired(_session, false);
         TrySetCursorCapture(_session, true);
+        _dirtyRegionFilter.Reset(TrySetDirtyRegionReporting(_session));
 
         FrameCount = 0;
         _firstTimestamp = -1;
@@ -185,8 +194,8 @@ public sealed class VideoRecorder : IDisposable
         _sw.Restart();
 
         _session.StartCapture();
-        Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps",
-            _width, _height, fps, bitrateMbps);
+        Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions}",
+            _width, _height, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled);
     }
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
@@ -309,6 +318,13 @@ public sealed class VideoRecorder : IDisposable
 
         long pts = (timestamp - _firstTimestamp) - _pauseOffsetTicks;
         if (pts < 0) pts = 0;
+
+        int? dirtyRegionCount = DirtyRegionInterop.TryGetDirtyRegionCount(frame);
+        if (!_dirtyRegionFilter.ShouldEncode(dirtyRegionCount))
+        {
+            Progress?.Invoke(FrameCount, Elapsed);
+            return;
+        }
 
         try
         {
@@ -511,7 +527,7 @@ public sealed class VideoRecorder : IDisposable
     {
         try
         {
-            if (Windows.Foundation.Metadata.ApiInformation.IsPropertyPresent(
+            if (ApiInformation.IsPropertyPresent(
                 typeof(GraphicsCaptureSession).FullName!, "IsCursorCaptureEnabled"))
             {
 #pragma warning disable CA1416
@@ -520,6 +536,27 @@ public sealed class VideoRecorder : IDisposable
             }
         }
         catch { }
+    }
+
+    private static bool TrySetDirtyRegionReporting(GraphicsCaptureSession session)
+    {
+        try
+        {
+            if (!ApiInformation.IsPropertyPresent(typeof(GraphicsCaptureSession).FullName!, "DirtyRegionMode"))
+                return false;
+
+            var prop = session.GetType().GetProperty("DirtyRegionMode");
+            if (prop is null || !prop.CanWrite || prop.PropertyType.IsEnum is false)
+                return false;
+
+            prop.SetValue(session, Enum.ToObject(prop.PropertyType, 0));
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "VideoRecorder.DirtyRegionModeUnavailable");
+            return false;
+        }
     }
 
     public void Dispose()
