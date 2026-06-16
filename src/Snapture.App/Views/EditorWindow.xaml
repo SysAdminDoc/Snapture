@@ -40,17 +40,17 @@
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"
                                Margin="0,0,16,0" />
-                    <Button x:Name="OpenButton" Content="Open…" Click="OnOpenClicked" />
-                    <Button x:Name="SaveProjectButton" Content="Save .snapture" Click="OnSaveProjectClicked" />
+                    <Button x:Name="OpenButton" Content="Open…" Click="OnOpenClicked" AutomationProperties.Name="Open file" />
+                    <Button x:Name="SaveProjectButton" Content="Save .snapture" Click="OnSaveProjectClicked" AutomationProperties.Name="Save project" />
                     <Separator Margin="6,0" Background="{DynamicResource AppBorder}" />
                     <Button x:Name="ExportButton"
                             Content="Export PNG"
                             Style="{StaticResource AccentButton}"
                             Click="OnExportPngClicked"
                             Padding="14,6" />
-                    <Button x:Name="ExportAsButton" Content="Export As…" Click="OnExportAsClicked" />
-                    <Button x:Name="CopyButton" Content="Copy" Click="OnCopyClicked" />
-                    <Button x:Name="PinButton" Content="Pin" Click="OnPinClicked" />
+                    <Button x:Name="ExportAsButton" Content="Export As…" Click="OnExportAsClicked" AutomationProperties.Name="Export as" />
+                    <Button x:Name="CopyButton" Content="Copy" Click="OnCopyClicked" AutomationProperties.Name="Copy to clipboard" />
+                    <Button x:Name="PinButton" Content="Pin" Click="OnPinClicked" AutomationProperties.Name="Pin as overlay" />
                     <Separator Margin="6,0" Background="{DynamicResource AppBorder}" />
                     <Button x:Name="RetakeButton" Content="Retake" Click="OnRetakeClicked"
                             ToolTip="Discard and recapture from the same source." Visibility="Collapsed" />
@@ -67,8 +67,8 @@
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             DockPanel.Dock="Right">
-                    <Button x:Name="UndoButton" Content="↶ Undo" Click="OnUndoClicked" />
-                    <Button x:Name="RedoButton" Content="↷ Redo" Click="OnRedoClicked" />
+                    <Button x:Name="UndoButton" Content="↶ Undo" Click="OnUndoClicked" AutomationProperties.Name="Undo" />
+                    <Button x:Name="RedoButton" Content="↷ Redo" Click="OnRedoClicked" AutomationProperties.Name="Redo" />
                     <TextBlock x:Name="DimensionText"
                                Foreground="{DynamicResource AppMutedForeground}"
                                VerticalAlignment="Center"
