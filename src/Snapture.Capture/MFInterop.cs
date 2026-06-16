@@ -92,6 +92,10 @@ public static class MFInterop
     // Sink writer attributes
     public static readonly Guid MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS = new("A634A91C-822B-41B9-A494-4DE4643612B0");
     public static readonly Guid MF_SINK_WRITER_DISABLE_THROTTLING = new("08B845D8-2B74-4AFE-9D53-BE16D2D5AE4F");
+    public static readonly Guid MF_TRANSCODE_CONTAINERTYPE = new("150FF23F-4ABC-478B-AC4F-E1916FBA1CCA");
+    public static readonly Guid MFTranscodeContainerType_MPEG4 = new("DC6CD05D-B9D0-40EF-BD35-FA622C1AB28A");
+    public static readonly Guid MFTranscodeContainerType_FMPEG4 = new("9BA876F1-419F-4B77-A1E0-35959D9D4004");
+    public static readonly Guid MF_MPEG4SINK_MIN_FRAGMENT_DURATION = new("A30B570C-8EFD-45E8-94FE-27C84B5BDFF6");
 
     // Transform categories and activation attributes
     public static readonly Guid MFT_CATEGORY_VIDEO_ENCODER = new("F79EAC7D-E545-4387-BDEE-D647D7BDE42A");
@@ -255,7 +259,7 @@ public static class MFInterop
         void GetMaxLength(out uint pcbMaxLength);
     }
 
-    [ComImport, Guid("3137F1CD-FE28-4DC2-A6DC-ACF8E9B4B3B4"),
+    [ComImport, Guid("3137F1CD-FE5E-4805-A5D8-FB477448CB3D"),
      InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     public interface IMFSinkWriter
     {

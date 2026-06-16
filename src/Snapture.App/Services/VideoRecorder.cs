@@ -36,6 +36,7 @@ public sealed class VideoRecorder : IDisposable
     public string DirtyRegionDescription => _dirtyRegionFilter.ReportingEnabled
         ? "dirty-region skip enabled"
         : "dirty-region skip unavailable";
+    public string ContainerDescription { get; private set; } = "fragmented MP4";
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
@@ -60,6 +61,8 @@ public sealed class VideoRecorder : IDisposable
     private string? _outputPath;
     private bool _disposed;
     private bool _mfStarted;
+
+    private const ulong Mp4FragmentDurationHns = 20_000_000; // two seconds
 
     /// <summary>
     /// Start recording the foreground window to the given output path.
@@ -235,8 +238,8 @@ public sealed class VideoRecorder : IDisposable
         int bitrateMbps,
         MediaFoundationVideoCodecDiscovery.EncoderCandidate candidate)
     {
-        // Create attributes for the sink writer: enable HW transforms
-        int hr = MFInterop.MFCreateAttributes(out var writerAttrs, 2);
+        // Create attributes for the sink writer: enable HW transforms and fragmented MP4.
+        int hr = MFInterop.MFCreateAttributes(out var writerAttrs, 4);
         if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
         MFInterop.IMFMediaType? outputType = null;
@@ -248,6 +251,14 @@ public sealed class VideoRecorder : IDisposable
 
             var throttleKey = MFInterop.MF_SINK_WRITER_DISABLE_THROTTLING;
             writerAttrs.SetUINT32(ref throttleKey, 1);
+
+            var containerKey = MFInterop.MF_TRANSCODE_CONTAINERTYPE;
+            var fragmentedMp4Container = MFInterop.MFTranscodeContainerType_FMPEG4;
+            writerAttrs.SetGUID(ref containerKey, ref fragmentedMp4Container);
+
+            var fragmentDurationKey = MFInterop.MF_MPEG4SINK_MIN_FRAGMENT_DURATION;
+            writerAttrs.SetUINT64(ref fragmentDurationKey, Mp4FragmentDurationHns);
+            ContainerDescription = "fragmented MP4 (2s fragments)";
 
             hr = MFInterop.MFCreateSinkWriterFromURL(outputPath, 0, writerAttrs, out _writer!);
             if (hr < 0) Marshal.ThrowExceptionForHR(hr);
