@@ -286,7 +286,7 @@ public sealed class CaptureOrchestrator
         }
         catch { /* history failures must never block delivery */ }
 
-        if (_settings.Current.CopyToClipboard)
+        if (_settings.Current.CopyToClipboard || _settings.Current.QuickMode)
         {
             try
             {
@@ -296,7 +296,7 @@ public sealed class CaptureOrchestrator
             catch { /* clipboard contention is not fatal */ }
         }
 
-        if (_settings.Current.OpenEditorAfterCapture)
+        if (_settings.Current.OpenEditorAfterCapture && !_settings.Current.QuickMode)
         {
             var bs = ToBitmapSource(result.Bitmap);
             var editor = new EditorWindow(bs, savedPath, result);

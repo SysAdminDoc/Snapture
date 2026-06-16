@@ -51,6 +51,9 @@ public sealed class SnaptureSettings
     /// </summary>
     public List<string> DisabledRedactRules { get; set; } = new();
 
+    /// <summary>Quick mode: copy to clipboard, skip editor entirely (ksnip #968).</summary>
+    public bool QuickMode { get; set; } = false;
+
     /// <summary>Include popups, menus, dropdowns in window-mode capture (Win11 22H2+).</summary>
     public bool IncludeSecondaryWindows { get; set; } = false;
 
