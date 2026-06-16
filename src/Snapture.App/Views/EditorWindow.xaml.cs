@@ -630,9 +630,10 @@ public partial class EditorWindow : Window
         bool bidir = BidirCheck.IsChecked == true;
         bool filled = FilledCheck.IsChecked == true;
         bool pixelate = PixelateCheck.IsChecked == true;
-        return _activeTool switch
+        bool shadow = DropShadowCheck.IsChecked == true;
+        var shape = _activeTool switch
         {
-            EditorTool.Rectangle => new RectangleShape   { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Filled = filled },
+            EditorTool.Rectangle => (Shape)new RectangleShape { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Filled = filled },
             EditorTool.Ellipse   => new EllipseShape     { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Filled = filled },
             EditorTool.Line      => new LineShape        { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed },
             EditorTool.Arrow     => new ArrowShape       { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed, Bidirectional = bidir },
@@ -642,10 +643,12 @@ public partial class EditorWindow : Window
             EditorTool.Blur      => new BlurShape        { X = p.X, Y = p.Y, BlurRadius = Math.Max(8, _strokeThickness * 4), Pixelate = pixelate },
             EditorTool.Redact    => new RedactShape      { X = p.X, Y = p.Y },
             EditorTool.Step      => new StepShape        { X = p.X, Y = p.Y, Label = _stepCounter.ToString(), StrokeColorArgb = _activeColor, Radius = Math.Max(14, _strokeThickness * 5) },
-            EditorTool.Spotlight => new SpotlightShape { X = p.X, Y = p.Y },
-            EditorTool.Crop      => null, // crop-on-release handled separately
+            EditorTool.Spotlight => new SpotlightShape   { X = p.X, Y = p.Y },
+            EditorTool.Crop      => null,
             _ => null,
         };
+        if (shape is not null) shape.DropShadow = shadow;
+        return shape;
     }
 
     private void UpdateDraft(Shape shape, SKPoint a, SKPoint b)

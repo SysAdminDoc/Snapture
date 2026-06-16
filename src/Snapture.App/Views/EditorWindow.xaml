@@ -148,6 +148,10 @@
                               Content="Pixelate (instead of blur)"
                               Foreground="{DynamicResource AppMutedForeground}"
                               Margin="0,4,0,0" />
+                    <CheckBox x:Name="DropShadowCheck"
+                              Content="Drop shadow on shapes"
+                              Foreground="{DynamicResource AppMutedForeground}"
+                              Margin="0,4,0,0" />
 
                     <TextBlock Text="Adjustments"
                                Foreground="{DynamicResource AppAccent}"
