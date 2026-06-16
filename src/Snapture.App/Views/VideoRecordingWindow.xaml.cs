@@ -55,6 +55,8 @@ public partial class VideoRecordingWindow : Window
         }
 
         _recorder.SourceClosed += OnSourceClosed;
+        if (!SystemParameters.ClientAreaAnimation)
+            Loaded += (_, _) => RecDotBlink.Storyboard.Stop(RecDot);
         SyncAudioControls();
         SyncZoomControls();
         UpdateFormatText();

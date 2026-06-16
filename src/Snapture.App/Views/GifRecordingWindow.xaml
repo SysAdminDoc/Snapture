@@ -19,10 +19,10 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <DockPanel Grid.Row="0" LastChildFill="True">
-            <Ellipse Width="12" Height="12" Fill="{DynamicResource AppDestructive}" Margin="0,0,8,0">
+            <Ellipse x:Name="RecDot" Width="12" Height="12" Fill="{DynamicResource AppDestructive}" Margin="0,0,8,0">
                 <Ellipse.Triggers>
                     <EventTrigger RoutedEvent="Loaded">
-                        <BeginStoryboard>
+                        <BeginStoryboard x:Name="RecDotBlink">
                             <Storyboard RepeatBehavior="Forever" AutoReverse="True">
                                 <DoubleAnimation Storyboard.TargetProperty="Opacity"
                                                  From="1.0" To="0.3" Duration="0:0:0.6" />

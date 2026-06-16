@@ -26,6 +26,9 @@ public partial class GifRecordingWindow : Window
         _ui.Tick += (_, _) => UpdateProgress();
         _ui.Start();
 
+        if (!SystemParameters.ClientAreaAnimation)
+            Loaded += (_, _) => RecDotBlink.Storyboard.Stop(RecDot);
+
         try
         {
             switch (mode)
