@@ -68,6 +68,12 @@ public sealed class SnaptureSettings
     /// <summary>Play a shutter sound on capture.</summary>
     public bool PlayShutterSound { get; set; } = false;
 
+    /// <summary>Draw a thin border around captured images (Greenshot #696, Flameshot #690).</summary>
+    public bool AutoBorderOnCapture { get; set; } = false;
+
+    /// <summary>Auto-border color (ARGB).</summary>
+    public uint AutoBorderColor { get; set; } = 0xFF888888;
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");
