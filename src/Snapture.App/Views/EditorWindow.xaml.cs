@@ -752,6 +752,11 @@ public partial class EditorWindow : Window
     private void OnUndoClicked(object sender, RoutedEventArgs e) { _commands.Undo(_doc); Canvas.InvalidateVisual(); }
     private void OnRedoClicked(object sender, RoutedEventArgs e) { _commands.Redo(_doc); Canvas.InvalidateVisual(); }
     private void OnStrokeChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => _strokeThickness = (float)e.NewValue;
+    private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        byte alpha = (byte)Math.Clamp((int)e.NewValue, 0, 255);
+        _activeColor = (_activeColor & 0x00FFFFFF) | ((uint)alpha << 24);
+    }
     private void OnAdjustmentChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => Canvas.InvalidateVisual();
     private void OnAdjustmentClicked(object sender, RoutedEventArgs e) => Canvas.InvalidateVisual();
     private void OnFrameClicked(object sender, RoutedEventArgs e) => Canvas.InvalidateVisual();
