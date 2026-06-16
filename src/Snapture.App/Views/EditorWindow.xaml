@@ -133,6 +133,13 @@
                     </DockPanel>
                     <UniformGrid x:Name="SavedSwatches" Columns="6" />
 
+                    <TextBlock Text="Opacity" Foreground="{DynamicResource AppMutedForeground}" Margin="0,12,0,4" />
+                    <Slider x:Name="OpacitySlider"
+                            Minimum="0" Maximum="255"
+                            Value="255"
+                            ValueChanged="OnOpacityChanged"
+                            ToolTip="Adjust color opacity (alpha channel)" />
+
                     <TextBlock Text="Stroke" Foreground="{DynamicResource AppMutedForeground}" Margin="0,12,0,4" />
                     <Slider x:Name="StrokeSlider"
                             Minimum="1" Maximum="24"
