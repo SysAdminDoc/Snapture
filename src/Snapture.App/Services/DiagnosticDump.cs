@@ -39,6 +39,7 @@ public static class DiagnosticDump
         sb.AppendLine($"Working Set: {Environment.WorkingSet / (1024 * 1024)} MB");
         sb.AppendLine($"Engine: {App.Host?.EngineName ?? "?"}");
         sb.AppendLine($"Theme: {App.Host?.Settings.Current.ThemeMode ?? "?"}");
+        sb.AppendLine($"Redact rules: {Editor.SecretDetector.RulePackVersion} ({Editor.SecretDetector.Rules.Count} rules)");
 
         sb.AppendLine();
         sb.AppendLine("Monitors:");

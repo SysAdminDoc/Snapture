@@ -12,6 +12,9 @@ namespace Snapture.App.Editor;
 /// </summary>
 public static class SecretDetector
 {
+    public const string RulePackVersion = "2026.1";
+    public const string RulePackSource = "gitleaks/gitleaks (MIT) + PII extensions";
+
     public sealed record SecretRule(string Id, string Description, Regex Pattern, bool LuhnValidate = false);
 
     public sealed record DetectedSecret(string RuleId, string Description, string Match, int Index, int Length);

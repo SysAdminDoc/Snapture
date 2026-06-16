@@ -446,7 +446,7 @@ public sealed class TrayIconHost : IDisposable
         {
             var ver = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
             MessageBox.Show(
-                $"Snapture v{ver}\n\nAll-in-one screenshot utility for Windows.\nEngine: {App.Host?.EngineName.ToUpperInvariant()}\nTheme: {ThemeManager.DisplayName(App.Host?.Settings.Current.ThemeMode)} ({ThemeManager.EffectiveMode})\nMIT License — github.com/SysAdminDoc/Snapture",
+                $"Snapture v{ver}\n\nAll-in-one screenshot utility for Windows.\nEngine: {App.Host?.EngineName.ToUpperInvariant()}\nTheme: {ThemeManager.DisplayName(App.Host?.Settings.Current.ThemeMode)} ({ThemeManager.EffectiveMode})\nRedact rules: {Editor.SecretDetector.RulePackVersion} ({Editor.SecretDetector.Rules.Count} rules, {Editor.SecretDetector.RulePackSource})\nMIT License — github.com/SysAdminDoc/Snapture",
                 "About Snapture", MessageBoxButton.OK, MessageBoxImage.Information);
         };
         m.Items.Add(about);
