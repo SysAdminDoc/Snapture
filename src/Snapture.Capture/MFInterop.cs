@@ -48,12 +48,31 @@ public static class MFInterop
     [DllImport("mfplat.dll", ExactSpelling = true)]
     public static extern int MFCreateAttributes(out IMFAttributes ppMFAttributes, uint cInitialSize);
 
+    // ---- Transform enumeration ----
+
+    [DllImport("mfplat.dll", ExactSpelling = true)]
+    public static extern int MFTEnumEx(
+        [In] ref Guid guidCategory,
+        uint flags,
+        nint pInputType,
+        [In] ref MFT_REGISTER_TYPE_INFO pOutputType,
+        out nint pppMFTActivate,
+        out uint pcMFTActivate);
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MFT_REGISTER_TYPE_INFO
+    {
+        public Guid guidMajorType;
+        public Guid guidSubtype;
+    }
+
     // ---- Well-known GUIDs ----
 
     // Major types
     public static readonly Guid MFMediaType_Video = new("73646976-0000-0010-8000-00AA00389B71");
 
     // Subtypes (output codecs)
+    public static readonly Guid MFVideoFormat_AV1 = new("31305641-0000-0010-8000-00AA00389B71");
     public static readonly Guid MFVideoFormat_H264 = new("34363248-0000-0010-8000-00AA00389B71");
     public static readonly Guid MFVideoFormat_HEVC = new("43564548-0000-0010-8000-00AA00389B71");
 
@@ -73,6 +92,19 @@ public static class MFInterop
     // Sink writer attributes
     public static readonly Guid MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS = new("A634A91C-822B-41B9-A494-4DE4643612B0");
     public static readonly Guid MF_SINK_WRITER_DISABLE_THROTTLING = new("08B845D8-2B74-4AFE-9D53-BE16D2D5AE4F");
+
+    // Transform categories and activation attributes
+    public static readonly Guid MFT_CATEGORY_VIDEO_ENCODER = new("F79EAC7D-E545-4387-BDEE-D647D7BDE42A");
+    public static readonly Guid MFT_FRIENDLY_NAME_Attribute = new("314FFBAE-5B41-4C95-9C19-4E7D586FACE3");
+    public static readonly Guid MFT_ENUM_HARDWARE_VENDOR_ID_Attribute = new("3AECB0CC-035B-4BCC-8185-2B8D551EF3AF");
+    public static readonly Guid MFT_TRANSFORM_CLSID_Attribute = new("6821C42B-65A4-4E82-99BC-9A88205ECD0C");
+
+    public const uint MFT_ENUM_FLAG_SYNCMFT = 0x00000001;
+    public const uint MFT_ENUM_FLAG_ASYNCMFT = 0x00000002;
+    public const uint MFT_ENUM_FLAG_HARDWARE = 0x00000004;
+    public const uint MFT_ENUM_FLAG_LOCALMFT = 0x00000010;
+    public const uint MFT_ENUM_FLAG_TRANSCODE_ONLY = 0x00000020;
+    public const uint MFT_ENUM_FLAG_SORTANDFILTER = 0x00000040;
 
     // Interlace mode
     public const uint MFVideoInterlace_Progressive = 2;
