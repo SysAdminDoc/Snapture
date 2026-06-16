@@ -90,6 +90,20 @@ public static class SecretDetector
                 new Regex(@"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b", Opts)),
             new SecretRule("mac", "MAC address",
                 new Regex(@"\b(?:[0-9a-fA-F]{2}[:\-]){5}[0-9a-fA-F]{2}\b", Opts)),
+
+            // HIPAA / PHI rule pack — off by default; user enables via Settings → Auto-redact → Healthcare
+            new SecretRule("phi-mrn", "Medical Record Number (10-digit prefixed)",
+                new Regex(@"\b(?:MRN|MR#|Med\.?\s*Rec\.?)[:\s#]*\d{6,10}\b", Opts)),
+            new SecretRule("phi-npi", "National Provider Identifier (Luhn-validated 10-digit)",
+                new Regex(@"\b\d{10}\b", Opts), LuhnValidate: true),
+            new SecretRule("phi-dea", "DEA Number",
+                new Regex(@"\b[A-Z]{2}\d{7}\b", Opts)),
+            new SecretRule("phi-dicom-uid", "DICOM UID (StudyInstanceUID / AccessionNumber)",
+                new Regex(@"\b\d+(?:\.\d+){4,}\b", Opts)),
+            new SecretRule("phi-dob-marker", "Date of Birth marker",
+                new Regex(@"(?i)\b(?:DOB|Date\s+of\s+Birth|D\.O\.B\.?)[:\s]*\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4}\b", Opts)),
+            new SecretRule("phi-patient-marker", "Patient name/ID marker",
+                new Regex(@"(?i)\b(?:patient\s+name|patient\s+id|pt\.\s*name)[:\s]+\S+", Opts)),
         };
     }
 
