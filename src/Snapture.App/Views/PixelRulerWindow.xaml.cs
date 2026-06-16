@@ -22,14 +22,17 @@ public partial class PixelRulerWindow : Window
         Height = _virtualBounds.Height;
         DimRect.Width = _virtualBounds.Width;
         DimRect.Height = _virtualBounds.Height;
-        Canvas.SetLeft(HintBadge, (_virtualBounds.Width / 2) - 220);
-        Canvas.SetTop(HintBadge, _virtualBounds.Height - 60);
 
         KeyDown += (_, e) => { if (e.Key == Key.Escape) Close(); };
         MouseLeftButtonDown += OnDown;
         MouseMove += OnMove;
         MouseLeftButtonUp += OnUp;
-        Loaded += (_, _) => Activate();
+        Loaded += (_, _) =>
+        {
+            PositionHintBadge();
+            Activate();
+        };
+        SizeChanged += (_, _) => PositionHintBadge();
     }
 
     private void OnDown(object sender, MouseButtonEventArgs e)
@@ -53,9 +56,11 @@ public partial class PixelRulerWindow : Window
         double len = Math.Sqrt(dx * dx + dy * dy);
         double angle = Math.Atan2(dy, dx) * 180.0 / Math.PI;
         if (angle < 0) angle += 360;
-        ReadoutText.Text = $"Δx {(int)dx}px   Δy {(int)dy}px   ‖ {(int)len}px   ∠ {angle:F1}°";
-        Canvas.SetLeft(ReadoutBadge, Math.Min(p.X + 12, ActualWidth - 220));
-        Canvas.SetTop(ReadoutBadge, Math.Max(p.Y - 30, 4));
+        ReadoutText.Text = $"X {FormatSigned(dx)} px   Y {FormatSigned(dy)} px   Length {(int)len} px   Angle {angle:F1} deg";
+        ReadoutBadge.UpdateLayout();
+        var badgeWidth = Math.Max(ReadoutBadge.ActualWidth, 260);
+        Canvas.SetLeft(ReadoutBadge, Math.Min(Math.Max(p.X + 12, 8), ActualWidth - badgeWidth - 8));
+        Canvas.SetTop(ReadoutBadge, Math.Max(p.Y - 32, 8));
     }
 
     private void OnUp(object sender, MouseButtonEventArgs e)
@@ -64,4 +69,16 @@ public partial class PixelRulerWindow : Window
         OverlayCanvas.ReleaseMouseCapture();
         // Keep the readout visible for a moment so the user can read it.
     }
+
+    private void PositionHintBadge()
+    {
+        HintBadge.UpdateLayout();
+        var badgeWidth = Math.Max(HintBadge.ActualWidth, 320);
+        var badgeHeight = Math.Max(HintBadge.ActualHeight, 54);
+        Canvas.SetLeft(HintBadge, Math.Max(16, (ActualWidth - badgeWidth) / 2));
+        Canvas.SetTop(HintBadge, Math.Max(16, ActualHeight - badgeHeight - 24));
+    }
+
+    private static string FormatSigned(double value)
+        => value >= 0 ? $"+{(int)value}" : ((int)value).ToString();
 }

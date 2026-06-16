@@ -54,51 +54,51 @@ public sealed class TrayIconHost : IDisposable
     {
         var m = new ContextMenu();
 
-        var picker = new MenuItem { Header = "Capture _Mode Picker…" };
+        var picker = new MenuItem { Header = "_Capture picker…" };
         picker.Click += async (_, _) => await SafeRun(_orchestrator.CaptureViaPickerAsync);
         m.Items.Add(picker);
 
         m.Items.Add(new Separator());
 
-        var region = new MenuItem { Header = "Capture _Region…  (PrintScreen)" };
+        var region = new MenuItem { Header = "_Region…", InputGestureText = "PrintScreen" };
         region.Click += async (_, _) => await SafeRun(_orchestrator.CaptureRegionAsync);
         m.Items.Add(region);
 
-        var lastRegion = new MenuItem { Header = "Recapture _Last Region  (Shift+PrintScreen)" };
+        var lastRegion = new MenuItem { Header = "_Last region", InputGestureText = "Shift+PrintScreen" };
         lastRegion.Click += async (_, _) => await SafeRun(_orchestrator.CaptureLastRegionAsync);
         m.Items.Add(lastRegion);
 
-        var pickWin = new MenuItem { Header = "_Pick Window…" };
+        var pickWin = new MenuItem { Header = "_Window picker…" };
         pickWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureWindowPickerAsync);
         m.Items.Add(pickWin);
 
-        var smartPick = new MenuItem { Header = "Smart _Element Capture…" };
+        var smartPick = new MenuItem { Header = "Smart _element…" };
         smartPick.Click += async (_, _) => await SafeRun(_orchestrator.CaptureSmartElementAsync);
         m.Items.Add(smartPick);
 
-        var window = new MenuItem { Header = "Capture Foreground _Window  (Alt+PrintScreen)" };
+        var window = new MenuItem { Header = "Foreground _window", InputGestureText = "Alt+PrintScreen" };
         window.Click += async (_, _) => await SafeRun(_orchestrator.CaptureForegroundWindowAsync);
         m.Items.Add(window);
 
-        var fs = new MenuItem { Header = "Capture _Fullscreen  (Ctrl+PrintScreen)" };
+        var fs = new MenuItem { Header = "_Fullscreen", InputGestureText = "Ctrl+PrintScreen" };
         fs.Click += async (_, _) => await SafeRun(_orchestrator.CaptureFullscreenAsync);
         m.Items.Add(fs);
 
-        var monUnderCursor = new MenuItem { Header = "Capture Monitor Under _Cursor" };
+        var monUnderCursor = new MenuItem { Header = "Monitor under _cursor" };
         monUnderCursor.Click += async (_, _) => await SafeRun(_orchestrator.CaptureMonitorUnderCursorAsync);
         m.Items.Add(monUnderCursor);
 
-        var scrollingWin = new MenuItem { Header = "Capture _Scrolling Window  (alpha)" };
+        var scrollingWin = new MenuItem { Header = "_Scrolling window (alpha)" };
         scrollingWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureScrollingForegroundAsync);
         m.Items.Add(scrollingWin);
 
-        var monitorParent = new MenuItem { Header = "Capture _Monitor" };
+        var monitorParent = new MenuItem { Header = "_Monitor" };
         try
         {
             var monitors = MonitorEnumerator.Enumerate();
             foreach (var mon in monitors)
             {
-                var mi = new MenuItem { Header = $"{mon.DeviceName} — {mon.Bounds.Width}×{mon.Bounds.Height}{(mon.IsPrimary ? "  (primary)" : "")}" };
+                var mi = new MenuItem { Header = $"{mon.DeviceName} - {mon.Bounds.Width}x{mon.Bounds.Height}{(mon.IsPrimary ? " (primary)" : "")}" };
                 var captured = mon;
                 mi.Click += async (_, _) => await SafeRun(() => _orchestrator.CaptureMonitorAsync(captured));
                 monitorParent.Items.Add(mi);
@@ -108,10 +108,10 @@ public sealed class TrayIconHost : IDisposable
         m.Items.Add(monitorParent);
 
         // Self-timer submenu
-        var timer = new MenuItem { Header = "Capture with _Delay" };
+        var timer = new MenuItem { Header = "Region with _delay" };
         foreach (var seconds in new[] { 1, 3, 5, 10 })
         {
-            var item = new MenuItem { Header = $"After {seconds}s — Region" };
+            var item = new MenuItem { Header = $"After {seconds}s" };
             int s = seconds;
             item.Click += async (_, _) => await SafeRun(() => _orchestrator.CaptureWithDelayAsync(_orchestrator.CaptureRegionAsync, s));
             timer.Items.Add(item);
@@ -177,7 +177,7 @@ public sealed class TrayIconHost : IDisposable
         var ocr = new MenuItem { Header = "OCR region…" };
         ocr.Click += async (_, _) => await SafeRun(_orchestrator.OcrRegionAsync);
         tools.Items.Add(ocr);
-        var captureText = new MenuItem { Header = "Capture Text → clipboard" };
+        var captureText = new MenuItem { Header = "Capture text to clipboard" };
         captureText.Click += async (_, _) => await SafeRun(_orchestrator.CaptureTextAsync);
         tools.Items.Add(captureText);
         var ocrFromFile = new MenuItem { Header = "OCR from file…" };
@@ -197,11 +197,11 @@ public sealed class TrayIconHost : IDisposable
                     try { System.Windows.Clipboard.SetText(text); } catch { }
                 new Views.OcrResultWindow(text).Show();
             }
-            catch (Exception ex) { MessageBox.Show($"OCR failed:\n{ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"OCR failed:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
         tools.Items.Add(ocrFromFile);
         var recordGif = new MenuItem { Header = "Record GIF" };
-        var recGifWindow = new MenuItem { Header = "…of foreground window" };
+        var recGifWindow = new MenuItem { Header = "Foreground window" };
         recGifWindow.Click += (_, _) =>
         {
             try
@@ -210,9 +210,9 @@ public sealed class TrayIconHost : IDisposable
                 var rec = new GifRecorder(App.Host.Engine);
                 new Views.GifRecordingWindow(rec, Views.GifRecordingWindow.Mode.ForegroundWindow).Show();
             }
-            catch (Exception ex) { MessageBox.Show($"Could not start GIF recorder: {ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"Could not start GIF recorder:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
-        var recGifFull = new MenuItem { Header = "…of all monitors" };
+        var recGifFull = new MenuItem { Header = "All monitors" };
         recGifFull.Click += (_, _) =>
         {
             try
@@ -221,20 +221,25 @@ public sealed class TrayIconHost : IDisposable
                 var rec = new GifRecorder(App.Host.Engine);
                 new Views.GifRecordingWindow(rec, Views.GifRecordingWindow.Mode.VirtualScreen).Show();
             }
-            catch (Exception ex) { MessageBox.Show($"Could not start GIF recorder: {ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"Could not start GIF recorder:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
         recordGif.Items.Add(recGifWindow);
         recordGif.Items.Add(recGifFull);
         tools.Items.Add(recordGif);
 
-        var recordVideo = new MenuItem { Header = "Record Video (MP4: AV1 / HEVC / H.264)" };
-        var recVidWindow = new MenuItem { Header = "…of foreground window" };
+        var recordVideo = new MenuItem { Header = "Record MP4 video" };
+        var recVidWindow = new MenuItem { Header = "Foreground window" };
         recVidWindow.Click += (_, _) =>
         {
             try
             {
                 var hwnd = Native2.GetForegroundWindow();
-                if (hwnd == 0) { MessageBox.Show("No foreground window.", "Snapture"); return; }
+                if (hwnd == 0)
+                {
+                    MessageBox.Show("No foreground window is available to record.", "Snapture",
+                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    return;
+                }
                 var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
                 var (ow, oh) = RecordingPresets.ResolveOutputSize(
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
@@ -242,10 +247,10 @@ public sealed class TrayIconHost : IDisposable
                 new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.ForegroundWindow, hwnd,
                     q.Fps, q.BitrateMbps, ow, oh).Show();
             }
-            catch (Exception ex) { MessageBox.Show($"Could not start video recorder: {ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"Could not start video recorder:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
         recordVideo.Items.Add(recVidWindow);
-        var recVidMonitor = new MenuItem { Header = "…of primary monitor" };
+        var recVidMonitor = new MenuItem { Header = "Primary monitor" };
         recVidMonitor.Click += (_, _) =>
         {
             try
@@ -259,7 +264,7 @@ public sealed class TrayIconHost : IDisposable
                 new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.Monitor, mon.Handle,
                     q.Fps, q.BitrateMbps, ow, oh).Show();
             }
-            catch (Exception ex) { MessageBox.Show($"Could not start video recorder: {ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"Could not start video recorder:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
         recordVideo.Items.Add(recVidMonitor);
 
@@ -282,7 +287,7 @@ public sealed class TrayIconHost : IDisposable
         }
         recordVideo.Items.Add(qualityMenu);
 
-        var resolutionMenu = new MenuItem { Header = "Output Resolution" };
+        var resolutionMenu = new MenuItem { Header = "Output resolution" };
         foreach (var preset in RecordingPresets.Resolutions)
         {
             var ri = new MenuItem { Header = preset.Label, IsCheckable = true, Tag = preset.Key };
@@ -301,11 +306,11 @@ public sealed class TrayIconHost : IDisposable
 
         tools.Items.Add(recordVideo);
 
-        var stepCapture = new MenuItem { Header = "Step Capture…" };
+        var stepCapture = new MenuItem { Header = "Step capture…" };
         stepCapture.Click += (_, _) =>
         {
             try { new Views.StepCaptureWindow().Show(); }
-            catch (Exception ex) { MessageBox.Show($"Could not open Step Capture: {ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"Could not open Step Capture:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
         tools.Items.Add(stepCapture);
 
@@ -313,7 +318,7 @@ public sealed class TrayIconHost : IDisposable
         pluginsItem.Click += (_, _) =>
         {
             try { new Views.PluginsWindow().Show(); }
-            catch (Exception ex) { MessageBox.Show($"Plugins window failed: {ex.Message}", "Snapture"); }
+            catch (Exception ex) { MessageBox.Show($"Could not open Plugins:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };
         tools.Items.Add(pluginsItem);
 
@@ -334,7 +339,7 @@ public sealed class TrayIconHost : IDisposable
         tools.Items.Add(history);
         m.Items.Add(tools);
 
-        var openFolder = new MenuItem { Header = "Open _Output Folder" };
+        var openFolder = new MenuItem { Header = "Open _output folder" };
         openFolder.Click += (_, _) =>
         {
             try
@@ -348,7 +353,7 @@ public sealed class TrayIconHost : IDisposable
         m.Items.Add(openFolder);
 
         // Engine selector
-        var engineMenu = new MenuItem { Header = "Capture _Engine" };
+        var engineMenu = new MenuItem { Header = "Capture _engine" };
         foreach (var (label, key) in new[]
         {
             ("Auto (recommended)", CaptureEngineFactory.Auto),
@@ -377,7 +382,7 @@ public sealed class TrayIconHost : IDisposable
 
         var cursorToggle = new MenuItem
         {
-            Header = "Include _Cursor in Capture",
+            Header = "Include _cursor",
             IsCheckable = true,
             IsChecked = App.Host?.Settings.Current.IncludeCursor ?? true
         };
@@ -390,10 +395,10 @@ public sealed class TrayIconHost : IDisposable
         };
         m.Items.Add(cursorToggle);
 
-        // Reclaim PrintScreen if hijacked by Win11 24H2
+        // Restore PrintScreen if hijacked by Win11 24H2.
         if (PrintScreenHijackDetector.IsHijacked())
         {
-            var reclaim = new MenuItem { Header = "Reclaim _PrintScreen (Windows is hijacking it)" };
+            var reclaim = new MenuItem { Header = "Restore _PrintScreen shortcut" };
             reclaim.Click += (_, _) =>
             {
                 if (PrintScreenHijackDetector.Reclaim())
@@ -408,7 +413,7 @@ public sealed class TrayIconHost : IDisposable
             m.Items.Add(reclaim);
         }
 
-        var diagDump = new MenuItem { Header = "Create _Diagnostic Dump…" };
+        var diagDump = new MenuItem { Header = "Create _diagnostic dump…" };
         diagDump.Click += (_, _) =>
         {
             try
@@ -424,7 +429,7 @@ public sealed class TrayIconHost : IDisposable
         };
         m.Items.Add(diagDump);
 
-        var checkUpdate = new MenuItem { Header = "Check for _Updates…" };
+        var checkUpdate = new MenuItem { Header = "Check for _updates…" };
         checkUpdate.Click += async (_, _) =>
         {
             try
@@ -433,7 +438,7 @@ public sealed class TrayIconHost : IDisposable
                 checkUpdate.Header = "Checking…";
                 var result = await UpdateChecker.CheckAsync();
                 checkUpdate.IsEnabled = true;
-                checkUpdate.Header = "Check for _Updates…";
+                checkUpdate.Header = "Check for _updates…";
                 if (result.Available)
                 {
                     var answer = MessageBox.Show(
@@ -450,7 +455,7 @@ public sealed class TrayIconHost : IDisposable
             catch
             {
                 checkUpdate.IsEnabled = true;
-                checkUpdate.Header = "Check for _Updates…";
+                checkUpdate.Header = "Check for _updates…";
                 ShowToast("Update check failed", "Could not reach GitHub.");
             }
         };
@@ -461,7 +466,7 @@ public sealed class TrayIconHost : IDisposable
         {
             var ver = typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
             MessageBox.Show(
-                $"Snapture v{ver}\n\nAll-in-one screenshot utility for Windows.\nEngine: {App.Host?.EngineName.ToUpperInvariant()}\nTheme: {ThemeManager.DisplayName(App.Host?.Settings.Current.ThemeMode)} ({ThemeManager.EffectiveMode})\nRedact rules: {Editor.SecretDetector.RulePackVersion} ({Editor.SecretDetector.Rules.Count} rules, {Editor.SecretDetector.RulePackSource})\nMIT License — github.com/SysAdminDoc/Snapture",
+                $"Snapture v{ver}\n\nAll-in-one screenshot utility for Windows.\nEngine: {App.Host?.EngineName.ToUpperInvariant()}\nTheme: {ThemeManager.DisplayName(App.Host?.Settings.Current.ThemeMode)} ({ThemeManager.EffectiveMode})\nRedact rules: {Editor.SecretDetector.RulePackVersion} ({Editor.SecretDetector.Rules.Count} rules, {Editor.SecretDetector.RulePackSource})\nMIT License - github.com/SysAdminDoc/Snapture",
                 "About Snapture", MessageBoxButton.OK, MessageBoxImage.Information);
         };
         m.Items.Add(about);

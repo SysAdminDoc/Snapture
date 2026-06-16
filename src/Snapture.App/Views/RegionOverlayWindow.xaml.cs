@@ -38,10 +38,12 @@ public partial class RegionOverlayWindow : Window
         DimRect.Width = virtualBounds.Width;
         DimRect.Height = virtualBounds.Height;
 
-        Canvas.SetLeft(HintBadge, (virtualBounds.Width / 2) - 200);
-        Canvas.SetTop(HintBadge, virtualBounds.Height - 60);
-
-        Loaded += (_, _) => Activate();
+        Loaded += (_, _) =>
+        {
+            PositionHintBadge();
+            Activate();
+        };
+        SizeChanged += (_, _) => PositionHintBadge();
         KeyDown += OnKeyDown;
         MouseLeftButtonDown += OnDown;
         MouseMove += OnMove;
@@ -174,6 +176,15 @@ public partial class RegionOverlayWindow : Window
         int w = (int)Math.Round(SelectionRect.Width);
         int h = (int)Math.Round(SelectionRect.Height);
         SelectedVirtualRegion = new Int32Rect(_virtualBounds.X + x, _virtualBounds.Y + y, w, h);
+    }
+
+    private void PositionHintBadge()
+    {
+        HintBadge.UpdateLayout();
+        var badgeWidth = Math.Max(HintBadge.ActualWidth, 320);
+        var badgeHeight = Math.Max(HintBadge.ActualHeight, 54);
+        Canvas.SetLeft(HintBadge, Math.Max(16, (ActualWidth - badgeWidth) / 2));
+        Canvas.SetTop(HintBadge, Math.Max(16, ActualHeight - badgeHeight - 24));
     }
 
     public System.Drawing.Rectangle? GetSelectedRegionAsRectangle()

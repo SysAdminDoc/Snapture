@@ -23,33 +23,21 @@
                        Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed" />
             <Border x:Name="TitleBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppAccent}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8,4"
+                    Style="{StaticResource OverlayInfoBadge}"
+                    MaxWidth="460"
                     Visibility="Collapsed">
                 <TextBlock x:Name="TitleText"
                            Foreground="{DynamicResource AppForeground}"
-                           FontSize="13" />
+                           FontSize="13"
+                           TextTrimming="CharacterEllipsis" />
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppBorderStrong}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    Padding="14,8"
-                    Opacity="0.95">
-                <TextBlock Foreground="{DynamicResource AppMutedForeground}" FontSize="13">
-                    <Run Foreground="{DynamicResource AppAccent}" Text="Click" />
-                    <Run Text=" a window to capture " />
-                    <Run Foreground="{DynamicResource AppBorderStrong}" Text="·" />
-                    <Run Foreground="{DynamicResource AppAccent}" Text=" PgUp/PgDn " />
-                    <Run Text="parent/child " />
-                    <Run Foreground="{DynamicResource AppBorderStrong}" Text="·" />
-                    <Run Foreground="{DynamicResource AppAccent}" Text=" Esc " />
-                    <Run Text="cancel" />
-                </TextBlock>
+                    Style="{StaticResource OverlayHintBadge}">
+                <StackPanel>
+                    <TextBlock Text="Window capture" Style="{StaticResource OverlayHintTitleText}" />
+                    <TextBlock Text="Click a window to capture it. PgUp/PgDn adjusts the target; Esc cancels."
+                               Style="{StaticResource OverlayHintBodyText}" />
+                </StackPanel>
             </Border>
         </Canvas>
     </Grid>

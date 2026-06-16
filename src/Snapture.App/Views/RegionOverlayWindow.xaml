@@ -40,11 +40,7 @@
                        Visibility="Collapsed"
                        SnapsToDevicePixels="True" />
             <Border x:Name="SizeBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppAccent}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="6,3"
+                    Style="{StaticResource OverlayInfoBadge}"
                     Visibility="Collapsed">
                 <TextBlock x:Name="SizeText"
                            Foreground="{DynamicResource AppForeground}"
@@ -74,23 +70,13 @@
                 </Grid>
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppBorderStrong}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    Padding="14,8"
-                    Opacity="0.95"
+                    Style="{StaticResource OverlayHintBadge}"
                     HorizontalAlignment="Center">
-                <TextBlock Foreground="{DynamicResource AppMutedForeground}" FontSize="13">
-                    <Run Foreground="{DynamicResource AppAccent}" Text="Drag" />
-                    <Run Text=" to select region " />
-                    <Run Foreground="{DynamicResource AppBorderStrong}" Text="·" />
-                    <Run Foreground="{DynamicResource AppAccent}" Text=" Esc " />
-                    <Run Text="cancel" />
-                    <Run Foreground="{DynamicResource AppBorderStrong}" Text=" · " />
-                    <Run Foreground="{DynamicResource AppAccent}" Text="Enter " />
-                    <Run Text="confirm" />
-                </TextBlock>
+                <StackPanel>
+                    <TextBlock Text="Region capture" Style="{StaticResource OverlayHintTitleText}" />
+                    <TextBlock Text="Drag to choose an area. Enter captures; Esc cancels."
+                               Style="{StaticResource OverlayHintBodyText}" />
+                </StackPanel>
             </Border>
         </Canvas>
     </Grid>

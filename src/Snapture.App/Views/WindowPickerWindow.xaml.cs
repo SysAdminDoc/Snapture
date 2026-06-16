@@ -25,18 +25,18 @@ public partial class WindowPickerWindow : Window
         Height = _virtualBounds.Height;
         DimRect.Width = _virtualBounds.Width;
         DimRect.Height = _virtualBounds.Height;
-        Canvas.SetLeft(HintBadge, (_virtualBounds.Width / 2) - 220);
-        Canvas.SetTop(HintBadge, _virtualBounds.Height - 60);
 
         // Don't activate — keep the target window's focus stack untouched.
         ShowActivated = false;
         Loaded += (_, _) =>
         {
+            PositionHintBadge();
             // Make this window non-activating so menus / focus on the target window stay open.
             var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
             int ex = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt32();
             SetWindowLongPtr(hwnd, GWL_EXSTYLE, (nint)(ex | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW));
         };
+        SizeChanged += (_, _) => PositionHintBadge();
 
         KeyDown += OnKeyDown;
         MouseLeftButtonDown += OnClick;
@@ -125,7 +125,8 @@ public partial class WindowPickerWindow : Window
         HighlightRect.Height = bounds.Height;
         HighlightRect.Visibility = Visibility.Visible;
 
-        TitleText.Text = GetWindowTitle(_hoverWindow);
+        var title = GetWindowTitle(_hoverWindow);
+        TitleText.Text = string.IsNullOrWhiteSpace(title) ? "Untitled window" : title;
         Canvas.SetLeft(TitleBadge, bounds.X - _virtualBounds.X + 8);
         Canvas.SetTop(TitleBadge, bounds.Y - _virtualBounds.Y + 8);
         TitleBadge.Visibility = Visibility.Visible;
@@ -162,6 +163,15 @@ public partial class WindowPickerWindow : Window
     {
         _hoverTimer.Stop();
         base.OnClosed(e);
+    }
+
+    private void PositionHintBadge()
+    {
+        HintBadge.UpdateLayout();
+        var badgeWidth = Math.Max(HintBadge.ActualWidth, 340);
+        var badgeHeight = Math.Max(HintBadge.ActualHeight, 54);
+        Canvas.SetLeft(HintBadge, Math.Max(16, (ActualWidth - badgeWidth) / 2));
+        Canvas.SetTop(HintBadge, Math.Max(16, ActualHeight - badgeHeight - 24));
     }
 
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int x; public int y; }

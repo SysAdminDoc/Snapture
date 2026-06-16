@@ -108,7 +108,7 @@
                                 <TextBlock x:Name="PrintScreenStatus"
                                            Style="{StaticResource HelpText}" />
                                 <Button x:Name="ReclaimPrintScreenButton"
-                                        Content="Reclaim PrintScreen"
+                                        Content="Restore PrintScreen shortcut"
                                         HorizontalAlignment="Left"
                                         Margin="0,10,0,0"
                                         Click="OnReclaimPrintScreenClicked" />

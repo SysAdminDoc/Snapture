@@ -21,11 +21,7 @@
                   StrokeThickness="2"
                   Visibility="Collapsed" />
             <Border x:Name="ReadoutBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppAccent}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8,4"
+                    Style="{StaticResource OverlayInfoBadge}"
                     Visibility="Collapsed">
                 <TextBlock x:Name="ReadoutText"
                            Foreground="{DynamicResource AppForeground}"
@@ -33,18 +29,12 @@
                            FontSize="13" />
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppBorderStrong}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    Padding="14,8">
-                <TextBlock Foreground="{DynamicResource AppMutedForeground}" FontSize="13">
-                    <Run Foreground="{DynamicResource AppAccent}" Text="Drag" />
-                    <Run Text=" to measure pixels and angle " />
-                    <Run Foreground="{DynamicResource AppBorderStrong}" Text="·" />
-                    <Run Foreground="{DynamicResource AppAccent}" Text=" Esc " />
-                    <Run Text="dismiss" />
-                </TextBlock>
+                    Style="{StaticResource OverlayHintBadge}">
+                <StackPanel>
+                    <TextBlock Text="Pixel ruler" Style="{StaticResource OverlayHintTitleText}" />
+                    <TextBlock Text="Drag to measure distance and angle. Esc dismisses."
+                               Style="{StaticResource OverlayHintBodyText}" />
+                </StackPanel>
             </Border>
         </Canvas>
     </Grid>

@@ -30,12 +30,11 @@ public partial class SmartCaptureWindow : Window
         Height = _virtualBounds.Height;
         DimRect.Width = _virtualBounds.Width;
         DimRect.Height = _virtualBounds.Height;
-        Canvas.SetLeft(HintBadge, (_virtualBounds.Width / 2) - 280);
-        Canvas.SetTop(HintBadge, _virtualBounds.Height - 60);
 
         ShowActivated = false;
 
         Loaded += OnLoaded;
+        SizeChanged += (_, _) => PositionHintBadge();
         KeyDown += OnKeyDown;
         MouseLeftButtonDown += OnLeftClick;
         MouseRightButtonDown += (_, _) => { _selectedBounds = Rectangle.Empty; Close(); };
@@ -47,6 +46,7 @@ public partial class SmartCaptureWindow : Window
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        PositionHintBadge();
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         const int GWL_EXSTYLE = -20;
         const int WS_EX_NOACTIVATE = 0x08000000;
@@ -153,9 +153,9 @@ public partial class SmartCaptureWindow : Window
             try { controlType = el.Current.ControlType?.ProgrammaticName?.Replace("ControlType.", "") ?? "Element"; } catch { }
             try { elName = el.Current.Name ?? ""; } catch { }
 
-            ElementType.Text = controlType + (_lockedElement is not null ? "  (locked — PgUp climb, PgDn release)" : "");
-            ElementName.Text = string.IsNullOrEmpty(elName) ? "(no name)" : elName;
-            ElementDims.Text = $"{(int)r.Width}×{(int)r.Height}  @  {(int)r.X},{(int)r.Y}";
+            ElementType.Text = controlType + (_lockedElement is not null ? "  (locked; PgUp climbs, PgDn releases)" : "");
+            ElementName.Text = string.IsNullOrWhiteSpace(elName) ? "Unnamed element" : elName;
+            ElementDims.Text = $"{(int)r.Width} x {(int)r.Height} @ {(int)r.X},{(int)r.Y}";
 
             double bx = r.X - _virtualBounds.X + 8;
             double by = r.Y - _virtualBounds.Y + 8;
@@ -183,7 +183,7 @@ public partial class SmartCaptureWindow : Window
             string elName = "";
             try { controlType = el.Current.ControlType?.ProgrammaticName?.Replace("ControlType.", "") ?? "Element"; } catch { }
             try { elName = el.Current.Name ?? ""; } catch { }
-            SelectedDescription = string.IsNullOrEmpty(elName) ? controlType : $"{controlType}: {elName}";
+            SelectedDescription = string.IsNullOrWhiteSpace(elName) ? controlType : $"{controlType}: {elName}";
             DialogResult = true;
             Close();
         }
@@ -194,6 +194,15 @@ public partial class SmartCaptureWindow : Window
     {
         _hoverTimer.Stop();
         base.OnClosed(e);
+    }
+
+    private void PositionHintBadge()
+    {
+        HintBadge.UpdateLayout();
+        var badgeWidth = Math.Max(HintBadge.ActualWidth, 360);
+        var badgeHeight = Math.Max(HintBadge.ActualHeight, 54);
+        Canvas.SetLeft(HintBadge, Math.Max(16, (ActualWidth - badgeWidth) / 2));
+        Canvas.SetTop(HintBadge, Math.Max(16, ActualHeight - badgeHeight - 24));
     }
 
     [StructLayout(LayoutKind.Sequential)] private struct POINT { public int x; public int y; }
