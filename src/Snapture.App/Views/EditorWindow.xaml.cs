@@ -1155,6 +1155,14 @@ public partial class EditorWindow : Window
     private async void OnRetakeClicked(object sender, RoutedEventArgs e)
     {
         if (_captureResult is null || App.Host is null) return;
+
+        bool preserveAnnotations = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift);
+        if (preserveAnnotations)
+        {
+            await RefreshCapturePreservingAnnotations();
+            return;
+        }
+
         Close();
         try
         {
@@ -1172,6 +1180,51 @@ public partial class EditorWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
+
+    private async Task RefreshCapturePreservingAnnotations()
+    {
+        if (_captureResult is null || App.Host is null) return;
+        try
+        {
+            StatusText.Text = "Recapturing…";
+            CaptureResult? newCapture = null;
+            var engine = App.Host.Engine;
+            if (_captureResult.SourceWindow is { } hwnd && hwnd != 0)
+                newCapture = await engine.CaptureWindowAsync(hwnd);
+            else if (_captureResult.Source == "VirtualScreen" || _captureResult.Source == "Fullscreen")
+                newCapture = await engine.CaptureVirtualScreenAsync();
+            else if (_captureResult.SourceBounds is { Width: > 0, Height: > 0 } bounds)
+                newCapture = await engine.CaptureRegionAsync(bounds);
+
+            if (newCapture is null)
+            {
+                StatusText.Text = "Refresh failed — could not recapture.";
+                return;
+            }
+
+            nint hbmp = newCapture.Bitmap.GetHbitmap();
+            try
+            {
+                var bs = System.Windows.Interop.Imaging.CreateBitmapSourceFromHBitmap(
+                    hbmp, IntPtr.Zero, System.Windows.Int32Rect.Empty,
+                    BitmapSizeOptions.FromEmptyOptions());
+                var newBg = BitmapSourceToSKBitmap(bs);
+                _doc.ReplaceBackground(newBg);
+            }
+            finally { DeleteObject(hbmp); }
+
+            _captureResult = newCapture;
+            Canvas.InvalidateVisual();
+            StatusText.Text = "Refreshed — annotations preserved.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Refresh failed: {ex.Message}";
+        }
+    }
+
+    [System.Runtime.InteropServices.DllImport("gdi32.dll")]
+    private static extern bool DeleteObject(nint hObject);
 
     private async void OnAutoRedactClicked(object sender, RoutedEventArgs e)
     {

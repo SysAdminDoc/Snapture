@@ -25,6 +25,13 @@ public sealed class AnnotationDocument
         Background = background ?? throw new ArgumentNullException(nameof(background));
     }
 
+    public void ReplaceBackground(SKBitmap newBackground)
+    {
+        var old = Background;
+        Background = newBackground ?? throw new ArgumentNullException(nameof(newBackground));
+        old.Dispose();
+    }
+
     public void Render(SKCanvas canvas, bool flattenForExport)
     {
         canvas.Clear(SKColors.Transparent);
