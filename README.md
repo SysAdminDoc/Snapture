@@ -15,6 +15,7 @@
   <img alt="License"  src="https://img.shields.io/badge/license-MIT-A6E3A1?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-89B4FA?style=for-the-badge&logo=windows&logoColor=white">
   <img alt=".NET 10"  src="https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">
+  <img alt="Downloads" src="https://img.shields.io/github/downloads/SysAdminDoc/Snapture/total?style=for-the-badge&color=89DCEB&label=downloads">
 </p>
 
 ---
