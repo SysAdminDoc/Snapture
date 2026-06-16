@@ -287,6 +287,7 @@ public sealed class ArrowShape : Shape
     public float X2 { get; set; }
     public float Y2 { get; set; }
     public bool Bidirectional { get; set; }
+    public bool Reversed { get; set; }
     public bool Dashed { get; set; }
 
     public override void Render(SKCanvas canvas, AnnotationDocument doc)
@@ -294,7 +295,10 @@ public sealed class ArrowShape : Shape
         using var stroke = MakeStrokePaint();
         if (Dashed) stroke.PathEffect = SKPathEffect.CreateDash(new[] { 8f, 8f }, 0);
         canvas.DrawLine(X1, Y1, X2, Y2, stroke);
-        DrawArrowhead(canvas, stroke, X1, Y1, X2, Y2);
+        if (Reversed)
+            DrawArrowhead(canvas, stroke, X2, Y2, X1, Y1);
+        else
+            DrawArrowhead(canvas, stroke, X1, Y1, X2, Y2);
         if (Bidirectional) DrawArrowhead(canvas, stroke, X2, Y2, X1, Y1);
     }
 
@@ -323,7 +327,7 @@ public sealed class ArrowShape : Shape
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
     public override Shape Clone() => new ArrowShape
     {
-        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Dashed = Dashed,
+        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Reversed = Reversed, Dashed = Dashed,
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }

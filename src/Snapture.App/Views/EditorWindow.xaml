@@ -154,6 +154,10 @@
                               Content="Bidirectional arrow"
                               Foreground="{DynamicResource AppMutedForeground}"
                               Margin="0,4,0,0" />
+                    <CheckBox x:Name="ReversedCheck"
+                              Content="Reversed arrow direction"
+                              Foreground="{DynamicResource AppMutedForeground}"
+                              Margin="0,4,0,0" />
                     <CheckBox x:Name="FilledCheck"
                               Content="Filled rectangle/ellipse"
                               Foreground="{DynamicResource AppMutedForeground}"
