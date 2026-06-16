@@ -51,7 +51,7 @@ public partial class VideoRecordingWindow : Window
             return;
         }
 
-        FormatText.Text = $"Recording to MP4 ({_recorder.SelectedCodecDescription}). Frames stream to disk — safe to record long sessions.";
+        FormatText.Text = $"Recording to MP4 ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}. Frames stream to disk.";
         UpdateProgress();
     }
 
@@ -59,7 +59,7 @@ public partial class VideoRecordingWindow : Window
     {
         var ts = _recorder.Elapsed;
         string status = _recorder.IsPaused ? "PAUSED" : "REC";
-        ProgressText.Text = $"{_recorder.FrameCount} frames · {ts:mm\\:ss\\.ff} · MP4 {_recorder.SelectedCodecName}";
+        ProgressText.Text = $"{_recorder.FrameCount} frames - {_recorder.SkippedCleanFrameCount} skipped - {ts:mm\\:ss\\.ff} - MP4 {_recorder.SelectedCodecName}";
         StatusLabel.Text = status;
         PauseButton.Content = _recorder.IsPaused ? "Resume" : "Pause";
     }
