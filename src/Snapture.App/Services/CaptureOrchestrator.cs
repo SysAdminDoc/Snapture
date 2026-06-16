@@ -108,6 +108,34 @@ public sealed class CaptureOrchestrator
         }
     }
 
+    public async Task CaptureTextAsync()
+    {
+        var virtualBounds = MonitorEnumerator.GetVirtualScreen();
+        var virtualCapture = await _engine.CaptureRegionAsync(virtualBounds).ConfigureAwait(true);
+        try
+        {
+            var overlay = new Views.RegionOverlayWindow(virtualCapture.Bitmap, virtualBounds);
+            overlay.ShowDialog();
+            var sel = overlay.GetSelectedRegionAsRectangle();
+            if (sel is null) return;
+
+            var crop = CropFromVirtual(virtualCapture.Bitmap, virtualBounds, sel.Value);
+            try
+            {
+                var bs = ToBitmapSource(crop);
+                var result = await OcrService.RecognizeAsync(bs).ConfigureAwait(true);
+                string text = result?.Text ?? string.Empty;
+                if (!string.IsNullOrEmpty(text))
+                {
+                    try { Clipboard.SetText(text); } catch { }
+                    Log.Information("CaptureText.Completed {Length}", text.Length);
+                }
+            }
+            finally { crop.Dispose(); }
+        }
+        finally { virtualCapture.Bitmap.Dispose(); }
+    }
+
     public async Task CaptureWithDelayAsync(Func<Task> capture, int delaySeconds)
     {
         if (delaySeconds > 0)
@@ -221,6 +249,8 @@ public sealed class CaptureOrchestrator
             }
         }
         catch { }
+
+        try { new Views.CaptureFlashWindow().Flash(); } catch { }
 
         // Save to disk
         string? savedPath = null;
