@@ -898,13 +898,14 @@ public partial class EditorWindow : Window
         using var doc = _doc.RenderToBitmap();
         ApplyAdjustments(doc);
 
-        bool gradient = GradientCheck.IsChecked == true;
-        bool shadow = ShadowCheck.IsChecked == true;
-        bool rounded = RoundedCheck.IsChecked == true;
+        bool beautifier = BeautifierCheck.IsChecked == true;
+        bool gradient = GradientCheck.IsChecked == true || beautifier;
+        bool shadow = ShadowCheck.IsChecked == true || beautifier;
+        bool rounded = RoundedCheck.IsChecked == true || beautifier;
         bool codeChrome = CodeChromeCheck.IsChecked == true;
 
         int chromeBar = codeChrome ? 36 : 0;
-        int padding = (gradient || shadow || codeChrome) ? 80 : 0;
+        int padding = beautifier ? 120 : (gradient || shadow || codeChrome) ? 80 : 0;
         int outW = _doc.Width + padding * 2;
         int outH = _doc.Height + chromeBar + padding * 2;
         var info = new SKImageInfo(outW, outH, SKColorType.Bgra8888, SKAlphaType.Premul);

@@ -210,6 +210,12 @@
                               Margin="0,4,0,0"
                               ToolTip="Wraps the image in a macOS-style window with red / yellow / green traffic-light dots."
                               Click="OnFrameClicked" />
+                    <CheckBox x:Name="BeautifierCheck"
+                              Content="Background Beautifier"
+                              Foreground="{DynamicResource AppMutedForeground}"
+                              Margin="0,4,0,0"
+                              ToolTip="Adds margin, rounded corners, and a gradient backdrop for polished screenshots."
+                              Click="OnFrameClicked" />
                 </StackPanel>
             </ScrollViewer>
         </Border>
