@@ -19,7 +19,7 @@ public partial class EditorWindow : Window
 {
     public enum EditorTool
     {
-        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop, Eyedropper
+        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop, Eyedropper, Spotlight
     }
 
     private static readonly (EditorTool tool, string label, Key hotkey, string glyph)[] ToolButtons =
@@ -37,6 +37,7 @@ public partial class EditorWindow : Window
         (EditorTool.Step,      "Step counter (N)",    Key.N, "①"),
         (EditorTool.Crop,      "Crop (C)",            Key.C, "✂"),
         (EditorTool.Eyedropper,"Eyedropper (I)",      Key.I, "💧"),
+        (EditorTool.Spotlight, "Spotlight (P)",       Key.P, "◐"),
     };
 
     private static readonly uint[] DefaultPalette =
@@ -641,6 +642,7 @@ public partial class EditorWindow : Window
             EditorTool.Blur      => new BlurShape        { X = p.X, Y = p.Y, BlurRadius = Math.Max(8, _strokeThickness * 4), Pixelate = pixelate },
             EditorTool.Redact    => new RedactShape      { X = p.X, Y = p.Y },
             EditorTool.Step      => new StepShape        { X = p.X, Y = p.Y, Label = _stepCounter.ToString(), StrokeColorArgb = _activeColor, Radius = Math.Max(14, _strokeThickness * 5) },
+            EditorTool.Spotlight => new SpotlightShape { X = p.X, Y = p.Y },
             EditorTool.Crop      => null, // crop-on-release handled separately
             _ => null,
         };
@@ -675,6 +677,10 @@ public partial class EditorWindow : Window
                 r2.X = Math.Min(a.X, b.X); r2.Y = Math.Min(a.Y, b.Y);
                 r2.Width = Math.Abs(b.X - a.X); r2.Height = Math.Abs(b.Y - a.Y);
                 break;
+            case SpotlightShape sp:
+                sp.X = Math.Min(a.X, b.X); sp.Y = Math.Min(a.Y, b.Y);
+                sp.Width = Math.Abs(b.X - a.X); sp.Height = Math.Abs(b.Y - a.Y);
+                break;
         }
     }
 
@@ -690,6 +696,7 @@ public partial class EditorWindow : Window
         BlurShape b        => b.Width >= 4 && b.Height >= 4,
         RedactShape r      => r.Width >= 4 && r.Height >= 4,
         StepShape          => true,
+        SpotlightShape sp  => sp.Width >= 4 && sp.Height >= 4,
         _                  => false,
     };
 

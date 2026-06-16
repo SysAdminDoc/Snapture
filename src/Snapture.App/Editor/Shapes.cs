@@ -18,6 +18,7 @@ namespace Snapture.App.Editor;
 [JsonDerivedType(typeof(BlurShape),       typeDiscriminator: "blur")]
 [JsonDerivedType(typeof(RedactShape),     typeDiscriminator: "redact")]
 [JsonDerivedType(typeof(StepShape),       typeDiscriminator: "step")]
+[JsonDerivedType(typeof(SpotlightShape), typeDiscriminator: "spotlight")]
 public abstract class Shape
 {
     public uint StrokeColorArgb { get; set; } = 0xFFE74C3C; // red default
@@ -89,6 +90,42 @@ public sealed class RectangleShape : Shape
     public override Shape Clone() => new RectangleShape
     {
         X = X, Y = Y, Width = Width, Height = Height, CornerRadius = CornerRadius, Filled = Filled,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+}
+
+/// <summary>Darkens everything outside the rectangle while keeping the inside sharp.</summary>
+public sealed class SpotlightShape : Shape
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+
+    public SpotlightShape() { StrokeColorArgb = 0xCC000000; }
+
+    public override void Render(SKCanvas canvas, AnnotationDocument doc)
+    {
+        var inner = new SKRect(X, Y, X + Width, Y + Height);
+        var outer = new SKRect(0, 0, doc.Width, doc.Height);
+        using var path = new SKPath();
+        path.AddRect(outer);
+        path.AddRect(inner);
+        path.FillType = SKPathFillType.EvenOdd;
+        using var paint = new SKPaint
+        {
+            Style = SKPaintStyle.Fill,
+            Color = ToColor(StrokeColorArgb),
+            IsAntialias = true
+        };
+        canvas.DrawPath(path, paint);
+    }
+    public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
+    public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new SpotlightShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height,
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
