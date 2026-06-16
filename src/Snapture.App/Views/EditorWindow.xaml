@@ -53,7 +53,7 @@
                     <Button x:Name="PinButton" Content="Pin" Click="OnPinClicked" AutomationProperties.Name="Pin as overlay" />
                     <Separator Margin="6,0" Background="{DynamicResource AppBorder}" />
                     <Button x:Name="RetakeButton" Content="Retake" Click="OnRetakeClicked"
-                            ToolTip="Discard and recapture from the same source." Visibility="Collapsed" />
+                            ToolTip="Retake: discard and recapture.&#x0a;Shift+click: refresh background, keep annotations." Visibility="Collapsed" />
                     <Separator x:Name="RetakeSep" Margin="6,0" Background="{DynamicResource AppBorder}" Visibility="Collapsed" />
                     <Button x:Name="AutoRedactButton"
                             Content="Auto-redact secrets"
