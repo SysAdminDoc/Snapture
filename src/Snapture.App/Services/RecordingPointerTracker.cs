@@ -23,7 +23,8 @@ internal readonly record struct RecordingPointerEffect(
 
 internal readonly record struct RecordingPointerFrame(
     Point? CursorPosition,
-    IReadOnlyList<RecordingPointerEffect> Clicks);
+    IReadOnlyList<RecordingPointerEffect> Clicks,
+    bool HasVisualActivity);
 
 internal sealed class RecordingPointerTracker : IDisposable
 {
@@ -32,6 +33,7 @@ internal sealed class RecordingPointerTracker : IDisposable
 
     private readonly object _lock = new();
     private readonly List<RecordingPointerClick> _recentClicks = new();
+    private Point? _lastScreenCursorPoint;
 
     private nint _hookHandle;
     private LowLevelMouseProc? _proc;
@@ -57,8 +59,15 @@ internal sealed class RecordingPointerTracker : IDisposable
         ThrowIfDisposed();
 
         Point? cursor = null;
+        bool hasVisualActivity = false;
         if (GetCursorPos(out var point))
-            cursor = ToLocalPoint(new Point(point.x, point.y), captureBounds);
+        {
+            var screenPoint = new Point(point.x, point.y);
+            cursor = ToLocalPoint(screenPoint, captureBounds);
+            if (cursor is not null && _lastScreenCursorPoint != screenPoint)
+                hasVisualActivity = true;
+            _lastScreenCursorPoint = cursor is null ? null : screenPoint;
+        }
 
         List<RecordingPointerEffect> effects = new();
         lock (_lock)
@@ -75,12 +84,15 @@ internal sealed class RecordingPointerTracker : IDisposable
 
                 var local = ToLocalPoint(click.ScreenPoint, captureBounds);
                 if (local is { } p)
+                {
                     effects.Add(new RecordingPointerEffect(p, click.Button, age));
+                    hasVisualActivity = true;
+                }
             }
         }
 
         effects.Reverse();
-        return new RecordingPointerFrame(cursor, effects);
+        return new RecordingPointerFrame(cursor, effects, hasVisualActivity);
     }
 
     public void ClearClicks()
