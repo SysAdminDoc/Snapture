@@ -103,10 +103,25 @@ public sealed class CaptureOrchestrator
             case Views.CapturePickerWindow.CaptureMode.Window: await CaptureForegroundWindowAsync(); break;
             case Views.CapturePickerWindow.CaptureMode.Fullscreen: await CaptureFullscreenAsync(); break;
             case Views.CapturePickerWindow.CaptureMode.LastRegion: await CaptureLastRegionAsync(); break;
+            case Views.CapturePickerWindow.CaptureMode.MonitorUnderCursor: await CaptureMonitorUnderCursorAsync(); break;
             case Views.CapturePickerWindow.CaptureMode.ScrollingWindow: await CaptureScrollingForegroundAsync(); break;
             case Views.CapturePickerWindow.CaptureMode.SmartElement: await CaptureSmartElementAsync(); break;
         }
     }
+
+    public async Task CaptureMonitorUnderCursorAsync()
+    {
+        GetCursorPos(out var pt);
+        var mon = MonitorEnumerator.FromPoint(new System.Drawing.Point(pt.X, pt.Y));
+        if (mon is null) return;
+        var result = await _engine.CaptureMonitorAsync(mon).ConfigureAwait(true);
+        await DeliverCaptureAsync(result).ConfigureAwait(true);
+    }
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    private struct POINT { public int X, Y; }
 
     public async Task CaptureTextAsync()
     {

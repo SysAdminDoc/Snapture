@@ -84,6 +84,10 @@ public sealed class TrayIconHost : IDisposable
         fs.Click += async (_, _) => await SafeRun(_orchestrator.CaptureFullscreenAsync);
         m.Items.Add(fs);
 
+        var monUnderCursor = new MenuItem { Header = "Capture Monitor Under _Cursor" };
+        monUnderCursor.Click += async (_, _) => await SafeRun(_orchestrator.CaptureMonitorUnderCursorAsync);
+        m.Items.Add(monUnderCursor);
+
         var scrollingWin = new MenuItem { Header = "Capture _Scrolling Window  (alpha)" };
         scrollingWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureScrollingForegroundAsync);
         m.Items.Add(scrollingWin);
