@@ -12,10 +12,12 @@ public partial class VideoRecordingWindow : Window
     private readonly DispatcherTimer _ui;
     private readonly string _tempPath;
     private bool _updatingAudioChecks;
+    private bool _updatingZoomToggle;
 
     public enum Mode { ForegroundWindow, Monitor }
 
-    public VideoRecordingWindow(VideoRecorder recorder, Mode mode, nint targetHandle, int fps = 30, int bitrateMbps = 8)
+    public VideoRecordingWindow(VideoRecorder recorder, Mode mode, nint targetHandle,
+        int fps = 30, int bitrateMbps = 8, int outputWidth = 0, int outputHeight = 0)
     {
         InitializeComponent();
         _recorder = recorder;
@@ -37,10 +39,10 @@ public partial class VideoRecordingWindow : Window
             switch (mode)
             {
                 case Mode.ForegroundWindow:
-                    _recorder.StartWindow(targetHandle, _tempPath, fps, bitrateMbps);
+                    _recorder.StartWindow(targetHandle, _tempPath, fps, bitrateMbps, outputWidth, outputHeight);
                     break;
                 case Mode.Monitor:
-                    _recorder.StartMonitor(targetHandle, _tempPath, fps, bitrateMbps);
+                    _recorder.StartMonitor(targetHandle, _tempPath, fps, bitrateMbps, outputWidth, outputHeight);
                     break;
             }
         }
@@ -53,7 +55,8 @@ public partial class VideoRecordingWindow : Window
         }
 
         SyncAudioControls();
-        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
+        SyncZoomControls();
+        UpdateFormatText();
         UpdateProgress();
     }
 
@@ -61,7 +64,10 @@ public partial class VideoRecordingWindow : Window
     {
         var ts = _recorder.Elapsed;
         string status = _recorder.IsPaused ? "PAUSED" : "REC";
-        ProgressText.Text = $"{_recorder.FrameCount} frames - {_recorder.SkippedCleanFrameCount} skipped - {ts:mm\\:ss\\.ff} - MP4 {_recorder.SelectedCodecName}";
+        string zoom = _recorder.IsZoomSuggestionsEnabled
+            ? $"{_recorder.ZoomSuggestionClickCount} zoom"
+            : "zoom off";
+        ProgressText.Text = $"{_recorder.FrameCount}f - {_recorder.SkippedCleanFrameCount} skipped - {ts:mm\\:ss\\.ff} - {_recorder.SelectedCodecName} - {zoom}";
         StatusLabel.Text = status;
         PauseButton.Content = _recorder.IsPaused ? "Resume" : "Pause";
         UpdateAudioMeters();
@@ -82,6 +88,19 @@ public partial class VideoRecordingWindow : Window
         finally
         {
             _updatingAudioChecks = false;
+        }
+    }
+
+    private void SyncZoomControls()
+    {
+        _updatingZoomToggle = true;
+        try
+        {
+            ZoomSuggestionsToggle.IsChecked = _recorder.IsZoomSuggestionsEnabled;
+        }
+        finally
+        {
+            _updatingZoomToggle = false;
         }
     }
 
@@ -117,7 +136,7 @@ public partial class VideoRecordingWindow : Window
             _updatingAudioChecks = false;
         }
 
-        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
+        UpdateFormatText();
         UpdateProgress();
     }
 
@@ -134,7 +153,7 @@ public partial class VideoRecordingWindow : Window
             _updatingAudioChecks = false;
         }
 
-        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
+        UpdateFormatText();
         UpdateProgress();
     }
 
@@ -151,8 +170,22 @@ public partial class VideoRecordingWindow : Window
             _updatingAudioChecks = false;
         }
 
-        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
+        UpdateFormatText();
         UpdateProgress();
+    }
+
+    private void OnZoomSuggestionsToggled(object sender, RoutedEventArgs e)
+    {
+        if (_updatingZoomToggle) return;
+
+        _recorder.SetZoomSuggestionsEnabled(ZoomSuggestionsToggle.IsChecked == true);
+        UpdateFormatText();
+        UpdateProgress();
+    }
+
+    private void UpdateFormatText()
+    {
+        FormatText.Text = $"Recording {_recorder.OutputResolutionDescription} to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}; {_recorder.ZoomSuggestionsDescription}. Frames stream to disk.";
     }
 
     private void OnStopClicked(object sender, RoutedEventArgs e)
@@ -172,6 +205,7 @@ public partial class VideoRecordingWindow : Window
                 if (File.Exists(_tempPath))
                 {
                     File.Copy(_tempPath, dlg.FileName, overwrite: true);
+                    _ = _recorder.ExportZoomSuggestions(dlg.FileName);
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
                         "explorer.exe", $"/select,\"{dlg.FileName}\"") { UseShellExecute = true });
                 }

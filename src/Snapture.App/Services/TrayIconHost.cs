@@ -235,8 +235,12 @@ public sealed class TrayIconHost : IDisposable
             {
                 var hwnd = Native2.GetForegroundWindow();
                 if (hwnd == 0) { MessageBox.Show("No foreground window.", "Snapture"); return; }
+                var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
+                var (ow, oh) = RecordingPresets.ResolveOutputSize(
+                    App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
                 var rec = new VideoRecorder();
-                new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.ForegroundWindow, hwnd).Show();
+                new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.ForegroundWindow, hwnd,
+                    q.Fps, q.BitrateMbps, ow, oh).Show();
             }
             catch (Exception ex) { MessageBox.Show($"Could not start video recorder: {ex.Message}", "Snapture"); }
         };
@@ -248,12 +252,53 @@ public sealed class TrayIconHost : IDisposable
             {
                 var mon = MonitorEnumerator.Enumerate().FirstOrDefault(m => m.IsPrimary)
                     ?? MonitorEnumerator.Enumerate().First();
+                var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
+                var (ow, oh) = RecordingPresets.ResolveOutputSize(
+                    App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
                 var rec = new VideoRecorder();
-                new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.Monitor, mon.Handle).Show();
+                new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.Monitor, mon.Handle,
+                    q.Fps, q.BitrateMbps, ow, oh).Show();
             }
             catch (Exception ex) { MessageBox.Show($"Could not start video recorder: {ex.Message}", "Snapture"); }
         };
         recordVideo.Items.Add(recVidMonitor);
+
+        recordVideo.Items.Add(new Separator());
+
+        var qualityMenu = new MenuItem { Header = "Quality" };
+        foreach (var preset in RecordingPresets.Qualities)
+        {
+            var qi = new MenuItem { Header = preset.Label, IsCheckable = true, Tag = preset.Key };
+            qi.IsChecked = preset.Key == (App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
+            qi.Click += (_, _) =>
+            {
+                if (App.Host is null) return;
+                App.Host.Settings.Current.RecordingQuality = preset.Key;
+                App.Host.Settings.Save();
+                foreach (var it in qualityMenu.Items.OfType<MenuItem>())
+                    it.IsChecked = (string)it.Tag! == preset.Key;
+            };
+            qualityMenu.Items.Add(qi);
+        }
+        recordVideo.Items.Add(qualityMenu);
+
+        var resolutionMenu = new MenuItem { Header = "Output Resolution" };
+        foreach (var preset in RecordingPresets.Resolutions)
+        {
+            var ri = new MenuItem { Header = preset.Label, IsCheckable = true, Tag = preset.Key };
+            ri.IsChecked = preset.Key == (App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution);
+            ri.Click += (_, _) =>
+            {
+                if (App.Host is null) return;
+                App.Host.Settings.Current.RecordingResolution = preset.Key;
+                App.Host.Settings.Save();
+                foreach (var it in resolutionMenu.Items.OfType<MenuItem>())
+                    it.IsChecked = (string)it.Tag! == preset.Key;
+            };
+            resolutionMenu.Items.Add(ri);
+        }
+        recordVideo.Items.Add(resolutionMenu);
+
         tools.Items.Add(recordVideo);
 
         var stepCapture = new MenuItem { Header = "Step Capture…" };
