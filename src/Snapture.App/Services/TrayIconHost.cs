@@ -173,6 +173,9 @@ public sealed class TrayIconHost : IDisposable
         var ocr = new MenuItem { Header = "OCR region…" };
         ocr.Click += async (_, _) => await SafeRun(_orchestrator.OcrRegionAsync);
         tools.Items.Add(ocr);
+        var captureText = new MenuItem { Header = "Capture Text → clipboard" };
+        captureText.Click += async (_, _) => await SafeRun(_orchestrator.CaptureTextAsync);
+        tools.Items.Add(captureText);
         var recordGif = new MenuItem { Header = "Record GIF" };
         var recGifWindow = new MenuItem { Header = "…of foreground window" };
         recGifWindow.Click += (_, _) =>
