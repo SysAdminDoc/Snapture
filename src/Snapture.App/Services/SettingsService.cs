@@ -6,6 +6,8 @@ namespace Snapture.App.Services;
 
 public sealed class SnaptureSettings
 {
+    public int SchemaVersion { get; set; } = 1;
+
     public string OutputFolder { get; set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Snapture");
 

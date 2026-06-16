@@ -1,5 +1,7 @@
 using System.Windows;
 using Serilog;
+using Snapture.App.Editor;
+using Snapture.App.Views;
 using Snapture.Capture;
 
 namespace Snapture.App.Services;
@@ -73,6 +75,9 @@ public sealed class AppHost : IDisposable
         try { Plugins.LoadAll(); }
         catch (Exception ex) { Log.Warning(ex, "Plugin.LoadAll.Failed"); }
 
+        // Autosave recovery — check for leftover drafts from a crash.
+        CheckForAutosaveRecovery();
+
         // PrintScreen hijack detection — quietly check, toast once.
         if (!Settings.Current.PrintScreenHijackToastShown && PrintScreenHijackDetector.IsHijacked())
         {
@@ -80,6 +85,55 @@ public sealed class AppHost : IDisposable
                 "Windows is sending PrintScreen to the Snipping Tool. Right-click the Snapture tray → Reclaim PrintScreen.");
             Settings.Current.PrintScreenHijackToastShown = true;
             Settings.Save();
+        }
+    }
+
+    private void CheckForAutosaveRecovery()
+    {
+        try
+        {
+            var pending = AutosaveService.GetPendingAutosaves();
+            if (pending.Count == 0) return;
+
+            Log.Information("Autosave.Found {Count} recovery file(s)", pending.Count);
+
+            var result = MessageBox.Show(
+                $"Snapture found {pending.Count} unsaved editing session(s) from a previous run.\n\n" +
+                "Would you like to recover them?",
+                "Snapture — Recover unsaved work",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                foreach (var path in pending)
+                {
+                    var doc = AutosaveService.TryLoadAutosave(path);
+                    if (doc is not null)
+                    {
+                        var editor = new EditorWindow(doc, path);
+                        editor.Show();
+                        Log.Information("Autosave.Recovered {Path}", path);
+                    }
+                    else
+                    {
+                        // Corrupt file — discard it
+                        AutosaveService.Discard(path);
+                        Log.Warning("Autosave.DiscardedCorrupt {Path}", path);
+                    }
+                }
+            }
+            else
+            {
+                // User declined recovery — clean up the autosave files.
+                foreach (var path in pending)
+                    AutosaveService.Discard(path);
+                Log.Information("Autosave.DeclinedRecovery — discarded {Count} file(s)", pending.Count);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Autosave.RecoveryCheckFailed");
         }
     }
 
