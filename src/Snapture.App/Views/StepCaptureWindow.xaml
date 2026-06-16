@@ -17,18 +17,17 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,0,0,1"
-                Padding="14,10">
+                Style="{StaticResource HeaderBar}">
             <DockPanel LastChildFill="True">
-                <TextBlock Text="✦ Step Capture"
-                           Foreground="{DynamicResource AppAccent}"
-                           FontWeight="SemiBold"
-                           FontSize="16"
-                           VerticalAlignment="Center"
-                           Margin="0,0,16,0"
-                           DockPanel.Dock="Left" />
+                <StackPanel DockPanel.Dock="Left"
+                            Margin="0,0,18,0">
+                    <TextBlock Text="Step Capture"
+                               Style="{StaticResource WindowTitleText}"
+                               Foreground="{DynamicResource AppAccent}" />
+                    <TextBlock Text="Record a workflow, caption each step, then export a Markdown bundle."
+                               Style="{StaticResource HelpText}"
+                               Margin="0,4,0,0" />
+                </StackPanel>
                 <Button x:Name="StartStopButton"
                         DockPanel.Dock="Left"
                         Content="Start recording"
@@ -43,8 +42,7 @@
                             HorizontalAlignment="Right"
                             DockPanel.Dock="Right">
                     <TextBox x:Name="TitleBox"
-                             Width="240"
-                             Padding="6,4"
+                             Width="260"
                              ToolTip="Document title used in the exported Markdown"
                              Text="My step-by-step guide" />
                     <Button x:Name="ExportButton"
@@ -54,14 +52,29 @@
             </DockPanel>
         </Border>
 
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="StepsList" Margin="14" />
-        </ScrollViewer>
+        <Grid Grid.Row="1" Background="{DynamicResource AppCanvas}">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel x:Name="StepsList" Margin="14" />
+            </ScrollViewer>
+            <Border x:Name="EmptyState"
+                    Style="{StaticResource SectionPanel}"
+                    Width="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock x:Name="EmptyTitleText"
+                               Text="Ready to record a walkthrough"
+                               Style="{StaticResource SectionTitleText}"
+                               Foreground="{DynamicResource AppForeground}" />
+                    <TextBlock x:Name="EmptyBodyText"
+                               Text="Click Start recording, complete the workflow, then stop to review captured steps and add captions."
+                               Style="{StaticResource HelpText}" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <Border Grid.Row="2"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,1,0,0"
+                Style="{StaticResource FooterBar}"
                 Padding="14,8">
             <TextBlock x:Name="FooterText"
                        Foreground="{DynamicResource AppMutedForeground}"

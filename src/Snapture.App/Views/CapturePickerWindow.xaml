@@ -14,15 +14,18 @@
     <Border Background="{DynamicResource AppSurface}"
             BorderBrush="{DynamicResource AppBorderStrong}"
             BorderThickness="1"
-            CornerRadius="12"
-            Padding="8"
+            CornerRadius="10"
+            Padding="10"
             Effect="{StaticResource WindowDropShadow}">
         <StackPanel Orientation="Vertical">
-            <TextBlock Text="Capture mode"
-                       Foreground="{DynamicResource AppMutedForeground}"
-                       FontSize="11"
-                       FontFamily="{StaticResource UiFont}"
-                       Margin="8,4,8,6" />
+            <TextBlock Text="Choose capture"
+                       Style="{StaticResource SectionTitleText}"
+                       Foreground="{DynamicResource AppForeground}"
+                       Margin="8,4,8,2" />
+            <TextBlock Text="Pick the source to capture."
+                       Style="{StaticResource HelpText}"
+                       FontSize="12"
+                       Margin="8,0,8,8" />
             <ItemsControl x:Name="ModeList">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>

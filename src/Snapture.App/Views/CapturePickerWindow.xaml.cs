@@ -12,15 +12,15 @@ public partial class CapturePickerWindow : Window
         Region, Window, Fullscreen, LastRegion, ScrollingWindow, SmartElement, MonitorUnderCursor
     }
 
-    private static readonly (CaptureMode mode, string label, string glyph, string hotkey)[] Modes =
+    private static readonly (CaptureMode mode, string label, string description, string glyph, string hotkey)[] Modes =
     {
-        (CaptureMode.Region,             "Region",                    "⊞", "1"),
-        (CaptureMode.Window,             "Foreground window",         "⊟", "2"),
-        (CaptureMode.Fullscreen,         "Fullscreen (all monitors)", "⊠", "3"),
-        (CaptureMode.MonitorUnderCursor, "Monitor under cursor",      "▣", "4"),
-        (CaptureMode.LastRegion,         "Last region",               "↺", "5"),
-        (CaptureMode.ScrollingWindow,    "Scrolling window",          "⇕", "6"),
-        (CaptureMode.SmartElement,       "Smart element",             "◎", "7"),
+        (CaptureMode.Region,             "Region",                    "Draw an exact area on screen.",          "⊞", "1"),
+        (CaptureMode.Window,             "Foreground window",         "Capture the active app window.",         "⊟", "2"),
+        (CaptureMode.Fullscreen,         "Fullscreen",                "Capture every monitor at once.",         "⊠", "3"),
+        (CaptureMode.MonitorUnderCursor, "Monitor under cursor",      "Use the display beneath the pointer.",   "▣", "4"),
+        (CaptureMode.LastRegion,         "Last region",               "Repeat the previous region bounds.",     "↺", "5"),
+        (CaptureMode.ScrollingWindow,    "Scrolling window",          "Stitch a long scrollable surface.",      "⇕", "6"),
+        (CaptureMode.SmartElement,       "Smart element",             "Snap to a UI Automation element.",       "◎", "7"),
     };
 
     public CaptureMode? SelectedMode { get; private set; }
@@ -29,27 +29,66 @@ public partial class CapturePickerWindow : Window
     {
         InitializeComponent();
 
-        foreach (var (mode, label, glyph, hotkey) in Modes)
+        foreach (var (mode, label, description, glyph, hotkey) in Modes)
         {
+            var content = new Grid();
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(34) });
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            content.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var icon = new TextBlock
+            {
+                Text = glyph,
+                FontSize = 17,
+                Width = 28,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextAlignment = TextAlignment.Center
+            };
+            icon.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+            Grid.SetColumn(icon, 0);
+            content.Children.Add(icon);
+
+            var copy = new StackPanel { Orientation = Orientation.Vertical };
+            copy.Children.Add(new TextBlock
+            {
+                Text = label,
+                FontWeight = FontWeights.SemiBold,
+                VerticalAlignment = VerticalAlignment.Center
+            });
+            var desc = new TextBlock
+            {
+                Text = description,
+                FontSize = 11,
+                Margin = new Thickness(0, 2, 0, 0)
+            };
+            desc.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+            copy.Children.Add(desc);
+            Grid.SetColumn(copy, 1);
+            content.Children.Add(copy);
+
+            var key = new TextBlock
+            {
+                Text = hotkey,
+                FontSize = 11,
+                FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(14, 0, 0, 0)
+            };
+            key.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleForeground");
+            Grid.SetColumn(key, 2);
+            content.Children.Add(key);
+
             var btn = new Button
             {
-                Content = new StackPanel
-                {
-                    Orientation = Orientation.Horizontal,
-                    Children =
-                    {
-                        new TextBlock { Text = glyph, FontSize = 16, Width = 24, VerticalAlignment = VerticalAlignment.Center },
-                        new TextBlock { Text = label, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(4, 0, 0, 0) },
-                        new TextBlock { Text = hotkey, Foreground = (Brush)FindResource("AppSubtleForeground"),
-                            FontSize = 11, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(12, 0, 0, 0) },
-                    }
-                },
-                Margin = new Thickness(0, 1, 0, 1),
-                Padding = new Thickness(8, 6, 16, 6),
+                Content = content,
+                Margin = new Thickness(0, 2, 0, 2),
+                Padding = new Thickness(10, 8, 12, 8),
                 HorizontalContentAlignment = HorizontalAlignment.Left,
-                MinWidth = 260,
+                MinWidth = 310,
                 Tag = mode
             };
+            System.Windows.Automation.AutomationProperties.SetName(btn, label);
+            System.Windows.Automation.AutomationProperties.SetHelpText(btn, description);
             var captured = mode;
             btn.Click += (_, _) => { SelectedMode = captured; Close(); };
             ModeList.Items.Add(btn);

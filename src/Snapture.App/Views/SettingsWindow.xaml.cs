@@ -71,7 +71,7 @@ public partial class SettingsWindow : Window
         var adapters = LanShareServer.EnumerateAdapters();
         foreach (var (adapter, ip) in adapters)
         {
-            LanAdapterCombo.Items.Add(new ComboBoxItem { Content = $"{adapter} — {ip}", Tag = ip });
+            LanAdapterCombo.Items.Add(new ComboBoxItem { Content = $"{adapter} - {ip}", Tag = ip });
         }
         // Pre-select the saved binding, else the first non-loopback IPv4.
         var savedIp = _draft.LanShareBindIp;
@@ -201,29 +201,46 @@ public partial class SettingsWindow : Window
         foreach (var rule in SecretDetector.Rules)
         {
             string id = rule.Id;
+            var row = new Border
+            {
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(10),
+                Margin = new Thickness(0, 0, 0, 8)
+            };
+            row.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+            row.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
+
             var cb = new CheckBox
             {
                 IsChecked = !disabled.Contains(id),
-                Margin = new Thickness(0, 4, 0, 4),
                 Tag = id
             };
-            var sp = new StackPanel { Orientation = Orientation.Horizontal };
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(210) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
             var idText = new TextBlock
             {
                 Text = $"{id}",
                 FontFamily = new System.Windows.Media.FontFamily("Cascadia Code, Consolas, monospace"),
-                Width = 200
+                VerticalAlignment = VerticalAlignment.Center
             };
             idText.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
-            sp.Children.Add(idText);
+            Grid.SetColumn(idText, 0);
+            grid.Children.Add(idText);
 
             var descriptionText = new TextBlock
             {
                 Text = rule.Description,
+                TextWrapping = TextWrapping.Wrap,
+                VerticalAlignment = VerticalAlignment.Center
             };
-            descriptionText.SetResourceReference(TextBlock.ForegroundProperty, "AppForeground");
-            sp.Children.Add(descriptionText);
-            cb.Content = sp;
+            descriptionText.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+            Grid.SetColumn(descriptionText, 1);
+            grid.Children.Add(descriptionText);
+
+            cb.Content = grid;
             cb.Click += (_, _) =>
             {
                 var ruleId = (string)cb.Tag!;
@@ -232,7 +249,8 @@ public partial class SettingsWindow : Window
                 else if (!_draft.DisabledRedactRules.Contains(ruleId))
                     _draft.DisabledRedactRules.Add(ruleId);
             };
-            RedactRulesList.Children.Add(cb);
+            row.Child = cb;
+            RedactRulesList.Children.Add(row);
         }
     }
 

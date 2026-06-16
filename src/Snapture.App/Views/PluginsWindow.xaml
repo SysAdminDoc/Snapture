@@ -17,21 +17,22 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,0,0,1"
-                Padding="14,10">
+                Style="{StaticResource HeaderBar}">
             <DockPanel LastChildFill="True">
-                <TextBlock Text="✦ Plugins"
+                <StackPanel DockPanel.Dock="Left">
+                    <TextBlock Text="Plugins"
+                           Style="{StaticResource WindowTitleText}"
                            Foreground="{DynamicResource AppAccent}"
-                           FontWeight="SemiBold"
-                           FontSize="16"
                            VerticalAlignment="Center"
-                           DockPanel.Dock="Left" />
+                           Margin="0,0,16,0" />
+                    <TextBlock Text="Inspect installed extensions and reload them without restarting Snapture."
+                               Style="{StaticResource HelpText}"
+                               Margin="0,4,16,0" />
+                </StackPanel>
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             DockPanel.Dock="Right">
-                    <Button Content="Open plugins folder" Click="OnOpenFolderClicked" />
+                    <Button Content="Open folder" Click="OnOpenFolderClicked" />
                     <Button x:Name="ReloadButton"
                             Content="Reload all"
                             Style="{StaticResource AccentButton}"
@@ -45,9 +46,7 @@
         </ScrollViewer>
 
         <Border Grid.Row="2"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,1,0,0"
+                Style="{StaticResource FooterBar}"
                 Padding="14,8">
             <TextBlock x:Name="StatusText"
                        Foreground="{DynamicResource AppMutedForeground}"
