@@ -77,6 +77,9 @@ public sealed class SnaptureSettings
     /// <summary>Auto-border color (ARGB).</summary>
     public uint AutoBorderColor { get; set; } = 0xFF888888;
 
+    /// <summary>User-saved color swatches (ARGB uint values).</summary>
+    public List<uint> SavedColorSwatches { get; set; } = new();
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");

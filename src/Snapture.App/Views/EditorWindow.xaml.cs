@@ -79,6 +79,7 @@ public partial class EditorWindow : Window
         BuildToolButtons();
         BuildColorPalette();
         UpdateRecentColors();
+        UpdateSavedSwatches();
         DimensionText.Text = $"{_doc.Width} × {_doc.Height}";
         Canvas.Width = _doc.Width;
         Canvas.Height = _doc.Height;
@@ -107,6 +108,7 @@ public partial class EditorWindow : Window
         BuildToolButtons();
         BuildColorPalette();
         UpdateRecentColors();
+        UpdateSavedSwatches();
         DimensionText.Text = $"{_doc.Width} × {_doc.Height}";
         Canvas.Width = _doc.Width;
         Canvas.Height = _doc.Height;
@@ -130,6 +132,7 @@ public partial class EditorWindow : Window
         BuildToolButtons();
         BuildColorPalette();
         UpdateRecentColors();
+        UpdateSavedSwatches();
         DimensionText.Text = $"{_doc.Width} × {_doc.Height}";
         Canvas.Width = _doc.Width;
         Canvas.Height = _doc.Height;
@@ -254,6 +257,41 @@ public partial class EditorWindow : Window
             swatch.BorderThickness = new Thickness(1);
             swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
             RecentColors.Children.Add(swatch);
+        }
+    }
+
+    private void OnSaveSwatchClicked(object sender, RoutedEventArgs e)
+    {
+        if (App.Host is null) return;
+        var swatches = App.Host.Settings.Current.SavedColorSwatches;
+        if (!swatches.Contains(_activeColor))
+        {
+            swatches.Add(_activeColor);
+            App.Host.Settings.Save();
+        }
+        UpdateSavedSwatches();
+    }
+
+    private void UpdateSavedSwatches()
+    {
+        SavedSwatches.Children.Clear();
+        var swatches = App.Host?.Settings.Current.SavedColorSwatches;
+        if (swatches is null) return;
+        foreach (var argb in swatches)
+        {
+            uint captured = argb;
+            var swatch = new Border
+            {
+                Width = 22, Height = 22,
+                Margin = new Thickness(2),
+                Background = new SolidColorBrush(ToWpfColor(argb)),
+                CornerRadius = new CornerRadius(3),
+                Cursor = Cursors.Hand
+            };
+            swatch.SetResourceReference(Border.BorderBrushProperty, "AppBorderStrong");
+            swatch.BorderThickness = new Thickness(1);
+            swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
+            SavedSwatches.Children.Add(swatch);
         }
     }
 
