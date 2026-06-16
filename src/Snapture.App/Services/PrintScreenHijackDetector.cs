@@ -43,4 +43,18 @@ public static class PrintScreenHijackDetector
             return false;
         }
     }
+
+    /// <summary>Opens the Windows Settings page where users can see the PrintScreen toggle.</summary>
+    public static void OpenSettingsPage()
+    {
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "ms-settings:easeofaccess-keyboard",
+                UseShellExecute = true
+            });
+        }
+        catch { }
+    }
 }

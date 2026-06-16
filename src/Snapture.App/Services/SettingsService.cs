@@ -65,6 +65,9 @@ public sealed class SnaptureSettings
     /// <summary>Include cursor in screenshot captures.</summary>
     public bool IncludeCursor { get; set; } = true;
 
+    /// <summary>Play a shutter sound on capture.</summary>
+    public bool PlayShutterSound { get; set; } = false;
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");

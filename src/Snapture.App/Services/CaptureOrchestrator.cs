@@ -267,6 +267,11 @@ public sealed class CaptureOrchestrator
 
         try { new Views.CaptureFlashWindow().Flash(); } catch { }
 
+        if (_settings.Current.PlayShutterSound)
+        {
+            try { System.Media.SystemSounds.Exclamation.Play(); } catch { }
+        }
+
         // Save to disk
         string? savedPath = null;
         try
