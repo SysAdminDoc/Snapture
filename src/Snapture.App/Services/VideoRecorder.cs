@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -59,8 +60,10 @@ public sealed class VideoRecorder : IDisposable
     private uint _audioStreamIndex;
     private bool _audioStreamEnabled;
     private RecordingAudioMixer? _audioCapture;
+    private RecordingPointerTracker? _pointerTracker;
     private int _sourceWidth, _sourceHeight;
     private int _width, _height;
+    private Rectangle _captureBounds = Rectangle.Empty;
     private long _frameDurationHns;
 
     // WGC continuous capture
@@ -91,6 +94,7 @@ public sealed class VideoRecorder : IDisposable
         _audioOptions.TargetProcessId = GetWindowProcessId(hwnd);
         var item = CaptureItemFactory.CreateForWindow(hwnd)
             ?? throw new InvalidOperationException("CreateForWindow returned null.");
+        _captureBounds = ResolveWindowBounds(hwnd, item.Size.Width, item.Size.Height);
         StartInternal(item, outputPath, fps, bitrateMbps);
     }
 
@@ -105,6 +109,7 @@ public sealed class VideoRecorder : IDisposable
         _audioOptions.UseTargetProcessAudio = false;
         var item = CaptureItemFactory.CreateForMonitor(hMonitor)
             ?? throw new InvalidOperationException("CreateForMonitor returned null.");
+        _captureBounds = ResolveMonitorBounds(hMonitor, item.Size.Width, item.Size.Height);
         StartInternal(item, outputPath, fps, bitrateMbps);
     }
 
@@ -114,6 +119,7 @@ public sealed class VideoRecorder : IDisposable
         IsPaused = true;
         _pauseStartTicks = _sw.ElapsedTicks;
         _audioCapture?.SetPaused(true);
+        _pointerTracker?.ClearClicks();
         _sw.Stop();
         Log.Information("VideoRecorder.Paused");
     }
@@ -125,6 +131,7 @@ public sealed class VideoRecorder : IDisposable
         IsPaused = false;
         _dirtyRegionFilter.ForceNextFrame();
         _audioCapture?.SetPaused(false);
+        _pointerTracker?.ClearClicks();
         _sw.Start();
         Log.Information("VideoRecorder.Resumed");
     }
@@ -144,6 +151,7 @@ public sealed class VideoRecorder : IDisposable
         _framePool = null;
         _audioCapture?.Dispose();
         _audioCapture = null;
+        StopPointerTracking();
 
         if (_writer is not null)
         {
@@ -214,6 +222,8 @@ public sealed class VideoRecorder : IDisposable
         if (_height % 2 != 0) _height--;
         if (_width <= 0 || _height <= 0)
             throw new InvalidOperationException("Capture item has invalid dimensions.");
+        if (_captureBounds.IsEmpty)
+            _captureBounds = new Rectangle(0, 0, _width, _height);
 
         _frameDurationHns = 10_000_000L / Math.Max(1, fps);
 
@@ -256,6 +266,7 @@ public sealed class VideoRecorder : IDisposable
         IsRecording = true;
         _sw.Restart();
         StartAudioCapture();
+        StartPointerTracking();
 
         _session.StartCapture();
         Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
@@ -577,6 +588,12 @@ public sealed class VideoRecorder : IDisposable
                                 dst + y * (long)rowBytes,
                                 rowBytes, rowBytes);
                         }
+
+                        if (_pointerTracker is not null)
+                        {
+                            var pointerFrame = _pointerTracker.CaptureFrame(_captureBounds, DateTime.UtcNow);
+                            CursorOverlayRenderer.RenderBgra(new Span<byte>(dst, (int)bufSize), _width, _height, rowBytes, pointerFrame);
+                        }
                     }
                     finally { mfBuffer.Unlock(); }
 
@@ -652,6 +669,30 @@ public sealed class VideoRecorder : IDisposable
         Marshal.ReleaseComObject(_writer);
         _writer = null;
         _audioStreamEnabled = false;
+    }
+
+    private void StartPointerTracking()
+    {
+        StopPointerTracking();
+        _pointerTracker = new RecordingPointerTracker();
+        _pointerTracker.PointerClicked += OnPointerClicked;
+        _pointerTracker.Start();
+    }
+
+    private void StopPointerTracking()
+    {
+        if (_pointerTracker is null) return;
+        _pointerTracker.PointerClicked -= OnPointerClicked;
+        _pointerTracker.Dispose();
+        _pointerTracker = null;
+    }
+
+    private void OnPointerClicked(RecordingPointerClick click)
+    {
+        if (!IsRecording || IsPaused || !_captureBounds.Contains(click.ScreenPoint))
+            return;
+
+        _audioCapture?.PlayClick();
     }
 
     private static void TryDeletePartialFile(string outputPath)
@@ -785,6 +826,19 @@ public sealed class VideoRecorder : IDisposable
         return checked((int)processId);
     }
 
+    private static Rectangle ResolveWindowBounds(nint hwnd, int width, int height)
+    {
+        return WindowEnumerator.GetExtendedFrameBounds(hwnd, out var bounds)
+            ? bounds
+            : new Rectangle(0, 0, width, height);
+    }
+
+    private static Rectangle ResolveMonitorBounds(nint hMonitor, int width, int height)
+    {
+        return MonitorEnumerator.Enumerate().FirstOrDefault(m => m.Handle == hMonitor)?.Bounds
+            ?? new Rectangle(0, 0, width, height);
+    }
+
     [DllImport("user32.dll")]
     private static extern uint GetWindowThreadProcessId(nint hWnd, out uint lpdwProcessId);
 
@@ -795,6 +849,7 @@ public sealed class VideoRecorder : IDisposable
         if (IsRecording) Stop();
         _audioCapture?.Dispose();
         _audioCapture = null;
+        StopPointerTracking();
         if (_d3dContext != 0) { Marshal.Release(_d3dContext); _d3dContext = 0; }
         if (_d3dDevice != 0) { Marshal.Release(_d3dDevice); _d3dDevice = 0; }
     }
