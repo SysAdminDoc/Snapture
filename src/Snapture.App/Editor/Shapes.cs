@@ -24,6 +24,7 @@ public abstract class Shape
     public uint StrokeColorArgb { get; set; } = 0xFFE74C3C; // red default
     public uint FillColorArgb { get; set; } = 0x00000000;
     public float StrokeThickness { get; set; } = 3f;
+    public bool DropShadow { get; set; }
 
     public abstract void Render(SKCanvas canvas, AnnotationDocument doc);
     public abstract SKRect GetBounds();
@@ -35,22 +36,38 @@ public abstract class Shape
     /// <summary>Translates the shape by the given pixel offset.</summary>
     public abstract void Offset(float dx, float dy);
 
-    protected SKPaint MakeStrokePaint() => new()
+    protected void ApplyShadowIfNeeded(SKPaint paint)
     {
-        Style = SKPaintStyle.Stroke,
-        Color = ToColor(StrokeColorArgb),
-        StrokeWidth = StrokeThickness,
-        IsAntialias = true,
-        StrokeCap = SKStrokeCap.Round,
-        StrokeJoin = SKStrokeJoin.Round
-    };
+        if (DropShadow)
+            paint.ImageFilter = SKImageFilter.CreateDropShadow(2, 3, 4, 4, new SKColor(0, 0, 0, 100));
+    }
 
-    protected SKPaint MakeFillPaint() => new()
+    protected SKPaint MakeStrokePaint()
     {
-        Style = SKPaintStyle.Fill,
-        Color = ToColor(FillColorArgb),
-        IsAntialias = true
-    };
+        var p = new SKPaint
+        {
+            Style = SKPaintStyle.Stroke,
+            Color = ToColor(StrokeColorArgb),
+            StrokeWidth = StrokeThickness,
+            IsAntialias = true,
+            StrokeCap = SKStrokeCap.Round,
+            StrokeJoin = SKStrokeJoin.Round
+        };
+        ApplyShadowIfNeeded(p);
+        return p;
+    }
+
+    protected SKPaint MakeFillPaint()
+    {
+        var p = new SKPaint
+        {
+            Style = SKPaintStyle.Fill,
+            Color = ToColor(FillColorArgb),
+            IsAntialias = true
+        };
+        ApplyShadowIfNeeded(p);
+        return p;
+    }
 
     protected static SKColor ToColor(uint argb) =>
         new((byte)((argb >> 16) & 0xFF),
@@ -90,7 +107,7 @@ public sealed class RectangleShape : Shape
     public override Shape Clone() => new RectangleShape
     {
         X = X, Y = Y, Width = Width, Height = Height, CornerRadius = CornerRadius, Filled = Filled,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -126,7 +143,7 @@ public sealed class SpotlightShape : Shape
     public override Shape Clone() => new SpotlightShape
     {
         X = X, Y = Y, Width = Width, Height = Height,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -159,7 +176,7 @@ public sealed class EllipseShape : Shape
     public override Shape Clone() => new EllipseShape
     {
         X = X, Y = Y, Width = Width, Height = Height, Filled = Filled,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -189,7 +206,7 @@ public sealed class LineShape : Shape
     public override Shape Clone() => new LineShape
     {
         X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Dashed = Dashed,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
 }
@@ -238,7 +255,7 @@ public sealed class ArrowShape : Shape
     public override Shape Clone() => new ArrowShape
     {
         X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Dashed = Dashed,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
 }
@@ -276,7 +293,7 @@ public sealed class FreehandShape : Shape
     public override Shape Clone() => new FreehandShape
     {
         Points = new List<SKPoint>(Points),
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy)
     {
@@ -322,7 +339,7 @@ public sealed class TextShape : Shape
     public override Shape Clone() => new TextShape
     {
         X = X, Y = Y, Text = Text, FontSize = FontSize, FontFamily = FontFamily, Bold = Bold, Italic = Italic,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -352,7 +369,7 @@ public sealed class HighlightShape : Shape
     public override Shape Clone() => new HighlightShape
     {
         X = X, Y = Y, Width = Width, Height = Height,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -409,7 +426,7 @@ public sealed class BlurShape : Shape
     public override Shape Clone() => new BlurShape
     {
         X = X, Y = Y, Width = Width, Height = Height, BlurRadius = BlurRadius, Pixelate = Pixelate,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -435,7 +452,7 @@ public sealed class RedactShape : Shape
     public override Shape Clone() => new RedactShape
     {
         X = X, Y = Y, Width = Width, Height = Height,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -473,7 +490,7 @@ public sealed class StepShape : Shape
     public override Shape Clone() => new StepShape
     {
         X = X, Y = Y, Radius = Radius, Label = Label,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
