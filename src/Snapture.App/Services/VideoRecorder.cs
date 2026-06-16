@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
@@ -16,8 +14,8 @@ namespace Snapture.App.Services;
 /// <summary>
 /// Records video from a WGC capture session to an MP4 file via Media Foundation SinkWriter.
 /// Continuous WGC frames flow through a queue-depth-3 frame pool; each frame is written
-/// as a BGRA sample to the SinkWriter which hardware-encodes to H.264 (HEVC fallback path
-/// reserved for future codec discovery).
+/// as a BGRA sample to the SinkWriter. Codec selection is discovered at runtime:
+/// hardware AV1, then HEVC, then H.264, with software AV1 intentionally skipped.
 ///
 /// SystemRelativeTime from WGC frames maps directly to presentation timestamps — both
 /// use 100-nanosecond units, no QPC conversion needed.
@@ -31,13 +29,17 @@ public sealed class VideoRecorder : IDisposable
     public bool IsPaused { get; private set; }
     public int FrameCount { get; private set; }
     public TimeSpan Elapsed => _sw.Elapsed;
+    public string SelectedCodecName { get; private set; } = "H.264";
+    public string SelectedCodecDescription { get; private set; } = "H.264";
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
     private readonly object _lock = new();
     private MFInterop.IMFSinkWriter? _writer;
     private uint _videoStreamIndex;
+    private int _sourceWidth, _sourceHeight;
     private int _width, _height;
+    private long _frameDurationHns;
 
     // WGC continuous capture
     private nint _d3dDevice;
@@ -130,14 +132,19 @@ public sealed class VideoRecorder : IDisposable
     private void StartInternal(GraphicsCaptureItem item, string outputPath, int fps, int bitrateMbps)
     {
         _outputPath = outputPath;
-        _width = item.Size.Width;
-        _height = item.Size.Height;
+        _sourceWidth = item.Size.Width;
+        _sourceHeight = item.Size.Height;
+        _width = _sourceWidth;
+        _height = _sourceHeight;
 
-        // Ensure width/height are even (H.264 requirement)
+        // Ensure width/height are even for MP4 encoders. The WGC source texture keeps
+        // its native size; WriteFrame crops the final row/column if needed.
         if (_width % 2 != 0) _width--;
         if (_height % 2 != 0) _height--;
         if (_width <= 0 || _height <= 0)
             throw new InvalidOperationException("Capture item has invalid dimensions.");
+
+        _frameDurationHns = 10_000_000L / Math.Max(1, fps);
 
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
 
@@ -184,65 +191,108 @@ public sealed class VideoRecorder : IDisposable
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
     {
+        var candidates = MediaFoundationVideoCodecDiscovery.GetPreferredEncodingCandidates();
+        if (candidates.Count == 0)
+            throw new InvalidOperationException("No Media Foundation video encoder was found.");
+
+        Exception? lastError = null;
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                ConfigureSinkWriter(outputPath, fps, bitrateMbps, candidate);
+                SelectedCodecName = candidate.CodecName;
+                SelectedCodecDescription = candidate.EncoderSummary;
+                Log.Information("VideoRecorder.CodecSelected {Codec} {Encoder}",
+                    candidate.CodecName, candidate.EncoderSummary);
+                return;
+            }
+            catch (Exception ex)
+            {
+                lastError = ex;
+                Log.Warning(ex, "VideoRecorder.CodecConfigureFailed {Codec} {Encoder}",
+                    candidate.CodecName, candidate.EncoderSummary);
+                ReleaseWriter();
+                TryDeletePartialFile(outputPath);
+            }
+        }
+
+        throw new InvalidOperationException("No Media Foundation video encoder could be configured.", lastError);
+    }
+
+    private void ConfigureSinkWriter(
+        string outputPath,
+        int fps,
+        int bitrateMbps,
+        MediaFoundationVideoCodecDiscovery.EncoderCandidate candidate)
+    {
         // Create attributes for the sink writer: enable HW transforms
         int hr = MFInterop.MFCreateAttributes(out var writerAttrs, 2);
         if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
-        var hwKey = MFInterop.MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS;
-        writerAttrs.SetUINT32(ref hwKey, 1);
+        MFInterop.IMFMediaType? outputType = null;
+        MFInterop.IMFMediaType? inputType = null;
+        try
+        {
+            var hwKey = MFInterop.MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS;
+            writerAttrs.SetUINT32(ref hwKey, candidate.UseHardwareTransforms ? 1u : 0u);
 
-        // Create sink writer for MP4
-        hr = MFInterop.MFCreateSinkWriterFromURL(outputPath, 0, writerAttrs, out _writer!);
-        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+            var throttleKey = MFInterop.MF_SINK_WRITER_DISABLE_THROTTLING;
+            writerAttrs.SetUINT32(ref throttleKey, 1);
 
-        // Output media type (H.264)
-        hr = MFInterop.MFCreateMediaType(out var outputType);
-        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+            hr = MFInterop.MFCreateSinkWriterFromURL(outputPath, 0, writerAttrs, out _writer!);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
-        var majorTypeKey = MFInterop.MF_MT_MAJOR_TYPE;
-        var videoType = MFInterop.MFMediaType_Video;
-        outputType.SetGUID(ref majorTypeKey, ref videoType);
+            hr = MFInterop.MFCreateMediaType(out outputType);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
-        var subtypeKey = MFInterop.MF_MT_SUBTYPE;
-        var h264 = MFInterop.MFVideoFormat_H264;
-        outputType.SetGUID(ref subtypeKey, ref h264);
+            var majorTypeKey = MFInterop.MF_MT_MAJOR_TYPE;
+            var videoType = MFInterop.MFMediaType_Video;
+            outputType.SetGUID(ref majorTypeKey, ref videoType);
 
-        var bitrateKey = MFInterop.MF_MT_AVG_BITRATE;
-        outputType.SetUINT32(ref bitrateKey, (uint)(bitrateMbps * 1_000_000));
+            var subtypeKey = MFInterop.MF_MT_SUBTYPE;
+            var subtype = candidate.Subtype;
+            outputType.SetGUID(ref subtypeKey, ref subtype);
 
-        var interlaceKey = MFInterop.MF_MT_INTERLACE_MODE;
-        outputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
+            var bitrateKey = MFInterop.MF_MT_AVG_BITRATE;
+            outputType.SetUINT32(ref bitrateKey, (uint)(bitrateMbps * 1_000_000));
 
-        var frameSizeKey = MFInterop.MF_MT_FRAME_SIZE;
-        outputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
+            var interlaceKey = MFInterop.MF_MT_INTERLACE_MODE;
+            outputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
 
-        var frameRateKey = MFInterop.MF_MT_FRAME_RATE;
-        outputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
+            var frameSizeKey = MFInterop.MF_MT_FRAME_SIZE;
+            outputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
 
-        var parKey = MFInterop.MF_MT_PIXEL_ASPECT_RATIO;
-        outputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
+            var frameRateKey = MFInterop.MF_MT_FRAME_RATE;
+            outputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
 
-        _writer.AddStream(outputType, out _videoStreamIndex);
+            var parKey = MFInterop.MF_MT_PIXEL_ASPECT_RATIO;
+            outputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
 
-        // Input media type (ARGB32 — matches WGC BGRA output)
-        hr = MFInterop.MFCreateMediaType(out var inputType);
-        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+            _writer.AddStream(outputType, out _videoStreamIndex);
 
-        inputType.SetGUID(ref majorTypeKey, ref videoType);
+            hr = MFInterop.MFCreateMediaType(out inputType);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
 
-        var argb32 = MFInterop.MFVideoFormat_ARGB32;
-        inputType.SetGUID(ref subtypeKey, ref argb32);
+            inputType.SetGUID(ref majorTypeKey, ref videoType);
 
-        inputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
+            var argb32 = MFInterop.MFVideoFormat_ARGB32;
+            inputType.SetGUID(ref subtypeKey, ref argb32);
 
-        inputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
+            inputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
+            inputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
+            inputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
+            inputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
 
-        inputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
-
-        inputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
-
-        _writer.SetInputMediaType(_videoStreamIndex, inputType, null);
-        _writer.BeginWriting();
+            _writer.SetInputMediaType(_videoStreamIndex, inputType, null);
+            _writer.BeginWriting();
+        }
+        finally
+        {
+            if (inputType is not null) Marshal.ReleaseComObject(inputType);
+            if (outputType is not null) Marshal.ReleaseComObject(outputType);
+            Marshal.ReleaseComObject(writerAttrs);
+        }
     }
 
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
@@ -298,8 +348,8 @@ public sealed class VideoRecorder : IDisposable
             // Create staging texture, copy GPU → CPU
             var desc = new D3D11Interop.D3D11_TEXTURE2D_DESC
             {
-                Width = (uint)_width,
-                Height = (uint)_height,
+                Width = (uint)_sourceWidth,
+                Height = (uint)_sourceHeight,
                 MipLevels = 1,
                 ArraySize = 1,
                 Format = D3D11Interop.DXGI_FORMAT_B8G8R8A8_UNORM,
@@ -344,7 +394,7 @@ public sealed class VideoRecorder : IDisposable
 
                     sample.AddBuffer(mfBuffer);
                     sample.SetSampleTime(pts);
-                    sample.SetSampleDuration(10_000_000 / 30); // ~33ms at 30fps
+                    sample.SetSampleDuration(_frameDurationHns);
 
                     lock (_lock)
                     {
@@ -359,6 +409,26 @@ public sealed class VideoRecorder : IDisposable
             finally { Marshal.Release(stagingTex); }
         }
         finally { Marshal.Release(texPtr); }
+    }
+
+    private void ReleaseWriter()
+    {
+        if (_writer is null) return;
+        Marshal.ReleaseComObject(_writer);
+        _writer = null;
+    }
+
+    private static void TryDeletePartialFile(string outputPath)
+    {
+        try
+        {
+            if (File.Exists(outputPath))
+                File.Delete(outputPath);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "VideoRecorder.PartialFileDeleteFailed {Path}", outputPath);
+        }
     }
 
     // ---- D3D11 device management (same pattern as WinRtCaptureEngine) ----

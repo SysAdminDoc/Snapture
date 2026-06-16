@@ -207,7 +207,7 @@ public sealed class TrayIconHost : IDisposable
         recordGif.Items.Add(recGifFull);
         tools.Items.Add(recordGif);
 
-        var recordVideo = new MenuItem { Header = "Record Video (MP4)" };
+        var recordVideo = new MenuItem { Header = "Record Video (MP4: AV1 / HEVC / H.264)" };
         var recVidWindow = new MenuItem { Header = "…of foreground window" };
         recVidWindow.Click += (_, _) =>
         {

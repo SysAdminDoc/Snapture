@@ -48,14 +48,18 @@ public partial class VideoRecordingWindow : Window
             MessageBox.Show($"Could not start recording:\n{ex.Message}", "Snapture",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
             Close();
+            return;
         }
+
+        FormatText.Text = $"Recording to MP4 ({_recorder.SelectedCodecDescription}). Frames stream to disk — safe to record long sessions.";
+        UpdateProgress();
     }
 
     private void UpdateProgress()
     {
         var ts = _recorder.Elapsed;
         string status = _recorder.IsPaused ? "PAUSED" : "REC";
-        ProgressText.Text = $"{_recorder.FrameCount} frames · {ts:mm\\:ss\\.ff} · MP4 H.264";
+        ProgressText.Text = $"{_recorder.FrameCount} frames · {ts:mm\\:ss\\.ff} · MP4 {_recorder.SelectedCodecName}";
         StatusLabel.Text = status;
         PauseButton.Content = _recorder.IsPaused ? "Resume" : "Pause";
     }

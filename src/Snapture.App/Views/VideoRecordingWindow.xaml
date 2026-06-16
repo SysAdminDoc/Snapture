@@ -42,13 +42,14 @@
                    Foreground="{DynamicResource AppMutedForeground}"
                    FontFamily="Cascadia Code, Consolas, monospace"
                    Margin="0,8,0,0"
-                   Text="0 frames · 00:00.00 · MP4 H.264" />
-        <TextBlock Grid.Row="2"
+                   Text="0 frames · 00:00.00 · MP4" />
+        <TextBlock x:Name="FormatText"
+                   Grid.Row="2"
                    Foreground="{DynamicResource AppSubtleForeground}"
                    FontSize="11"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"
-                   Text="Recording to MP4 (H.264). Frames stream to disk — safe to record long sessions." />
+                   Text="Recording to MP4. Frames stream to disk — safe to record long sessions." />
         <DockPanel Grid.Row="3" LastChildFill="True" Margin="0,8,0,0">
             <Button x:Name="StopButton"
                     DockPanel.Dock="Right"
