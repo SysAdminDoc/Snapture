@@ -58,6 +58,8 @@ public partial class EditorWindow : Window
     private SKPoint _dragStart;
     private bool _dragging;
 
+    // Selection model — tracks shapes the user has clicked in Select mode
+    private readonly HashSet<Shape> _selectedShapes = new();
 
     public EditorWindow(BitmapSource image, string? savedPath, CaptureResult capture)
     {
@@ -221,6 +223,7 @@ public partial class EditorWindow : Window
             if (e.Key == Key.E) { OnExportPngClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.O) { OnOpenClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.C) { OnCopyClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
+            if (e.Key == Key.D) { DuplicateSelectedShapes(); e.Handled = true; return; }
         }
         foreach (var (tool, _, hk, _) in ToolButtons)
         {
@@ -233,12 +236,105 @@ public partial class EditorWindow : Window
         }
         if (e.Key == Key.Delete)
         {
-            // No selected-shape model yet; clear last shape.
-            if (_doc.Shapes.Count > 0)
+            if (_selectedShapes.Count > 0)
             {
+                // Delete all selected shapes as one undoable operation.
+                var removeCmds = _selectedShapes
+                    .Select(s => (AnnotationCommand)new RemoveShapeCommand(s))
+                    .ToList();
+                if (removeCmds.Count == 1)
+                    _commands.Do(_doc, removeCmds[0]);
+                else
+                    _commands.Do(_doc, new CompositeCommand(removeCmds));
+                _selectedShapes.Clear();
+                Canvas.InvalidateVisual();
+            }
+            else if (_doc.Shapes.Count > 0)
+            {
+                // Fallback: delete last shape.
                 var last = _doc.Shapes[^1];
                 _commands.Do(_doc, new RemoveShapeCommand(last));
                 Canvas.InvalidateVisual();
+            }
+        }
+    }
+
+    private void DuplicateSelectedShapes()
+    {
+        // Determine which shapes to duplicate: selected shapes, or fall back to the last shape.
+        var targets = _selectedShapes.Count > 0
+            ? _doc.Shapes.Where(s => _selectedShapes.Contains(s)).ToList()
+            : _doc.Shapes.Count > 0
+                ? new List<Shape> { _doc.Shapes[^1] }
+                : new List<Shape>();
+
+        if (targets.Count == 0) return;
+
+        var clones = new List<Shape>();
+        var addCmds = new List<AnnotationCommand>();
+        foreach (var original in targets)
+        {
+            var clone = original.Clone();
+            clone.Offset(10, 10);
+            clones.Add(clone);
+            addCmds.Add(new AddShapeCommand(clone));
+        }
+
+        if (addCmds.Count == 1)
+            _commands.Do(_doc, addCmds[0]);
+        else
+            _commands.Do(_doc, new CompositeCommand(addCmds));
+
+        // Move selection to the new clones
+        _selectedShapes.Clear();
+        foreach (var c in clones) _selectedShapes.Add(c);
+
+        int count = clones.Count;
+        StatusText.Text = count == 1 ? "Duplicated 1 shape" : $"Duplicated {count} shapes";
+        Canvas.InvalidateVisual();
+    }
+
+    // ---- Drag-and-drop -------------------------------------------------------
+
+    private static readonly HashSet<string> AcceptedImageExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".bmp", SnapFileFormat.Extension
+    };
+
+    private void OnDragEnter(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetDataPresent(DataFormats.FileDrop) &&
+            e.Data.GetData(DataFormats.FileDrop) is string[] files &&
+            files.Any(f => AcceptedImageExtensions.Contains(Path.GetExtension(f))))
+        {
+            e.Effects = DragDropEffects.Copy;
+        }
+        else
+        {
+            e.Effects = DragDropEffects.None;
+        }
+        e.Handled = true;
+    }
+
+    private void OnDrop(object sender, DragEventArgs e)
+    {
+        if (!e.Data.GetDataPresent(DataFormats.FileDrop) ||
+            e.Data.GetData(DataFormats.FileDrop) is not string[] files)
+            return;
+
+        foreach (var file in files)
+        {
+            if (!AcceptedImageExtensions.Contains(Path.GetExtension(file)))
+                continue;
+            try
+            {
+                var w = new EditorWindow(file);
+                w.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open dropped file:\n{ex.Message}",
+                    "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
     }
@@ -301,6 +397,25 @@ public partial class EditorWindow : Window
         // Live preview of the shape currently being drawn
         if (_draftShape is not null)
             _draftShape.Render(canvas, _doc);
+
+        // Draw selection handles around selected shapes
+        if (_selectedShapes.Count > 0)
+        {
+            using var selPaint = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = new SKColor(59, 130, 246), // blue highlight
+                StrokeWidth = 1.5f,
+                IsAntialias = true,
+                PathEffect = SKPathEffect.CreateDash(new[] { 6f, 4f }, 0)
+            };
+            foreach (var shape in _selectedShapes)
+            {
+                var bounds = shape.GetBounds();
+                bounds.Inflate(4, 4);
+                canvas.DrawRect(bounds, selPaint);
+            }
+        }
     }
 
     private void ApplyAdjustments(SKBitmap bmp)
@@ -348,6 +463,46 @@ public partial class EditorWindow : Window
     private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
     {
         var pos = ToImagePoint(e.GetPosition(Canvas));
+
+        if (_activeTool == EditorTool.Select)
+        {
+            // Hit-test shapes in reverse (top-most first)
+            Shape? hit = null;
+            for (int i = _doc.Shapes.Count - 1; i >= 0; i--)
+            {
+                if (_doc.Shapes[i].HitTest(pos))
+                {
+                    hit = _doc.Shapes[i];
+                    break;
+                }
+            }
+
+            if (hit is not null)
+            {
+                if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+                {
+                    // Toggle selection on Ctrl+click
+                    if (!_selectedShapes.Remove(hit))
+                        _selectedShapes.Add(hit);
+                }
+                else
+                {
+                    // Plain click: select only this shape
+                    _selectedShapes.Clear();
+                    _selectedShapes.Add(hit);
+                }
+                int count = _selectedShapes.Count;
+                StatusText.Text = count == 1 ? "1 shape selected" : $"{count} shapes selected";
+            }
+            else if (!Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+            {
+                _selectedShapes.Clear();
+                StatusText.Text = "Tool: Select";
+            }
+            Canvas.InvalidateVisual();
+            return;
+        }
+
         _dragStart = pos;
         _dragging = true;
         _draftShape = CreateDraftShape(pos);

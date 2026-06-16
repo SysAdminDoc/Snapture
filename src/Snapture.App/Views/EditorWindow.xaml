@@ -9,7 +9,10 @@
         Background="{DynamicResource AppBackground}"
         Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
-        FontSize="13">
+        FontSize="13"
+        AllowDrop="True"
+        DragEnter="OnDragEnter"
+        Drop="OnDrop">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />

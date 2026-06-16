@@ -28,6 +28,12 @@ public abstract class Shape
     public abstract SKRect GetBounds();
     public abstract bool HitTest(SKPoint point);
 
+    /// <summary>Creates a deep copy of this shape.</summary>
+    public abstract Shape Clone();
+
+    /// <summary>Translates the shape by the given pixel offset.</summary>
+    public abstract void Offset(float dx, float dy);
+
     protected SKPaint MakeStrokePaint() => new()
     {
         Style = SKPaintStyle.Stroke,
@@ -80,6 +86,12 @@ public sealed class RectangleShape : Shape
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new RectangleShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height, CornerRadius = CornerRadius, Filled = Filled,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
 
 public sealed class EllipseShape : Shape
@@ -107,6 +119,12 @@ public sealed class EllipseShape : Shape
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new EllipseShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height, Filled = Filled,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
 
 public sealed class LineShape : Shape
@@ -131,6 +149,12 @@ public sealed class LineShape : Shape
         bounds.Inflate(StrokeThickness * 2, StrokeThickness * 2);
         return bounds.Contains(p);
     }
+    public override Shape Clone() => new LineShape
+    {
+        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Dashed = Dashed,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
 }
 
 public sealed class ArrowShape : Shape
@@ -174,6 +198,12 @@ public sealed class ArrowShape : Shape
         Math.Min(X1, X2) - 8, Math.Min(Y1, Y2) - 8,
         Math.Abs(X2 - X1) + 16, Math.Abs(Y2 - Y1) + 16);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new ArrowShape
+    {
+        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Dashed = Dashed,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
 }
 
 public sealed class FreehandShape : Shape
@@ -205,6 +235,16 @@ public sealed class FreehandShape : Shape
     {
         var b = GetBounds(); b.Inflate(StrokeThickness * 2, StrokeThickness * 2);
         return b.Contains(p);
+    }
+    public override Shape Clone() => new FreehandShape
+    {
+        Points = new List<SKPoint>(Points),
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy)
+    {
+        for (int i = 0; i < Points.Count; i++)
+            Points[i] = new SKPoint(Points[i].X + dx, Points[i].Y + dy);
     }
 }
 
@@ -242,6 +282,12 @@ public sealed class TextShape : Shape
         return new SKRect(X, Y, X + Math.Max(40, Text.Length * FontSize * 0.6f), Y + FontSize * 1.4f);
     }
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new TextShape
+    {
+        X = X, Y = Y, Text = Text, FontSize = FontSize, FontFamily = FontFamily, Bold = Bold, Italic = Italic,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
 
 public sealed class HighlightShape : Shape
@@ -266,6 +312,12 @@ public sealed class HighlightShape : Shape
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new HighlightShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
 
 public sealed class BlurShape : Shape
@@ -317,6 +369,12 @@ public sealed class BlurShape : Shape
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new BlurShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height, BlurRadius = BlurRadius, Pixelate = Pixelate,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
 
 /// <summary>Solid-fill redaction. The only safe way to hide secrets — blur is reversible.</summary>
@@ -337,6 +395,12 @@ public sealed class RedactShape : Shape
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new RedactShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
 
 public sealed class StepShape : Shape
@@ -369,4 +433,10 @@ public sealed class StepShape : Shape
         float dx = p.X - X, dy = p.Y - Y;
         return dx * dx + dy * dy <= Radius * Radius;
     }
+    public override Shape Clone() => new StepShape
+    {
+        X = X, Y = Y, Radius = Radius, Label = Label,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
