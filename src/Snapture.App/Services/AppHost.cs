@@ -86,6 +86,17 @@ public sealed class AppHost : IDisposable
         // Autosave recovery — check for leftover drafts from a crash.
         CheckForAutosaveRecovery();
 
+        // Pre-warm UIA COM proxy so Smart Element Capture's first attach is snappy.
+        Task.Run(() =>
+        {
+            try
+            {
+                _ = System.Windows.Automation.AutomationElement.RootElement;
+                Log.Debug("UIA.Prewarmed");
+            }
+            catch (Exception ex) { Log.Debug(ex, "UIA.Prewarm.Failed"); }
+        });
+
         // PrintScreen hijack detection — quietly check, toast once.
         if (!Settings.Current.PrintScreenHijackToastShown && PrintScreenHijackDetector.IsHijacked())
         {
