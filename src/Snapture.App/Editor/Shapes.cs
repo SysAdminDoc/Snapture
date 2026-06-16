@@ -19,6 +19,7 @@ namespace Snapture.App.Editor;
 [JsonDerivedType(typeof(RedactShape),     typeDiscriminator: "redact")]
 [JsonDerivedType(typeof(StepShape),       typeDiscriminator: "step")]
 [JsonDerivedType(typeof(SpotlightShape), typeDiscriminator: "spotlight")]
+[JsonDerivedType(typeof(RulerShape),    typeDiscriminator: "ruler")]
 public abstract class Shape
 {
     public uint StrokeColorArgb { get; set; } = 0xFFE74C3C; // red default
@@ -110,6 +111,74 @@ public sealed class RectangleShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+}
+
+/// <summary>Drops a measurement line onto the canvas showing pixel distance and angle.</summary>
+public sealed class RulerShape : Shape
+{
+    public float X1 { get; set; }
+    public float Y1 { get; set; }
+    public float X2 { get; set; }
+    public float Y2 { get; set; }
+
+    public RulerShape() { StrokeColorArgb = 0xFF3498DB; StrokeThickness = 2f; }
+
+    public override void Render(SKCanvas canvas, AnnotationDocument doc)
+    {
+        using var paint = MakeStrokePaint();
+        canvas.DrawLine(X1, Y1, X2, Y2, paint);
+
+        float dx = X2 - X1, dy = Y2 - Y1;
+        float length = MathF.Sqrt(dx * dx + dy * dy);
+        float angle = MathF.Atan2(dy, dx) * 180f / MathF.PI;
+        string label = $"{length:F0}px · {angle:F1}°";
+
+        float mx = (X1 + X2) / 2, my = (Y1 + Y2) / 2;
+        using var textPaint = new SKPaint
+        {
+            Color = ToColor(StrokeColorArgb),
+            IsAntialias = true,
+            TextSize = 12,
+            Typeface = SKTypeface.FromFamilyName("Segoe UI"),
+            TextAlign = SKTextAlign.Center
+        };
+        canvas.DrawText(label, mx, my - 6, textPaint);
+
+        float endLen = 6;
+        using var endPaint = MakeStrokePaint();
+        float perpX = -dy / length * endLen, perpY = dx / length * endLen;
+        if (length > 1)
+        {
+            canvas.DrawLine(X1 + perpX, Y1 + perpY, X1 - perpX, Y1 - perpY, endPaint);
+            canvas.DrawLine(X2 + perpX, Y2 + perpY, X2 - perpX, Y2 - perpY, endPaint);
+        }
+    }
+
+    public override SKRect GetBounds()
+    {
+        float l = Math.Min(X1, X2), t = Math.Min(Y1, Y2);
+        float r = Math.Max(X1, X2), b = Math.Max(Y1, Y2);
+        return new SKRect(l, t, r, b);
+    }
+
+    public override bool HitTest(SKPoint p)
+    {
+        float dx = X2 - X1, dy = Y2 - Y1;
+        float len2 = dx * dx + dy * dy;
+        if (len2 < 1) return false;
+        float t = Math.Clamp(((p.X - X1) * dx + (p.Y - Y1) * dy) / len2, 0, 1);
+        float cx = X1 + t * dx, cy = Y1 + t * dy;
+        float dist = MathF.Sqrt((p.X - cx) * (p.X - cx) + (p.Y - cy) * (p.Y - cy));
+        return dist <= StrokeThickness + 4;
+    }
+
+    public override Shape Clone() => new RulerShape
+    {
+        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+    };
+
+    public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
 }
 
 /// <summary>Darkens everything outside the rectangle while keeping the inside sharp.</summary>

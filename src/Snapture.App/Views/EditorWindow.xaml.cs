@@ -19,7 +19,7 @@ public partial class EditorWindow : Window
 {
     public enum EditorTool
     {
-        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop, Eyedropper, Spotlight
+        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop, Eyedropper, Spotlight, Ruler
     }
 
     private static readonly (EditorTool tool, string label, Key hotkey, string glyph)[] ToolButtons =
@@ -38,6 +38,7 @@ public partial class EditorWindow : Window
         (EditorTool.Crop,      "Crop (C)",            Key.C, "✂"),
         (EditorTool.Eyedropper,"Eyedropper (I)",      Key.I, "💧"),
         (EditorTool.Spotlight, "Spotlight (P)",       Key.P, "◐"),
+        (EditorTool.Ruler,     "Ruler (M)",           Key.M, "📏"),
     };
 
     private static readonly uint[] DefaultPalette =
@@ -696,6 +697,7 @@ public partial class EditorWindow : Window
             EditorTool.Redact    => new RedactShape      { X = p.X, Y = p.Y },
             EditorTool.Step      => new StepShape        { X = p.X, Y = p.Y, Label = _stepCounter.ToString(), StrokeColorArgb = _activeColor, Radius = Math.Max(14, _strokeThickness * 5) },
             EditorTool.Spotlight => new SpotlightShape   { X = p.X, Y = p.Y },
+            EditorTool.Ruler     => new RulerShape       { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness },
             EditorTool.Crop      => null,
             _ => null,
         };
@@ -717,6 +719,7 @@ public partial class EditorWindow : Window
                 break;
             case LineShape l:    l.X2 = b.X; l.Y2 = b.Y; break;
             case ArrowShape ar:  ar.X2 = b.X; ar.Y2 = b.Y; break;
+            case RulerShape ru:  ru.X2 = b.X; ru.Y2 = b.Y; break;
             case FreehandShape f:
                 if (f.Points.Count == 0 || (f.Points[^1] - b).Length > 0.5f) f.Points.Add(b);
                 break;
@@ -752,6 +755,7 @@ public partial class EditorWindow : Window
         RedactShape r      => r.Width >= 4 && r.Height >= 4,
         StepShape          => true,
         SpotlightShape sp  => sp.Width >= 4 && sp.Height >= 4,
+        RulerShape ru      => Math.Abs(ru.X2 - ru.X1) + Math.Abs(ru.Y2 - ru.Y1) >= 4,
         _                  => false,
     };
 
