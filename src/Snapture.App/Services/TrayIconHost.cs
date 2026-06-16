@@ -409,6 +409,38 @@ public sealed class TrayIconHost : IDisposable
         };
         m.Items.Add(diagDump);
 
+        var checkUpdate = new MenuItem { Header = "Check for _Updates…" };
+        checkUpdate.Click += async (_, _) =>
+        {
+            try
+            {
+                checkUpdate.IsEnabled = false;
+                checkUpdate.Header = "Checking…";
+                var result = await UpdateChecker.CheckAsync();
+                checkUpdate.IsEnabled = true;
+                checkUpdate.Header = "Check for _Updates…";
+                if (result.Available)
+                {
+                    var answer = MessageBox.Show(
+                        $"A newer version is available: v{result.LatestVersion}\nYou are running: v{result.CurrentVersion}\n\nOpen the release page?",
+                        "Snapture Update", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                    if (answer == MessageBoxResult.Yes && result.HtmlUrl is not null)
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(result.HtmlUrl) { UseShellExecute = true });
+                }
+                else
+                {
+                    ShowToast("Up to date", $"Snapture v{result.CurrentVersion} is the latest.");
+                }
+            }
+            catch
+            {
+                checkUpdate.IsEnabled = true;
+                checkUpdate.Header = "Check for _Updates…";
+                ShowToast("Update check failed", "Could not reach GitHub.");
+            }
+        };
+        m.Items.Add(checkUpdate);
+
         var about = new MenuItem { Header = "_About Snapture" };
         about.Click += (_, _) =>
         {
