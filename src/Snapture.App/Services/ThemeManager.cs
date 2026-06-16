@@ -33,6 +33,15 @@ public static class ThemeManager
     public static void Apply(string? mode)
     {
         RequestedMode = NormalizeMode(mode);
+
+        if (SystemParameters.HighContrast)
+        {
+            EffectiveMode = "highcontrast";
+            RemoveThemeDictionary();
+            ThemeChanged?.Invoke(null, EventArgs.Empty);
+            return;
+        }
+
         EffectiveMode = RequestedMode == SystemMode
             ? (IsSystemLightTheme() ? LightMode : DarkMode)
             : RequestedMode;
@@ -78,6 +87,20 @@ public static class ThemeManager
         catch
         {
             return false;
+        }
+    }
+
+    private static void RemoveThemeDictionary()
+    {
+        var dictionaries = Application.Current.Resources.MergedDictionaries;
+        for (var i = dictionaries.Count - 1; i >= 0; i--)
+        {
+            var source = dictionaries[i].Source?.OriginalString ?? "";
+            if (source.Contains("/Resources/Themes/Catppuccin", StringComparison.OrdinalIgnoreCase) ||
+                source.Contains("\\Resources\\Themes\\Catppuccin", StringComparison.OrdinalIgnoreCase))
+            {
+                dictionaries.RemoveAt(i);
+            }
         }
     }
 
