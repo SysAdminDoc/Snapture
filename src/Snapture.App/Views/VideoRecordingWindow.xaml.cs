@@ -74,8 +74,10 @@ public partial class VideoRecordingWindow : Window
         {
             SystemAudioCheckBox.IsEnabled = _recorder.HasAudioStream;
             MicrophoneCheckBox.IsEnabled = _recorder.HasAudioStream;
+            AppAudioOnlyCheckBox.IsEnabled = _recorder.CanUseAppAudio;
             SystemAudioCheckBox.IsChecked = _recorder.IsSystemAudioEnabled;
             MicrophoneCheckBox.IsChecked = _recorder.IsMicrophoneEnabled;
+            AppAudioOnlyCheckBox.IsChecked = _recorder.IsAppAudioOnly;
         }
         finally
         {
@@ -112,6 +114,23 @@ public partial class VideoRecordingWindow : Window
         {
             _updatingAudioChecks = true;
             SystemAudioCheckBox.IsChecked = false;
+            _updatingAudioChecks = false;
+        }
+
+        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
+        UpdateProgress();
+    }
+
+    private void OnAppAudioOnlyToggled(object sender, RoutedEventArgs e)
+    {
+        if (_updatingAudioChecks) return;
+
+        bool requested = AppAudioOnlyCheckBox.IsChecked == true;
+        bool applied = _recorder.SetAppAudioOnly(requested);
+        if (!applied)
+        {
+            _updatingAudioChecks = true;
+            AppAudioOnlyCheckBox.IsChecked = _recorder.IsAppAudioOnly;
             _updatingAudioChecks = false;
         }
 

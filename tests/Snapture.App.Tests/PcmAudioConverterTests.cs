@@ -16,7 +16,7 @@ public sealed class PcmAudioConverterTests
 
         var converted = PcmAudioConverter.ConvertToStereo48(data, new WaveFormat(48_000, 16, 1));
 
-        Assert.IsTrue(converted.Samples.Length == 4);
+        Assert.HasCount(4, converted.Samples);
         Assert.AreEqual(0.5f, converted.Samples[0], 0.0001f);
         Assert.AreEqual(0.5f, converted.Samples[1], 0.0001f);
         Assert.AreEqual(-0.5f, converted.Samples[2], 0.0001f);
@@ -32,7 +32,7 @@ public sealed class PcmAudioConverterTests
 
         var converted = PcmAudioConverter.ConvertToStereo48(data, new WaveFormat(24_000, 16, 1));
 
-        Assert.IsTrue(converted.Samples.Length == 4);
+        Assert.HasCount(4, converted.Samples);
     }
 
     [TestMethod]
