@@ -80,6 +80,12 @@ public sealed class SnaptureSettings
     /// <summary>User-saved color swatches (ARGB uint values).</summary>
     public List<uint> SavedColorSwatches { get; set; } = new();
 
+    /// <summary>Recording quality preset. Maps to bitrate and FPS.</summary>
+    public string RecordingQuality { get; set; } = RecordingPresets.DefaultQuality;
+
+    /// <summary>Recording output resolution. "native" keeps the capture source size.</summary>
+    public string RecordingResolution { get; set; } = RecordingPresets.NativeResolution;
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");

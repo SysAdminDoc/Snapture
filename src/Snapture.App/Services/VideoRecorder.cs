@@ -46,15 +46,24 @@ public sealed class VideoRecorder : IDisposable
     public bool IsMicrophoneEnabled => _audioCapture?.IsMicrophoneEnabled ?? _audioOptions.IncludeMicrophone;
     public bool CanUseAppAudio => _audioOptions.TargetProcessId > 0 && HasAudioStream;
     public bool IsAppAudioOnly => _audioCapture?.IsTargetProcessAudioEnabled ?? _audioOptions.UseTargetProcessAudio;
+    public bool IsZoomSuggestionsEnabled => _zoomSuggestionsEnabled;
+    public int ZoomSuggestionClickCount => _zoomSuggestions.ClickCount;
     public float SystemAudioLevel => _audioCapture?.SystemLevel ?? 0f;
     public float MicrophoneLevel => _audioCapture?.MicrophoneLevel ?? 0f;
     public string AudioDescription { get; private set; } = "AAC audio pending";
+    public string ZoomSuggestionsDescription => _zoomSuggestionsEnabled
+        ? $"auto-zoom hints: {ZoomSuggestionClickCount}"
+        : "auto-zoom hints off";
+    public string OutputResolutionDescription => _outputWidth == _width && _outputHeight == _height
+        ? $"{_outputWidth}x{_outputHeight}"
+        : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
     private readonly object _lock = new();
     private readonly DirtyRegionFrameFilter _dirtyRegionFilter = new();
     private readonly RecordingAudioOptions _audioOptions;
+    private readonly RecordingZoomSuggestionEngine _zoomSuggestions = new();
     private MFInterop.IMFSinkWriter? _writer;
     private uint _videoStreamIndex;
     private uint _audioStreamIndex;
@@ -66,6 +75,7 @@ public sealed class VideoRecorder : IDisposable
     private int _width, _height;
     private Rectangle _captureBounds = Rectangle.Empty;
     private long _frameDurationHns;
+    private bool _zoomSuggestionsEnabled = true;
 
     // WGC continuous capture
     private nint _d3dDevice;
@@ -88,7 +98,7 @@ public sealed class VideoRecorder : IDisposable
     /// <summary>
     /// Start recording the foreground window to the given output path.
     /// </summary>
-    public void StartWindow(nint hwnd, string outputPath, int fps = 30, int bitrateMbps = 8)
+    public void StartWindow(nint hwnd, string outputPath, int fps = 30, int bitrateMbps = 8, int outputWidth = 0, int outputHeight = 0)
     {
         if (IsRecording) return;
         EnsureDevice();
@@ -96,13 +106,13 @@ public sealed class VideoRecorder : IDisposable
         var item = CaptureItemFactory.CreateForWindow(hwnd)
             ?? throw new InvalidOperationException("CreateForWindow returned null.");
         _captureBounds = ResolveWindowBounds(hwnd, item.Size.Width, item.Size.Height);
-        StartInternal(item, outputPath, fps, bitrateMbps);
+        StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight);
     }
 
     /// <summary>
     /// Start recording a specific monitor to the given output path.
     /// </summary>
-    public void StartMonitor(nint hMonitor, string outputPath, int fps = 30, int bitrateMbps = 8)
+    public void StartMonitor(nint hMonitor, string outputPath, int fps = 30, int bitrateMbps = 8, int outputWidth = 0, int outputHeight = 0)
     {
         if (IsRecording) return;
         EnsureDevice();
@@ -111,7 +121,7 @@ public sealed class VideoRecorder : IDisposable
         var item = CaptureItemFactory.CreateForMonitor(hMonitor)
             ?? throw new InvalidOperationException("CreateForMonitor returned null.");
         _captureBounds = ResolveMonitorBounds(hMonitor, item.Size.Width, item.Size.Height);
-        StartInternal(item, outputPath, fps, bitrateMbps);
+        StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight);
     }
 
     public void Pause()
@@ -212,7 +222,19 @@ public sealed class VideoRecorder : IDisposable
         return applied;
     }
 
-    private void StartInternal(GraphicsCaptureItem item, string outputPath, int fps, int bitrateMbps)
+    public void SetZoomSuggestionsEnabled(bool enabled)
+        => _zoomSuggestionsEnabled = enabled;
+
+    public string? ExportZoomSuggestions(string videoPath)
+    {
+        return _zoomSuggestionsEnabled
+            ? _zoomSuggestions.ExportSidecar(videoPath, _width, _height)
+            : null;
+    }
+
+    private int _outputWidth, _outputHeight;
+
+    private void StartInternal(GraphicsCaptureItem item, string outputPath, int fps, int bitrateMbps, int outputWidth = 0, int outputHeight = 0)
     {
         _outputPath = outputPath;
         _sourceWidth = item.Size.Width;
@@ -228,6 +250,13 @@ public sealed class VideoRecorder : IDisposable
             throw new InvalidOperationException("Capture item has invalid dimensions.");
         if (_captureBounds.IsEmpty)
             _captureBounds = new Rectangle(0, 0, _width, _height);
+
+        // Output resolution: if a preset target is specified, use it (encoder scales).
+        // Otherwise output at native capture dimensions.
+        _outputWidth = outputWidth > 0 ? outputWidth : _width;
+        _outputHeight = outputHeight > 0 ? outputHeight : _height;
+        if (_outputWidth % 2 != 0) _outputWidth--;
+        if (_outputHeight % 2 != 0) _outputHeight--;
 
         _frameDurationHns = 10_000_000L / Math.Max(1, fps);
 
@@ -266,6 +295,7 @@ public sealed class VideoRecorder : IDisposable
         FrameCount = 0;
         _firstTimestamp = -1;
         _pauseOffsetTicks = 0;
+        _zoomSuggestions.Clear();
         IsPaused = false;
         IsRecording = true;
         _sw.Restart();
@@ -274,8 +304,8 @@ public sealed class VideoRecorder : IDisposable
         StartKeyboardTracking();
 
         _session.StartCapture();
-        Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
-            _width, _height, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled);
+        Log.Information("VideoRecorder.Started {Width}x{Height}→{OutWidth}x{OutHeight} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
+            _width, _height, _outputWidth, _outputHeight, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled);
     }
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
@@ -368,7 +398,7 @@ public sealed class VideoRecorder : IDisposable
             outputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
 
             var frameSizeKey = MFInterop.MF_MT_FRAME_SIZE;
-            outputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
+            outputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_outputWidth, (uint)_outputHeight));
 
             var frameRateKey = MFInterop.MF_MT_FRAME_RATE;
             outputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
@@ -516,6 +546,8 @@ public sealed class VideoRecorder : IDisposable
         DateTime nowUtc = DateTime.UtcNow;
         RecordingPointerFrame? pointerFrame = _pointerTracker?.CaptureFrame(_captureBounds, nowUtc);
         RecordingKeystrokeFrame? keystrokeFrame = _keyboardTracker?.CaptureFrame(nowUtc);
+        if (_zoomSuggestionsEnabled && pointerFrame?.CursorPosition is { } cursor)
+            _zoomSuggestions.AddCursorSample(TimeSpan.FromTicks(pts), cursor);
         bool overlayActive = (pointerFrame?.HasVisualActivity ?? false)
             || (keystrokeFrame?.HasVisualActivity ?? false);
 
@@ -718,8 +750,15 @@ public sealed class VideoRecorder : IDisposable
 
     private void OnPointerClicked(RecordingPointerClick click)
     {
-        if (!IsRecording || IsPaused || !_captureBounds.Contains(click.ScreenPoint))
+        if (!IsRecording || IsPaused)
             return;
+
+        var localPoint = RecordingPointerTracker.ToLocalPoint(click.ScreenPoint, _captureBounds);
+        if (localPoint is null)
+            return;
+
+        if (_zoomSuggestionsEnabled)
+            _zoomSuggestions.AddClick(_sw.Elapsed, localPoint.Value);
 
         _audioCapture?.PlayClick();
     }
