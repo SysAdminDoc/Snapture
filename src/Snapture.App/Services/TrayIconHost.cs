@@ -375,6 +375,21 @@ public sealed class TrayIconHost : IDisposable
         }
         m.Items.Add(engineMenu);
 
+        var cursorToggle = new MenuItem
+        {
+            Header = "Include _Cursor in Capture",
+            IsCheckable = true,
+            IsChecked = App.Host?.Settings.Current.IncludeCursor ?? true
+        };
+        cursorToggle.Click += (_, _) =>
+        {
+            if (App.Host is null) return;
+            App.Host.Settings.Current.IncludeCursor = cursorToggle.IsChecked;
+            App.Host.Settings.Save();
+            App.Host.ApplyEngineSettings();
+        };
+        m.Items.Add(cursorToggle);
+
         // Reclaim PrintScreen if hijacked by Win11 24H2
         if (PrintScreenHijackDetector.IsHijacked())
         {

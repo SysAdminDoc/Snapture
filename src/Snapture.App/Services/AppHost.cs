@@ -215,6 +215,8 @@ public sealed class AppHost : IDisposable
         Log.Information("Engine.Switched {EngineName}", actual);
     }
 
+    public void ApplyEngineSettings() => ApplyEngineSettings(Engine);
+
     private void ApplyEngineSettings(ICaptureEngine engine)
     {
         if (engine is WinRtCaptureEngine wrt)
