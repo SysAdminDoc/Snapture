@@ -16,11 +16,13 @@ internal sealed class RecordingAudioMixer : IDisposable
     private readonly CancellationTokenSource _cts = new();
     private readonly object _stateLock = new();
     private readonly float[] _mixBuffer;
+    private readonly int _targetProcessId;
 
-    private WasapiLoopbackCapture? _systemCapture;
+    private IWaveIn? _systemCapture;
     private WasapiCapture? _microphoneCapture;
     private Task? _mixTask;
     private long _writtenFrames;
+    private bool _useTargetProcessAudio;
     private bool _paused;
     private bool _disposed;
 
@@ -30,10 +32,14 @@ internal sealed class RecordingAudioMixer : IDisposable
         _mixBuffer = new float[PcmAudioConverter.OutputFramesPerChunk * PcmAudioConverter.OutputChannels];
         _systemSource.Enabled = options.IncludeSystemAudio;
         _microphoneSource.Enabled = options.IncludeMicrophone;
+        _useTargetProcessAudio = options.UseTargetProcessAudio && options.TargetProcessId > 0;
+        _targetProcessId = options.TargetProcessId;
     }
 
     public bool IsSystemAudioEnabled => _systemSource.Enabled;
     public bool IsMicrophoneEnabled => _microphoneSource.Enabled;
+    public bool CanUseTargetProcessAudio => _targetProcessId > 0;
+    public bool IsTargetProcessAudioEnabled => _useTargetProcessAudio && CanUseTargetProcessAudio;
     public float SystemLevel => _systemSource.Level;
     public float MicrophoneLevel => _microphoneSource.Level;
 
@@ -41,7 +47,9 @@ internal sealed class RecordingAudioMixer : IDisposable
     {
         get
         {
-            string system = _systemSource.Enabled ? "system" : "system off";
+            string system = _systemSource.Enabled
+                ? (_useTargetProcessAudio ? "app audio" : "system")
+                : "system off";
             string microphone = _microphoneSource.Enabled ? "mic" : "mic off";
             return $"AAC audio: {system}, {microphone}";
         }
@@ -68,6 +76,32 @@ internal sealed class RecordingAudioMixer : IDisposable
             _systemSource.Clear();
             if (!enabled) return true;
             return TryStartSystemAudioCapture();
+        }
+    }
+
+    public bool SetTargetProcessAudioEnabled(bool enabled)
+    {
+        ThrowIfDisposed();
+        lock (_stateLock)
+        {
+            if (enabled && !CanUseTargetProcessAudio)
+                return false;
+
+            bool previous = _useTargetProcessAudio;
+            StopSystemCapture();
+            _systemSource.Clear();
+            _useTargetProcessAudio = enabled;
+
+            if (!_systemSource.Enabled)
+                return true;
+
+            if (TryStartSystemAudioCapture())
+                return true;
+
+            _useTargetProcessAudio = previous;
+            _systemSource.Enabled = true;
+            TryStartSystemAudioCapture();
+            return false;
         }
     }
 
@@ -140,12 +174,15 @@ internal sealed class RecordingAudioMixer : IDisposable
 
         try
         {
-            var capture = new WasapiLoopbackCapture();
+            IWaveIn capture = _useTargetProcessAudio
+                ? new ProcessLoopbackCapture(_targetProcessId, includeProcessTree: true)
+                : new WasapiLoopbackCapture();
             capture.DataAvailable += OnSystemAudioAvailable;
             capture.RecordingStopped += OnRecordingStopped;
             _systemCapture = capture;
             capture.StartRecording();
-            Log.Information("VideoRecorder.Audio.SystemStarted {Format}", capture.WaveFormat);
+            Log.Information("VideoRecorder.Audio.SystemStarted {Format} TargetProcess={TargetProcess}",
+                capture.WaveFormat, _useTargetProcessAudio ? _targetProcessId : 0);
             return true;
         }
         catch (Exception ex)
@@ -209,9 +246,15 @@ internal sealed class RecordingAudioMixer : IDisposable
         _cts.Cancel();
         try { _mixTask?.Wait(TimeSpan.FromSeconds(1)); } catch { }
 
-        StopCapture(_systemCapture);
+        StopSystemCapture();
         StopCapture(_microphoneCapture);
         _cts.Dispose();
+    }
+
+    private void StopSystemCapture()
+    {
+        StopCapture(_systemCapture);
+        _systemCapture = null;
     }
 
     private static void StopCapture(IWaveIn? capture)

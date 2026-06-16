@@ -43,6 +43,8 @@ public sealed class VideoRecorder : IDisposable
     public bool HasAudioStream => _audioStreamEnabled;
     public bool IsSystemAudioEnabled => _audioCapture?.IsSystemAudioEnabled ?? _audioOptions.IncludeSystemAudio;
     public bool IsMicrophoneEnabled => _audioCapture?.IsMicrophoneEnabled ?? _audioOptions.IncludeMicrophone;
+    public bool CanUseAppAudio => _audioOptions.TargetProcessId > 0 && HasAudioStream;
+    public bool IsAppAudioOnly => _audioCapture?.IsTargetProcessAudioEnabled ?? _audioOptions.UseTargetProcessAudio;
     public float SystemAudioLevel => _audioCapture?.SystemLevel ?? 0f;
     public float MicrophoneLevel => _audioCapture?.MicrophoneLevel ?? 0f;
     public string AudioDescription { get; private set; } = "AAC audio pending";
@@ -86,6 +88,7 @@ public sealed class VideoRecorder : IDisposable
     {
         if (IsRecording) return;
         EnsureDevice();
+        _audioOptions.TargetProcessId = GetWindowProcessId(hwnd);
         var item = CaptureItemFactory.CreateForWindow(hwnd)
             ?? throw new InvalidOperationException("CreateForWindow returned null.");
         StartInternal(item, outputPath, fps, bitrateMbps);
@@ -98,6 +101,8 @@ public sealed class VideoRecorder : IDisposable
     {
         if (IsRecording) return;
         EnsureDevice();
+        _audioOptions.TargetProcessId = 0;
+        _audioOptions.UseTargetProcessAudio = false;
         var item = CaptureItemFactory.CreateForMonitor(hMonitor)
             ?? throw new InvalidOperationException("CreateForMonitor returned null.");
         StartInternal(item, outputPath, fps, bitrateMbps);
@@ -175,6 +180,22 @@ public sealed class VideoRecorder : IDisposable
         if (_audioCapture is null) return !enabled;
         bool applied = _audioCapture.SetMicrophoneEnabled(enabled);
         if (!applied) _audioOptions.IncludeMicrophone = false;
+        AudioDescription = _audioCapture.Description;
+        return applied;
+    }
+
+    public bool SetAppAudioOnly(bool enabled)
+    {
+        if (_audioOptions.TargetProcessId <= 0)
+        {
+            _audioOptions.UseTargetProcessAudio = false;
+            return !enabled;
+        }
+
+        _audioOptions.UseTargetProcessAudio = enabled;
+        if (_audioCapture is null) return true;
+        bool applied = _audioCapture.SetTargetProcessAudioEnabled(enabled);
+        if (!applied) _audioOptions.UseTargetProcessAudio = !enabled;
         AudioDescription = _audioCapture.Description;
         return applied;
     }
@@ -757,6 +778,15 @@ public sealed class VideoRecorder : IDisposable
             return false;
         }
     }
+
+    private static int GetWindowProcessId(nint hwnd)
+    {
+        GetWindowThreadProcessId(hwnd, out uint processId);
+        return checked((int)processId);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(nint hWnd, out uint lpdwProcessId);
 
     public void Dispose()
     {
