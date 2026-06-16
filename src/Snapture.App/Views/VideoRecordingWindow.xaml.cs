@@ -51,7 +51,7 @@ public partial class VideoRecordingWindow : Window
             return;
         }
 
-        FormatText.Text = $"Recording to MP4 ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}. Frames stream to disk.";
+        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}. Frames stream to disk.";
         UpdateProgress();
     }
 
