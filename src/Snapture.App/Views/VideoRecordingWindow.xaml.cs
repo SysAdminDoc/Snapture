@@ -54,22 +54,36 @@ public partial class VideoRecordingWindow : Window
             return;
         }
 
+        _recorder.SourceClosed += OnSourceClosed;
         SyncAudioControls();
         SyncZoomControls();
         UpdateFormatText();
         UpdateProgress();
     }
 
+    private void OnSourceClosed()
+    {
+        Dispatcher.BeginInvoke(() =>
+        {
+            StatusLabel.Text = "SOURCE LOST";
+            StatusLabel.Foreground = (System.Windows.Media.Brush)FindResource("AppWarning");
+            UpdateProgress();
+        });
+    }
+
     private void UpdateProgress()
     {
         var ts = _recorder.Elapsed;
-        string status = _recorder.IsPaused ? "PAUSED" : "REC";
+        string status = _recorder.IsSourceClosed ? "SOURCE LOST"
+            : _recorder.IsPaused ? "PAUSED"
+            : "REC";
         string zoom = _recorder.IsZoomSuggestionsEnabled
             ? $"{_recorder.ZoomSuggestionClickCount} zoom"
             : "zoom off";
         ProgressText.Text = $"{_recorder.FrameCount}f - {_recorder.SkippedCleanFrameCount} skipped - {ts:mm\\:ss\\.ff} - {_recorder.SelectedCodecName} - {zoom}";
         StatusLabel.Text = status;
         PauseButton.Content = _recorder.IsPaused ? "Resume" : "Pause";
+        PauseButton.IsEnabled = !_recorder.IsSourceClosed;
         UpdateAudioMeters();
     }
 
@@ -236,6 +250,7 @@ public partial class VideoRecordingWindow : Window
     protected override void OnClosed(EventArgs e)
     {
         _ui.Stop();
+        _recorder.SourceClosed -= OnSourceClosed;
         _recorder.Dispose();
         base.OnClosed(e);
     }

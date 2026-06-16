@@ -57,6 +57,8 @@ public sealed class VideoRecorder : IDisposable
     public string OutputResolutionDescription => _outputWidth == _width && _outputHeight == _height
         ? $"{_outputWidth}x{_outputHeight}"
         : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
+    public bool IsSourceClosed => _sourceClosedFlag;
+    public event Action? SourceClosed;
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
@@ -83,9 +85,11 @@ public sealed class VideoRecorder : IDisposable
     private IDirect3DDevice? _direct3DDevice;
     private Direct3D11CaptureFramePool? _framePool;
     private GraphicsCaptureSession? _session;
+    private GraphicsCaptureItem? _captureItem;
     private long _firstTimestamp = -1;
     private long _pauseOffsetTicks;
     private long _pauseStartTicks;
+    private volatile bool _sourceClosedFlag;
 
     private string? _outputPath;
     private bool _disposed;
@@ -157,6 +161,14 @@ public sealed class VideoRecorder : IDisposable
         if (!IsRecording) return null;
         IsRecording = false;
         _sw.Stop();
+
+        Microsoft.Win32.SystemEvents.PowerModeChanged -= OnPowerModeChanged;
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        if (_captureItem is not null)
+        {
+            _captureItem.Closed -= OnCaptureItemClosed;
+            _captureItem = null;
+        }
 
         _session?.Dispose();
         _session = null;
@@ -287,6 +299,10 @@ public sealed class VideoRecorder : IDisposable
 
         _framePool.FrameArrived += OnFrameArrived;
 
+        _captureItem = item;
+        _captureItem.Closed += OnCaptureItemClosed;
+        _sourceClosedFlag = false;
+
         _session = _framePool.CreateCaptureSession(item);
         TrySetBorderRequired(_session, false);
         TrySetCursorCapture(_session, true);
@@ -302,6 +318,8 @@ public sealed class VideoRecorder : IDisposable
         StartAudioCapture();
         StartPointerTracking();
         StartKeyboardTracking();
+        Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         _session.StartCapture();
         Log.Information("VideoRecorder.Started {Width}x{Height}→{OutWidth}x{OutHeight} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
@@ -529,10 +547,12 @@ public sealed class VideoRecorder : IDisposable
 
     private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
     {
-        if (!IsRecording || IsPaused) return;
+        if (!IsRecording || IsPaused || _sourceClosedFlag) return;
 
         using var frame = sender.TryGetNextFrame();
         if (frame is null) return;
+
+        if (frame.ContentSize.Width <= 0 || frame.ContentSize.Height <= 0) return;
 
         long timestamp = frame.SystemRelativeTime.Ticks;
 
@@ -905,6 +925,36 @@ public sealed class VideoRecorder : IDisposable
     {
         return MonitorEnumerator.Enumerate().FirstOrDefault(m => m.Handle == hMonitor)?.Bounds
             ?? new Rectangle(0, 0, width, height);
+    }
+
+    private void OnCaptureItemClosed(GraphicsCaptureItem sender, object args)
+    {
+        _sourceClosedFlag = true;
+        Log.Warning("VideoRecorder.CaptureItemClosed — source window/monitor went away");
+        if (IsRecording && !IsPaused)
+            Pause();
+        SourceClosed?.Invoke();
+    }
+
+    private void OnPowerModeChanged(object? sender, Microsoft.Win32.PowerModeChangedEventArgs e)
+    {
+        if (e.Mode == Microsoft.Win32.PowerModes.Suspend && IsRecording && !IsPaused)
+        {
+            Log.Information("VideoRecorder.PowerSuspend — pausing recording");
+            Pause();
+        }
+        else if (e.Mode == Microsoft.Win32.PowerModes.Resume && IsRecording && IsPaused && !_sourceClosedFlag)
+        {
+            Log.Information("VideoRecorder.PowerResume — resuming recording");
+            Resume();
+        }
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        if (!IsRecording) return;
+        Log.Information("VideoRecorder.DisplaySettingsChanged — DPI or monitor topology changed during recording");
+        _dirtyRegionFilter.ForceNextFrame();
     }
 
     [DllImport("user32.dll")]
