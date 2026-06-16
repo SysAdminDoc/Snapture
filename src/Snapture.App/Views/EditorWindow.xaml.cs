@@ -10,6 +10,7 @@ using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using SkiaSharp.Views.WPF;
 using Snapture.App.Editor;
+using Snapture.App.Services;
 using Snapture.Capture;
 
 namespace Snapture.App.Views;
@@ -61,6 +62,9 @@ public partial class EditorWindow : Window
     // Selection model — tracks shapes the user has clicked in Select mode
     private readonly HashSet<Shape> _selectedShapes = new();
 
+    // Autosave: periodic crash-recovery draft
+    private AutosaveService? _autosave;
+
     public EditorWindow(BitmapSource image, string? savedPath, CaptureResult capture)
     {
         InitializeComponent();
@@ -75,11 +79,38 @@ public partial class EditorWindow : Window
         StatusText.Text = capture.Source is { } src ? $"Captured: {src}" : "Ready";
         PathText.Text = savedPath ?? "(unsaved)";
         KeyDown += OnKeyDown;
+        Closed += OnEditorClosed;
+        _autosave = new AutosaveService(_doc);
         Canvas.InvalidateVisual();
     }
 
     public EditorWindow(string projectOrImagePath) : this(LoadFromDisk(projectOrImagePath, out var doc), doc, projectOrImagePath)
     {
+    }
+
+    /// <summary>
+    /// Opens an editor from a recovered autosave document. The autosave file
+    /// is adopted so it will be cleaned up on normal close.
+    /// </summary>
+    internal EditorWindow(AnnotationDocument recoveredDoc, string autosavePath)
+    {
+        InitializeComponent();
+        _doc = recoveredDoc;
+        BuildToolButtons();
+        BuildColorPalette();
+        UpdateRecentColors();
+        DimensionText.Text = $"{_doc.Width} × {_doc.Height}";
+        Canvas.Width = _doc.Width;
+        Canvas.Height = _doc.Height;
+        StatusText.Text = "Recovered from autosave";
+        PathText.Text = "(recovered — unsaved)";
+        KeyDown += OnKeyDown;
+        Closed += OnEditorClosed;
+        // Delete the original autosave; a new autosave service will create
+        // a fresh file on its own timer.
+        AutosaveService.Discard(autosavePath);
+        _autosave = new AutosaveService(_doc);
+        Canvas.InvalidateVisual();
     }
 
     private EditorWindow(BitmapSource bs, AnnotationDocument doc, string path)
@@ -97,7 +128,17 @@ public partial class EditorWindow : Window
         StatusText.Text = $"Loaded {Path.GetFileName(path)}";
         PathText.Text = path;
         KeyDown += OnKeyDown;
+        Closed += OnEditorClosed;
+        _autosave = new AutosaveService(_doc);
         Canvas.InvalidateVisual();
+    }
+
+    private void OnEditorClosed(object? sender, EventArgs e)
+    {
+        // Clean close: delete the autosave file so no recovery prompt appears next launch.
+        _autosave?.DeleteAutosave();
+        _autosave?.Dispose();
+        _autosave = null;
     }
 
     private static BitmapSource LoadFromDisk(string path, out AnnotationDocument doc)
@@ -217,8 +258,9 @@ public partial class EditorWindow : Window
     {
         if (Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
         {
-            if (e.Key == Key.Z) { _commands.Undo(_doc); Canvas.InvalidateVisual(); e.Handled = true; return; }
-            if (e.Key == Key.Y) { _commands.Redo(_doc); Canvas.InvalidateVisual(); e.Handled = true; return; }
+            if (e.Key == Key.Z) { _selectedShapes.Clear(); _commands.Undo(_doc); Canvas.InvalidateVisual(); e.Handled = true; return; }
+            if (e.Key == Key.Y) { _selectedShapes.Clear(); _commands.Redo(_doc); Canvas.InvalidateVisual(); e.Handled = true; return; }
+            if (e.Key == Key.A) { SelectAll(); e.Handled = true; return; }
             if (e.Key == Key.S) { OnSaveProjectClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.E) { OnExportPngClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.O) { OnOpenClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
@@ -233,6 +275,14 @@ public partial class EditorWindow : Window
                 e.Handled = true;
                 return;
             }
+        }
+        if (e.Key == Key.Escape && _selectedShapes.Count > 0)
+        {
+            _selectedShapes.Clear();
+            StatusText.Text = $"Tool: {_activeTool}";
+            Canvas.InvalidateVisual();
+            e.Handled = true;
+            return;
         }
         if (e.Key == Key.Delete)
         {
@@ -257,6 +307,15 @@ public partial class EditorWindow : Window
                 Canvas.InvalidateVisual();
             }
         }
+    }
+
+    private void SelectAll()
+    {
+        _selectedShapes.Clear();
+        foreach (var s in _doc.Shapes) _selectedShapes.Add(s);
+        int count = _selectedShapes.Count;
+        StatusText.Text = count == 0 ? "No shapes" : $"{count} shapes selected";
+        Canvas.InvalidateVisual();
     }
 
     private void DuplicateSelectedShapes()
