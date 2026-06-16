@@ -78,10 +78,19 @@ public partial class RegionOverlayWindow : Window
         UpdateLoupe(p);
 
         if (!_isDragging) return;
-        double x = Math.Min(_dragStart.X, p.X);
-        double y = Math.Min(_dragStart.Y, p.Y);
         double w = Math.Abs(p.X - _dragStart.X);
         double h = Math.Abs(p.Y - _dragStart.Y);
+
+        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+        {
+            double side = Math.Max(w, h);
+            w = side;
+            h = side;
+        }
+
+        double x = p.X >= _dragStart.X ? _dragStart.X : _dragStart.X - w;
+        double y = p.Y >= _dragStart.Y ? _dragStart.Y : _dragStart.Y - h;
+
         Canvas.SetLeft(SelectionRect, x);
         Canvas.SetTop(SelectionRect, y);
         SelectionRect.Width = w;
