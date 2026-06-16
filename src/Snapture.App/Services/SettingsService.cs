@@ -35,6 +35,9 @@ public sealed class SnaptureSettings
     /// <summary>Set after the user has been notified about Win11 24H2 PrintScreen hijack (one-shot toast).</summary>
     public bool PrintScreenHijackToastShown { get; set; } = false;
 
+    /// <summary>Set after the user sees the one-shot "engine upgraded to WinRT" toast.</summary>
+    public bool WinRtUpgradeToastShown { get; set; } = false;
+
     /// <summary>Stores the last region capture for Shift+PrintScreen recapture.</summary>
     public CaptureRect? LastRegion { get; set; }
 

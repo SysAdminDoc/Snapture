@@ -56,6 +56,14 @@ public sealed class AppHost : IDisposable
             TryRequestBorderlessConsent();
         }
 
+        if (!Settings.Current.WinRtUpgradeToastShown && EngineName == CaptureEngineFactory.WinRt)
+        {
+            _tray?.ShowToast("Capture engine upgraded",
+                "Snapture is using the modern WinRT engine. If anything looks off, switch back in Settings → Capture → Engine.");
+            Settings.Current.WinRtUpgradeToastShown = true;
+            Settings.Save();
+        }
+
         // LAN share auto-start if user previously enabled it.
         if (Settings.Current.LanShareEnabled)
             TryStartLanShare();
