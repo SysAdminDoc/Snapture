@@ -27,7 +27,42 @@ public partial class HistoryWindow : Window
         InitializeComponent();
         _history = history;
         DbPathText.Text = $"Index: {CaptureHistoryService.DbPath}";
+        PopulateFilters();
         LoadRecent();
+    }
+
+    private void PopulateFilters()
+    {
+        AppFilter.Items.Add("All apps");
+        var entries = _history.Recent(500);
+        var apps = entries.Select(e => e.SourceApp).Where(a => !string.IsNullOrWhiteSpace(a)).Distinct().Order();
+        foreach (var app in apps) AppFilter.Items.Add(app!);
+        AppFilter.SelectedIndex = 0;
+
+        DateFilter.Items.Add("Any date");
+        DateFilter.Items.Add("Today");
+        DateFilter.Items.Add("Last 7 days");
+        DateFilter.Items.Add("Last 30 days");
+        DateFilter.SelectedIndex = 0;
+    }
+
+    private void OnFilterChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => ApplyFilters();
+
+    private void ApplyFilters()
+    {
+        var all = string.IsNullOrWhiteSpace(SearchBox.Text) ? _history.Recent(500) : _history.Search(SearchBox.Text, 500);
+        string? appFilter = AppFilter.SelectedIndex > 0 ? AppFilter.SelectedItem as string : null;
+        DateTime? dateCutoff = DateFilter.SelectedIndex switch
+        {
+            1 => DateTime.UtcNow.Date,
+            2 => DateTime.UtcNow.AddDays(-7),
+            3 => DateTime.UtcNow.AddDays(-30),
+            _ => null
+        };
+        var filtered = all.Where(e =>
+            (appFilter is null || e.SourceApp == appFilter) &&
+            (dateCutoff is null || e.CapturedAtUtc >= dateCutoff)).ToList();
+        Populate(filtered);
     }
 
     private void LoadRecent() => Populate(_history.Recent());
