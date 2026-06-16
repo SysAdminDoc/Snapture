@@ -184,6 +184,7 @@ public partial class EditorWindow : Window
                 Tag = tool,
                 FontSize = 18
             };
+            System.Windows.Automation.AutomationProperties.SetName(btn, tip);
             EditorTool captured = tool;
             btn.Click += (_, _) => SetActiveTool(captured);
             ToolStack.Children.Add(btn);
