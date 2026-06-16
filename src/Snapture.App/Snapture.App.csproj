@@ -18,6 +18,7 @@
     <Copyright>Copyright (c) 2026 Matt Parker</Copyright>
     <AssemblyTitle>Snapture</AssemblyTitle>
     <Description>All-in-one screenshot utility for Windows.</Description>
+    <RollForward>LatestPatch</RollForward>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Hardcodet.NotifyIcon.Wpf" Version="2.0.1" />
