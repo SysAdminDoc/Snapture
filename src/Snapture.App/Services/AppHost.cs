@@ -58,6 +58,17 @@ public sealed class AppHost : IDisposable
         if (Settings.Current.LanShareEnabled)
             TryStartLanShare();
 
+        // Run history retention cleanup
+        if (Settings.Current.HistoryRetentionDays > 0)
+        {
+            try
+            {
+                int purged = History.PurgeOlderThan(Settings.Current.HistoryRetentionDays);
+                if (purged > 0) Log.Information("History.Purged {Count} entries older than {Days}d", purged, Settings.Current.HistoryRetentionDays);
+            }
+            catch (Exception ex) { Log.Warning(ex, "History.Purge.Failed"); }
+        }
+
         // Discover and load plugins. Each lives in its own collectible context.
         try { Plugins.LoadAll(); }
         catch (Exception ex) { Log.Warning(ex, "Plugin.LoadAll.Failed"); }

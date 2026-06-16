@@ -146,6 +146,16 @@ END;
         cmd.ExecuteNonQuery();
     }
 
+    public int PurgeOlderThan(int days)
+    {
+        if (days <= 0) return 0;
+        var cutoff = DateTime.UtcNow.AddDays(-days).ToString("O");
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "DELETE FROM captures WHERE captured_at < $cutoff";
+        cmd.Parameters.AddWithValue("$cutoff", cutoff);
+        return cmd.ExecuteNonQuery();
+    }
+
     public void UpdateOcrText(long id, string text)
     {
         using var cmd = _conn.CreateCommand();
