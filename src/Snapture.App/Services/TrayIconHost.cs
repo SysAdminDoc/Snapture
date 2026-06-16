@@ -328,6 +328,22 @@ public sealed class TrayIconHost : IDisposable
             m.Items.Add(reclaim);
         }
 
+        var diagDump = new MenuItem { Header = "Create _Diagnostic Dump…" };
+        diagDump.Click += (_, _) =>
+        {
+            try
+            {
+                var path = DiagnosticDump.Create();
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
+                ShowToast("Diagnostic dump created", $"Saved to Desktop: {System.IO.Path.GetFileName(path)}");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not create dump:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        m.Items.Add(diagDump);
+
         var about = new MenuItem { Header = "_About Snapture" };
         about.Click += (_, _) =>
         {
