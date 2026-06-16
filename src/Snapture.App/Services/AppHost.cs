@@ -1,4 +1,5 @@
 using System.Windows;
+using Serilog;
 using Snapture.Capture;
 
 namespace Snapture.App.Services;
@@ -25,6 +26,7 @@ public sealed class AppHost : IDisposable
         var (engine, name) = CaptureEngineFactory.Create(Settings.Current.CaptureEngine);
         Engine = engine;
         EngineName = name;
+        Log.Information("Engine.Initialized {EngineName}", name);
         History = new CaptureHistoryService();
         var scratch = System.IO.Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -56,7 +58,8 @@ public sealed class AppHost : IDisposable
             TryStartLanShare();
 
         // Discover and load plugins. Each lives in its own collectible context.
-        try { Plugins.LoadAll(); } catch { /* loader failures are user-facing logs only */ }
+        try { Plugins.LoadAll(); }
+        catch (Exception ex) { Log.Warning(ex, "Plugin.LoadAll.Failed"); }
 
         // PrintScreen hijack detection — quietly check, toast once.
         if (!Settings.Current.PrintScreenHijackToastShown && PrintScreenHijackDetector.IsHijacked())
@@ -109,13 +112,13 @@ public sealed class AppHost : IDisposable
     public void SwitchEngine(string name)
     {
         var (engine, actual) = CaptureEngineFactory.Create(name);
-        // Replace the engine on the orchestrator. The old engine, if disposable, is dropped.
         if (Engine is IDisposable d) d.Dispose();
         Engine = engine;
         EngineName = actual;
         Orchestrator.ReplaceEngine(engine);
         Settings.Current.CaptureEngine = actual;
         Settings.Save();
+        Log.Information("Engine.Switched {EngineName}", actual);
     }
 
     public void RewireHotkeys()
@@ -130,7 +133,7 @@ public sealed class AppHost : IDisposable
     private void TryRegister(HotkeyBinding b, Action handler)
     {
         try { Hotkeys.Register(b.Modifiers, KeyToVk(b.KeyName), handler); }
-        catch { /* hotkey already in use; tray menu still works */ }
+        catch (Exception ex) { Log.Warning(ex, "Hotkey.Register.Failed {Key}", b.KeyName); }
     }
 
     private static uint KeyToVk(string keyName) => Native.NameToVirtualKey(keyName);

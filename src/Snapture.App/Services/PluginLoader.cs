@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
+using Serilog;
 using Snapture.Plugin;
 
 namespace Snapture.App.Services;
@@ -42,6 +43,7 @@ public sealed class PluginLoader : IDisposable
             try { LoadOne(dll); }
             catch (Exception ex)
             {
+                Log.Warning(ex, "Plugin.Load.Failed {FileName}", Path.GetFileName(dll));
                 _host.Log($"Plugin load failed: {Path.GetFileName(dll)} — {ex.Message}");
             }
         }
@@ -95,6 +97,7 @@ public sealed class PluginLoader : IDisposable
 
         var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx);
         _plugins.Add(loaded);
+        Log.Information("Plugin.Loaded {PluginName} {PluginVersion}", info.Name, info.Version);
         _host.Log($"Plugin loaded: {info.Name} v{info.Version} by {info.Author} " +
                   $"(caps: {info.Capabilities}; types: {string.Join(", ", info.ContractTypes)})");
         return loaded;
