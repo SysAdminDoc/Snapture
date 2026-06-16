@@ -194,6 +194,35 @@ public sealed class TrayIconHost : IDisposable
         recordGif.Items.Add(recGifFull);
         tools.Items.Add(recordGif);
 
+        var recordVideo = new MenuItem { Header = "Record Video (MP4)" };
+        var recVidWindow = new MenuItem { Header = "…of foreground window" };
+        recVidWindow.Click += (_, _) =>
+        {
+            try
+            {
+                var hwnd = Native2.GetForegroundWindow();
+                if (hwnd == 0) { MessageBox.Show("No foreground window.", "Snapture"); return; }
+                var rec = new VideoRecorder();
+                new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.ForegroundWindow, hwnd).Show();
+            }
+            catch (Exception ex) { MessageBox.Show($"Could not start video recorder: {ex.Message}", "Snapture"); }
+        };
+        recordVideo.Items.Add(recVidWindow);
+        var recVidMonitor = new MenuItem { Header = "…of primary monitor" };
+        recVidMonitor.Click += (_, _) =>
+        {
+            try
+            {
+                var mon = MonitorEnumerator.Enumerate().FirstOrDefault(m => m.IsPrimary)
+                    ?? MonitorEnumerator.Enumerate().First();
+                var rec = new VideoRecorder();
+                new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.Monitor, mon.Handle).Show();
+            }
+            catch (Exception ex) { MessageBox.Show($"Could not start video recorder: {ex.Message}", "Snapture"); }
+        };
+        recordVideo.Items.Add(recVidMonitor);
+        tools.Items.Add(recordVideo);
+
         var stepCapture = new MenuItem { Header = "Step Capture…" };
         stepCapture.Click += (_, _) =>
         {

@@ -13,7 +13,7 @@ namespace Snapture.Capture;
 ///      to get back to an <c>ID3D11Texture2D</c>.
 /// </summary>
 [SupportedOSPlatform("windows10.0.17763.0")]
-internal static class D3D11Interop
+public static class D3D11Interop
 {
     public const int D3D11_CREATE_DEVICE_BGRA_SUPPORT = 0x20;
     public const int D3D_DRIVER_TYPE_HARDWARE = 1;

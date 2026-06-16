@@ -1,0 +1,463 @@
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
+using Serilog;
+using Snapture.Capture;
+using Windows.Foundation;
+using Windows.Graphics.Capture;
+using Windows.Graphics.DirectX;
+using Windows.Graphics.DirectX.Direct3D11;
+
+namespace Snapture.App.Services;
+
+/// <summary>
+/// Records video from a WGC capture session to an MP4 file via Media Foundation SinkWriter.
+/// Continuous WGC frames flow through a queue-depth-3 frame pool; each frame is written
+/// as a BGRA sample to the SinkWriter which hardware-encodes to H.264 (HEVC fallback path
+/// reserved for future codec discovery).
+///
+/// SystemRelativeTime from WGC frames maps directly to presentation timestamps — both
+/// use 100-nanosecond units, no QPC conversion needed.
+/// </summary>
+[SupportedOSPlatform("windows10.0.17763.0")]
+public sealed class VideoRecorder : IDisposable
+{
+    public enum RecordSource { ForegroundWindow, Monitor, VirtualScreen }
+
+    public bool IsRecording { get; private set; }
+    public bool IsPaused { get; private set; }
+    public int FrameCount { get; private set; }
+    public TimeSpan Elapsed => _sw.Elapsed;
+    public event Action<int, TimeSpan>? Progress;
+
+    private readonly Stopwatch _sw = new();
+    private readonly object _lock = new();
+    private MFInterop.IMFSinkWriter? _writer;
+    private uint _videoStreamIndex;
+    private int _width, _height;
+
+    // WGC continuous capture
+    private nint _d3dDevice;
+    private nint _d3dContext;
+    private IDirect3DDevice? _direct3DDevice;
+    private Direct3D11CaptureFramePool? _framePool;
+    private GraphicsCaptureSession? _session;
+    private long _firstTimestamp = -1;
+    private long _pauseOffsetTicks;
+    private long _pauseStartTicks;
+
+    private string? _outputPath;
+    private bool _disposed;
+    private bool _mfStarted;
+
+    /// <summary>
+    /// Start recording the foreground window to the given output path.
+    /// </summary>
+    public void StartWindow(nint hwnd, string outputPath, int fps = 30, int bitrateMbps = 8)
+    {
+        if (IsRecording) return;
+        EnsureDevice();
+        var item = CaptureItemFactory.CreateForWindow(hwnd)
+            ?? throw new InvalidOperationException("CreateForWindow returned null.");
+        StartInternal(item, outputPath, fps, bitrateMbps);
+    }
+
+    /// <summary>
+    /// Start recording a specific monitor to the given output path.
+    /// </summary>
+    public void StartMonitor(nint hMonitor, string outputPath, int fps = 30, int bitrateMbps = 8)
+    {
+        if (IsRecording) return;
+        EnsureDevice();
+        var item = CaptureItemFactory.CreateForMonitor(hMonitor)
+            ?? throw new InvalidOperationException("CreateForMonitor returned null.");
+        StartInternal(item, outputPath, fps, bitrateMbps);
+    }
+
+    public void Pause()
+    {
+        if (!IsRecording || IsPaused) return;
+        IsPaused = true;
+        _pauseStartTicks = _sw.ElapsedTicks;
+        _sw.Stop();
+        Log.Information("VideoRecorder.Paused");
+    }
+
+    public void Resume()
+    {
+        if (!IsRecording || !IsPaused) return;
+        _pauseOffsetTicks += _sw.ElapsedTicks - _pauseStartTicks;
+        IsPaused = false;
+        _sw.Start();
+        Log.Information("VideoRecorder.Resumed");
+    }
+
+    /// <summary>
+    /// Stop recording and finalize the MP4 file.
+    /// </summary>
+    public string? Stop()
+    {
+        if (!IsRecording) return null;
+        IsRecording = false;
+        _sw.Stop();
+
+        _session?.Dispose();
+        _session = null;
+        _framePool?.Dispose();
+        _framePool = null;
+
+        if (_writer is not null)
+        {
+            try { _writer.Finalize_(); }
+            catch (Exception ex) { Log.Error(ex, "VideoRecorder.Finalize.Failed"); }
+            Marshal.ReleaseComObject(_writer);
+            _writer = null;
+        }
+
+        if (_mfStarted)
+        {
+            MFInterop.MFShutdown();
+            _mfStarted = false;
+        }
+
+        Log.Information("VideoRecorder.Stopped {Frames} {Duration}", FrameCount, Elapsed);
+        return _outputPath;
+    }
+
+    private void StartInternal(GraphicsCaptureItem item, string outputPath, int fps, int bitrateMbps)
+    {
+        _outputPath = outputPath;
+        _width = item.Size.Width;
+        _height = item.Size.Height;
+
+        // Ensure width/height are even (H.264 requirement)
+        if (_width % 2 != 0) _width--;
+        if (_height % 2 != 0) _height--;
+        if (_width <= 0 || _height <= 0)
+            throw new InvalidOperationException("Capture item has invalid dimensions.");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
+
+        // Initialize Media Foundation
+        int hr = MFInterop.MFStartup(MFInterop.MF_VERSION, 0);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+        _mfStarted = true;
+
+        try
+        {
+            ConfigureSinkWriter(outputPath, fps, bitrateMbps);
+        }
+        catch
+        {
+            MFInterop.MFShutdown();
+            _mfStarted = false;
+            throw;
+        }
+
+        // Set up continuous WGC capture with queue depth 3
+        _framePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
+            _direct3DDevice!,
+            DirectXPixelFormat.B8G8R8A8UIntNormalized,
+            3,
+            item.Size);
+
+        _framePool.FrameArrived += OnFrameArrived;
+
+        _session = _framePool.CreateCaptureSession(item);
+        TrySetBorderRequired(_session, false);
+        TrySetCursorCapture(_session, true);
+
+        FrameCount = 0;
+        _firstTimestamp = -1;
+        _pauseOffsetTicks = 0;
+        IsPaused = false;
+        IsRecording = true;
+        _sw.Restart();
+
+        _session.StartCapture();
+        Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps",
+            _width, _height, fps, bitrateMbps);
+    }
+
+    private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
+    {
+        // Create attributes for the sink writer: enable HW transforms
+        int hr = MFInterop.MFCreateAttributes(out var writerAttrs, 2);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+        var hwKey = MFInterop.MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS;
+        writerAttrs.SetUINT32(ref hwKey, 1);
+
+        // Create sink writer for MP4
+        hr = MFInterop.MFCreateSinkWriterFromURL(outputPath, 0, writerAttrs, out _writer!);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+        // Output media type (H.264)
+        hr = MFInterop.MFCreateMediaType(out var outputType);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+        var majorTypeKey = MFInterop.MF_MT_MAJOR_TYPE;
+        var videoType = MFInterop.MFMediaType_Video;
+        outputType.SetGUID(ref majorTypeKey, ref videoType);
+
+        var subtypeKey = MFInterop.MF_MT_SUBTYPE;
+        var h264 = MFInterop.MFVideoFormat_H264;
+        outputType.SetGUID(ref subtypeKey, ref h264);
+
+        var bitrateKey = MFInterop.MF_MT_AVG_BITRATE;
+        outputType.SetUINT32(ref bitrateKey, (uint)(bitrateMbps * 1_000_000));
+
+        var interlaceKey = MFInterop.MF_MT_INTERLACE_MODE;
+        outputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
+
+        var frameSizeKey = MFInterop.MF_MT_FRAME_SIZE;
+        outputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
+
+        var frameRateKey = MFInterop.MF_MT_FRAME_RATE;
+        outputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
+
+        var parKey = MFInterop.MF_MT_PIXEL_ASPECT_RATIO;
+        outputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
+
+        _writer.AddStream(outputType, out _videoStreamIndex);
+
+        // Input media type (ARGB32 — matches WGC BGRA output)
+        hr = MFInterop.MFCreateMediaType(out var inputType);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+        inputType.SetGUID(ref majorTypeKey, ref videoType);
+
+        var argb32 = MFInterop.MFVideoFormat_ARGB32;
+        inputType.SetGUID(ref subtypeKey, ref argb32);
+
+        inputType.SetUINT32(ref interlaceKey, MFInterop.MFVideoInterlace_Progressive);
+
+        inputType.SetUINT64(ref frameSizeKey, MFInterop.Pack2x32((uint)_width, (uint)_height));
+
+        inputType.SetUINT64(ref frameRateKey, MFInterop.Pack2x32((uint)fps, 1));
+
+        inputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
+
+        _writer.SetInputMediaType(_videoStreamIndex, inputType, null);
+        _writer.BeginWriting();
+    }
+
+    private void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)
+    {
+        if (!IsRecording || IsPaused) return;
+
+        using var frame = sender.TryGetNextFrame();
+        if (frame is null) return;
+
+        long timestamp = frame.SystemRelativeTime.Ticks;
+
+        if (_firstTimestamp < 0)
+            _firstTimestamp = timestamp;
+
+        long pts = (timestamp - _firstTimestamp) - _pauseOffsetTicks;
+        if (pts < 0) pts = 0;
+
+        try
+        {
+            WriteFrame(frame, pts);
+            FrameCount++;
+            Progress?.Invoke(FrameCount, Elapsed);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "VideoRecorder.WriteFrame.Failed");
+        }
+    }
+
+    private unsafe void WriteFrame(Direct3D11CaptureFrame frame, long pts)
+    {
+        // Get ID3D11Texture2D from the frame surface
+        nint surfacePtr = Marshal.GetIUnknownForObject(frame.Surface);
+        nint texPtr;
+        try
+        {
+            var iidAccess = typeof(D3D11Interop.IDirect3DDxgiInterfaceAccess).GUID;
+            int hrQI = Marshal.QueryInterface(surfacePtr, in iidAccess, out nint accessPtr);
+            if (hrQI < 0) Marshal.ThrowExceptionForHR(hrQI);
+            try
+            {
+                var access = (D3D11Interop.IDirect3DDxgiInterfaceAccess)
+                    Marshal.GetObjectForIUnknown(accessPtr);
+                var iidTex = D3D11Interop.IID_ID3D11Texture2D;
+                texPtr = access.GetInterface(ref iidTex);
+            }
+            finally { Marshal.Release(accessPtr); }
+        }
+        finally { Marshal.Release(surfacePtr); }
+
+        try
+        {
+            // Create staging texture, copy GPU → CPU
+            var desc = new D3D11Interop.D3D11_TEXTURE2D_DESC
+            {
+                Width = (uint)_width,
+                Height = (uint)_height,
+                MipLevels = 1,
+                ArraySize = 1,
+                Format = D3D11Interop.DXGI_FORMAT_B8G8R8A8_UNORM,
+                SampleDesc = new D3D11Interop.DXGI_SAMPLE_DESC { Count = 1, Quality = 0 },
+                Usage = D3D11Interop.D3D11_USAGE_STAGING,
+                BindFlags = 0,
+                CPUAccessFlags = D3D11Interop.D3D11_CPU_ACCESS_READ,
+                MiscFlags = 0
+            };
+
+            nint stagingTex = CreateTexture2D(_d3dDevice, ref desc);
+            try
+            {
+                CopyResource(_d3dContext, stagingTex, texPtr);
+                var mapped = MapResource(_d3dContext, stagingTex);
+                try
+                {
+                    uint bufSize = (uint)(_width * _height * 4);
+                    int hr = MFInterop.MFCreateMemoryBuffer(bufSize, out var mfBuffer);
+                    if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+                    mfBuffer.Lock(out nint bufPtr, out _, out _);
+                    try
+                    {
+                        byte* src = (byte*)mapped.pData;
+                        byte* dst = (byte*)bufPtr;
+                        int rowBytes = _width * 4;
+                        for (int y = 0; y < _height; y++)
+                        {
+                            Buffer.MemoryCopy(
+                                src + y * (long)mapped.RowPitch,
+                                dst + y * (long)rowBytes,
+                                rowBytes, rowBytes);
+                        }
+                    }
+                    finally { mfBuffer.Unlock(); }
+
+                    mfBuffer.SetCurrentLength(bufSize);
+
+                    hr = MFInterop.MFCreateSample(out var sample);
+                    if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+                    sample.AddBuffer(mfBuffer);
+                    sample.SetSampleTime(pts);
+                    sample.SetSampleDuration(10_000_000 / 30); // ~33ms at 30fps
+
+                    lock (_lock)
+                    {
+                        _writer?.WriteSample(_videoStreamIndex, sample);
+                    }
+
+                    Marshal.ReleaseComObject(sample);
+                    Marshal.ReleaseComObject(mfBuffer);
+                }
+                finally { UnmapResource(_d3dContext, stagingTex); }
+            }
+            finally { Marshal.Release(stagingTex); }
+        }
+        finally { Marshal.Release(texPtr); }
+    }
+
+    // ---- D3D11 device management (same pattern as WinRtCaptureEngine) ----
+
+    private void EnsureDevice()
+    {
+        if (_direct3DDevice is not null) return;
+        int hr = D3D11Interop.D3D11CreateDevice(
+            0, D3D11Interop.D3D_DRIVER_TYPE_HARDWARE, 0,
+            (uint)D3D11Interop.D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+            0, 0, 7, out _d3dDevice, out _, out _d3dContext);
+        if (hr < 0)
+        {
+            hr = D3D11Interop.D3D11CreateDevice(0, D3D11Interop.D3D_DRIVER_TYPE_WARP, 0,
+                (uint)D3D11Interop.D3D11_CREATE_DEVICE_BGRA_SUPPORT, 0, 0, 7,
+                out _d3dDevice, out _, out _d3dContext);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+        }
+
+        var iidDxgi = D3D11Interop.IID_IDXGIDevice;
+        int hrQI = Marshal.QueryInterface(_d3dDevice, in iidDxgi, out nint dxgiDevice);
+        if (hrQI < 0) Marshal.ThrowExceptionForHR(hrQI);
+        try
+        {
+            int hrCreate = D3D11Interop.CreateDirect3D11DeviceFromDXGIDevice(dxgiDevice, out nint inspectable);
+            if (hrCreate < 0) Marshal.ThrowExceptionForHR(hrCreate);
+            try
+            {
+                _direct3DDevice = (IDirect3DDevice)Marshal.GetObjectForIUnknown(inspectable);
+            }
+            finally { Marshal.Release(inspectable); }
+        }
+        finally { Marshal.Release(dxgiDevice); }
+    }
+
+    private static unsafe nint CreateTexture2D(nint device, ref D3D11Interop.D3D11_TEXTURE2D_DESC desc)
+    {
+        var vtbl = *(nint**)device;
+        var fn = (delegate* unmanaged[Stdcall]<nint, ref D3D11Interop.D3D11_TEXTURE2D_DESC, nint, out nint, int>)vtbl[5];
+        int hr = fn(device, ref desc, 0, out nint tex);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+        return tex;
+    }
+
+    private static unsafe void CopyResource(nint context, nint dst, nint src)
+    {
+        var vtbl = *(nint**)context;
+        var fn = (delegate* unmanaged[Stdcall]<nint, nint, nint, void>)vtbl[47];
+        fn(context, dst, src);
+    }
+
+    private static unsafe D3D11Interop.D3D11_MAPPED_SUBRESOURCE MapResource(nint context, nint resource)
+    {
+        var vtbl = *(nint**)context;
+        var fn = (delegate* unmanaged[Stdcall]<nint, nint, uint, int, uint, out D3D11Interop.D3D11_MAPPED_SUBRESOURCE, int>)vtbl[14];
+        int hr = fn(context, resource, 0, D3D11Interop.D3D11_MAP_READ, 0, out var mapped);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+        return mapped;
+    }
+
+    private static unsafe void UnmapResource(nint context, nint resource)
+    {
+        var vtbl = *(nint**)context;
+        var fn = (delegate* unmanaged[Stdcall]<nint, nint, uint, void>)vtbl[15];
+        fn(context, resource, 0);
+    }
+
+    private static void TrySetBorderRequired(GraphicsCaptureSession session, bool value)
+    {
+        try
+        {
+            if (Windows.Foundation.Metadata.ApiInformation.IsPropertyPresent(
+                typeof(GraphicsCaptureSession).FullName!, "IsBorderRequired"))
+                session.IsBorderRequired = value;
+        }
+        catch { }
+    }
+
+    private static void TrySetCursorCapture(GraphicsCaptureSession session, bool value)
+    {
+        try
+        {
+            if (Windows.Foundation.Metadata.ApiInformation.IsPropertyPresent(
+                typeof(GraphicsCaptureSession).FullName!, "IsCursorCaptureEnabled"))
+            {
+#pragma warning disable CA1416
+                session.IsCursorCaptureEnabled = value;
+#pragma warning restore CA1416
+            }
+        }
+        catch { }
+    }
+
+    public void Dispose()
+    {
+        if (_disposed) return;
+        _disposed = true;
+        if (IsRecording) Stop();
+        if (_d3dContext != 0) { Marshal.Release(_d3dContext); _d3dContext = 0; }
+        if (_d3dDevice != 0) { Marshal.Release(_d3dDevice); _d3dDevice = 0; }
+    }
+}

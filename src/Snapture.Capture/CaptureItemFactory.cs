@@ -10,7 +10,7 @@ namespace Snapture.Capture;
 /// <c>IGraphicsCaptureItemInterop</c> on the activation factory.
 /// </summary>
 [SupportedOSPlatform("windows10.0.17763.0")]
-internal static class CaptureItemFactory
+public static class CaptureItemFactory
 {
     private static readonly Guid IID_IGraphicsCaptureItemInterop =
         new("3628E81B-3CAC-4C60-B7F4-23CE0E0C3356");
