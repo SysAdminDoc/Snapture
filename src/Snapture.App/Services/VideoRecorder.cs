@@ -61,6 +61,7 @@ public sealed class VideoRecorder : IDisposable
     private bool _audioStreamEnabled;
     private RecordingAudioMixer? _audioCapture;
     private RecordingPointerTracker? _pointerTracker;
+    private RecordingKeyboardTracker? _keyboardTracker;
     private int _sourceWidth, _sourceHeight;
     private int _width, _height;
     private Rectangle _captureBounds = Rectangle.Empty;
@@ -120,6 +121,7 @@ public sealed class VideoRecorder : IDisposable
         _pauseStartTicks = _sw.ElapsedTicks;
         _audioCapture?.SetPaused(true);
         _pointerTracker?.ClearClicks();
+        _keyboardTracker?.Clear();
         _sw.Stop();
         Log.Information("VideoRecorder.Paused");
     }
@@ -132,6 +134,7 @@ public sealed class VideoRecorder : IDisposable
         _dirtyRegionFilter.ForceNextFrame();
         _audioCapture?.SetPaused(false);
         _pointerTracker?.ClearClicks();
+        _keyboardTracker?.Clear();
         _sw.Start();
         Log.Information("VideoRecorder.Resumed");
     }
@@ -152,6 +155,7 @@ public sealed class VideoRecorder : IDisposable
         _audioCapture?.Dispose();
         _audioCapture = null;
         StopPointerTracking();
+        StopKeyboardTracking();
 
         if (_writer is not null)
         {
@@ -267,6 +271,7 @@ public sealed class VideoRecorder : IDisposable
         _sw.Restart();
         StartAudioCapture();
         StartPointerTracking();
+        StartKeyboardTracking();
 
         _session.StartCapture();
         Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
@@ -508,7 +513,13 @@ public sealed class VideoRecorder : IDisposable
         if (pts < 0) pts = 0;
 
         int? dirtyRegionCount = DirtyRegionInterop.TryGetDirtyRegionCount(frame);
-        if (!_dirtyRegionFilter.ShouldEncode(dirtyRegionCount))
+        DateTime nowUtc = DateTime.UtcNow;
+        RecordingPointerFrame? pointerFrame = _pointerTracker?.CaptureFrame(_captureBounds, nowUtc);
+        RecordingKeystrokeFrame? keystrokeFrame = _keyboardTracker?.CaptureFrame(nowUtc);
+        bool overlayActive = (pointerFrame?.HasVisualActivity ?? false)
+            || (keystrokeFrame?.HasVisualActivity ?? false);
+
+        if (!_dirtyRegionFilter.ShouldEncode(dirtyRegionCount) && !overlayActive)
         {
             Progress?.Invoke(FrameCount, Elapsed);
             return;
@@ -516,7 +527,7 @@ public sealed class VideoRecorder : IDisposable
 
         try
         {
-            WriteFrame(frame, pts);
+            WriteFrame(frame, pts, pointerFrame, keystrokeFrame);
             FrameCount++;
             Progress?.Invoke(FrameCount, Elapsed);
         }
@@ -526,7 +537,11 @@ public sealed class VideoRecorder : IDisposable
         }
     }
 
-    private unsafe void WriteFrame(Direct3D11CaptureFrame frame, long pts)
+    private unsafe void WriteFrame(
+        Direct3D11CaptureFrame frame,
+        long pts,
+        RecordingPointerFrame? pointerFrame,
+        RecordingKeystrokeFrame? keystrokeFrame)
     {
         // Get ID3D11Texture2D from the frame surface
         nint surfacePtr = Marshal.GetIUnknownForObject(frame.Surface);
@@ -589,11 +604,11 @@ public sealed class VideoRecorder : IDisposable
                                 rowBytes, rowBytes);
                         }
 
-                        if (_pointerTracker is not null)
-                        {
-                            var pointerFrame = _pointerTracker.CaptureFrame(_captureBounds, DateTime.UtcNow);
-                            CursorOverlayRenderer.RenderBgra(new Span<byte>(dst, (int)bufSize), _width, _height, rowBytes, pointerFrame);
-                        }
+                        var pixels = new Span<byte>(dst, (int)bufSize);
+                        if (pointerFrame is { } pointer)
+                            CursorOverlayRenderer.RenderBgra(pixels, _width, _height, rowBytes, pointer);
+                        if (keystrokeFrame is { } keystrokes)
+                            KeystrokeOverlayRenderer.RenderBgra(pixels, _width, _height, rowBytes, keystrokes);
                     }
                     finally { mfBuffer.Unlock(); }
 
@@ -685,6 +700,20 @@ public sealed class VideoRecorder : IDisposable
         _pointerTracker.PointerClicked -= OnPointerClicked;
         _pointerTracker.Dispose();
         _pointerTracker = null;
+    }
+
+    private void StartKeyboardTracking()
+    {
+        StopKeyboardTracking();
+        _keyboardTracker = new RecordingKeyboardTracker();
+        _keyboardTracker.Start();
+    }
+
+    private void StopKeyboardTracking()
+    {
+        if (_keyboardTracker is null) return;
+        _keyboardTracker.Dispose();
+        _keyboardTracker = null;
     }
 
     private void OnPointerClicked(RecordingPointerClick click)
@@ -850,6 +879,7 @@ public sealed class VideoRecorder : IDisposable
         _audioCapture?.Dispose();
         _audioCapture = null;
         StopPointerTracking();
+        StopKeyboardTracking();
         if (_d3dContext != 0) { Marshal.Release(_d3dContext); _d3dContext = 0; }
         if (_d3dDevice != 0) { Marshal.Release(_d3dDevice); _d3dDevice = 0; }
     }

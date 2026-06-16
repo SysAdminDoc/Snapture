@@ -36,7 +36,8 @@ public sealed class CursorOverlayRendererTests
             new[]
             {
                 new RecordingPointerEffect(new Point(24, 24), RecordingPointerButton.Left, 80)
-            });
+            },
+            true);
 
         CursorOverlayRenderer.RenderBgra(pixels, 80, 80, 80 * 4, frame);
 
@@ -52,7 +53,8 @@ public sealed class CursorOverlayRendererTests
             new[]
             {
                 new RecordingPointerEffect(new Point(15, 15), RecordingPointerButton.Right, 20)
-            });
+            },
+            true);
 
         CursorOverlayRenderer.RenderBgra(pixels, 16, 16, 16 * 4, frame);
 
