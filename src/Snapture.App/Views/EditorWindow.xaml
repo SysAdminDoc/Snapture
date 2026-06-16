@@ -126,6 +126,13 @@
                     <TextBlock Text="Recent" Foreground="{DynamicResource AppMutedForeground}" Margin="0,8,0,4" />
                     <UniformGrid x:Name="RecentColors" Columns="6" Height="24" />
 
+                    <DockPanel Margin="0,8,0,4">
+                        <TextBlock Text="Saved" Foreground="{DynamicResource AppMutedForeground}" VerticalAlignment="Center" />
+                        <Button Content="+ Save" FontSize="10" Padding="4,1" Margin="6,0,0,0"
+                                Click="OnSaveSwatchClicked" VerticalAlignment="Center" />
+                    </DockPanel>
+                    <UniformGrid x:Name="SavedSwatches" Columns="6" />
+
                     <TextBlock Text="Stroke" Foreground="{DynamicResource AppMutedForeground}" Margin="0,12,0,4" />
                     <Slider x:Name="StrokeSlider"
                             Minimum="1" Maximum="24"
