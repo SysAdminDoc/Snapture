@@ -34,6 +34,8 @@ The existing landscape on Windows in 2026:
 
 **Snapture's pitch:** the polish of Snagit, the no-cloud philosophy of Greenshot, modern WinRT-class capture, and a Catppuccin-themed editor that doesn't look like it was designed in 2008.
 
+**Auto-redact:** Snipping Tool's "Quick Redact" catches 2 things (phones and emails). Snapture catches 30+ — AWS keys, GCP tokens, GitHub PATs, Stripe keys, Slack webhooks, JWTs, npm tokens, credit cards (Luhn-validated), SSNs, IBANs, IPs, MACs, HIPAA identifiers, and more. All local, all undoable.
+
 ## What ships in v0.6.0
 
 - **Sticky-header / sticky-footer detection** in the image stitcher — UI chrome that doesn't scroll appears once at the top + bottom of the stitched output instead of repeating per frame.
