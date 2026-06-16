@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
+using Serilog;
+using Serilog.Events;
 using Snapture.App.Services;
 
 namespace Snapture.App;
@@ -11,36 +13,58 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Set the AUMID first — Win11 22H2+ pins the borderless-capture consent against
-        // this identifier, so anything that surfaces a taskbar entry must wait until it's set.
         AppIdentity.SetAumid();
+        ConfigureLogging(e.Args);
 
         base.OnStartup(e);
-        AppDomain.CurrentDomain.UnhandledException += (_, args) => LogCrash(args.ExceptionObject as Exception);
-        DispatcherUnhandledException += (_, args) => { LogCrash(args.Exception); args.Handled = true; };
-        TaskScheduler.UnobservedTaskException += (_, args) => { LogCrash(args.Exception); args.SetObserved(); };
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            Log.Fatal(args.ExceptionObject as Exception, "AppDomain.UnhandledException");
+            Log.CloseAndFlush();
+        };
+        DispatcherUnhandledException += (_, args) =>
+        {
+            Log.Fatal(args.Exception, "Dispatcher.UnhandledException");
+            args.Handled = true;
+        };
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            Log.Error(args.Exception, "Task.UnobservedException");
+            args.SetObserved();
+        };
 
+        Log.Information("App.Startup");
         Host = new AppHost();
         Host.Start();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        Log.Information("App.Shutdown");
         Host?.Dispose();
+        Log.CloseAndFlush();
         base.OnExit(e);
     }
 
-    private static void LogCrash(Exception? ex)
+    private static void ConfigureLogging(string[] args)
     {
-        if (ex == null) return;
-        try
-        {
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Snapture");
-            Directory.CreateDirectory(dir);
-            var path = Path.Combine(dir, "crashlog.txt");
-            File.AppendAllText(path,
-                $"[{DateTime.Now:O}] {ex.GetType().FullName}: {ex.Message}{Environment.NewLine}{ex.StackTrace}{Environment.NewLine}{Environment.NewLine}");
-        }
-        catch { /* swallow logging errors */ }
+        var logDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "Snapture", "logs");
+
+        var level = args.Contains("--verbose", StringComparer.OrdinalIgnoreCase)
+            ? LogEventLevel.Debug
+            : LogEventLevel.Information;
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Is(level)
+            .WriteTo.File(
+                Path.Combine(logDir, "snapture-.log"),
+                rollingInterval: RollingInterval.Day,
+                retainedFileCountLimit: 7,
+                buffered: true,
+                flushToDiskInterval: TimeSpan.FromSeconds(1),
+                outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+            .CreateLogger();
     }
 }

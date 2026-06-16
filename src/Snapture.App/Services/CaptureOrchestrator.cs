@@ -3,6 +3,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using Serilog;
 using Snapture.App.Views;
 using Snapture.Capture;
 
@@ -216,9 +217,12 @@ public sealed class CaptureOrchestrator
             var fmt = _settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
                 ? ImageFormat.Jpeg : ImageFormat.Png;
             result.Bitmap.Save(fs, fmt);
+            Log.Information("Capture.Saved {Source} {Width}x{Height}",
+                result.Source, result.Bitmap.Width, result.Bitmap.Height);
         }
         catch (Exception ex)
         {
+            Log.Error(ex, "Capture.Save.Failed");
             MessageBox.Show($"Could not save capture:\n{ex.Message}", "Snapture",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
