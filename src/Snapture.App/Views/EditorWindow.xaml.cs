@@ -19,7 +19,7 @@ public partial class EditorWindow : Window
 {
     public enum EditorTool
     {
-        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop
+        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop, Eyedropper
     }
 
     private static readonly (EditorTool tool, string label, Key hotkey, string glyph)[] ToolButtons =
@@ -36,6 +36,7 @@ public partial class EditorWindow : Window
         (EditorTool.Redact,    "Redact secrets (X)",  Key.X, "■"),
         (EditorTool.Step,      "Step counter (N)",    Key.N, "①"),
         (EditorTool.Crop,      "Crop (C)",            Key.C, "✂"),
+        (EditorTool.Eyedropper,"Eyedropper (I)",      Key.I, "💧"),
     };
 
     private static readonly uint[] DefaultPalette =
@@ -529,6 +530,17 @@ public partial class EditorWindow : Window
     {
         var pos = ToImagePoint(e.GetPosition(Canvas));
 
+        if (_activeTool == EditorTool.Eyedropper)
+        {
+            int px = Math.Clamp((int)pos.X, 0, _doc.Width - 1);
+            int py = Math.Clamp((int)pos.Y, 0, _doc.Height - 1);
+            var pixel = _doc.Background.GetPixel(px, py);
+            uint argb = (uint)((pixel.Alpha << 24) | (pixel.Red << 16) | (pixel.Green << 8) | pixel.Blue);
+            SetActiveColor(argb);
+            StatusText.Text = $"Picked: #{argb:X8}";
+            return;
+        }
+
         if (_activeTool == EditorTool.Select)
         {
             // Hit-test shapes in reverse (top-most first)
@@ -752,7 +764,7 @@ public partial class EditorWindow : Window
     {
         var dlg = new SaveFileDialog
         {
-            Filter = "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|BMP (*.bmp)|*.bmp|WebP (*.webp)|*.webp",
+            Filter = "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|BMP (*.bmp)|*.bmp|WebP (*.webp)|*.webp|SVG (*.svg)|*.svg",
             FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png"
         };
         if (dlg.ShowDialog(this) != true) return;
@@ -764,6 +776,11 @@ public partial class EditorWindow : Window
     {
         try
         {
+            if (Path.GetExtension(path).Equals(".svg", StringComparison.OrdinalIgnoreCase))
+            {
+                ExportSvg(path);
+                return;
+            }
             using var flat = RenderForExport();
             using var image = SKImage.FromBitmap(flat);
             var fmt = Path.GetExtension(path).ToLowerInvariant() switch
@@ -783,6 +800,29 @@ public partial class EditorWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show($"Could not export:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void ExportSvg(string path)
+    {
+        try
+        {
+            using var stream = File.Create(path);
+            using var svgCanvas = SKSvgCanvas.Create(
+                new SKRect(0, 0, _doc.Width, _doc.Height), stream);
+            // Draw background as embedded PNG
+            using var bgImage = SKImage.FromBitmap(_doc.Background);
+            svgCanvas.DrawImage(bgImage, 0, 0);
+            // Draw all shapes
+            foreach (var shape in _doc.Shapes)
+                shape.Render(svgCanvas, _doc);
+            StatusText.Text = $"Exported {Path.GetFileName(path)}";
+            PathText.Text = path;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not export SVG:\n{ex.Message}", "Snapture",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
