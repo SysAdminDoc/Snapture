@@ -366,6 +366,9 @@ public sealed class CaptureOrchestrator
                     "WindowTitle" => SanitizeFilename(windowTitle ?? "untitled"),
                     "Width" => capture?.Bitmap.Width.ToString() ?? "0",
                     "Height" => capture?.Bitmap.Height.ToString() ?? "0",
+                    "MonitorIndex" => ResolveMonitorIndex(capture),
+                    "MonitorDpi" => ResolveMonitorDpi(capture),
+                    "HDR" => "N",
                     _ => now.ToString(token)
                 };
             });
@@ -377,6 +380,28 @@ public sealed class CaptureOrchestrator
             path = Path.Combine(s.OutputFolder, $"{baseName}_{n++}{ext}");
         }
         return path;
+    }
+
+    private static string ResolveMonitorIndex(CaptureResult? capture)
+    {
+        if (capture is null) return "0";
+        var monitors = MonitorEnumerator.Enumerate();
+        var pt = new System.Drawing.Point(
+            capture.SourceBounds.X + capture.SourceBounds.Width / 2,
+            capture.SourceBounds.Y + capture.SourceBounds.Height / 2);
+        for (int i = 0; i < monitors.Count; i++)
+            if (monitors[i].Bounds.Contains(pt)) return (i + 1).ToString();
+        return "0";
+    }
+
+    private static string ResolveMonitorDpi(CaptureResult? capture)
+    {
+        if (capture is null) return "96";
+        var pt = new System.Drawing.Point(
+            capture.SourceBounds.X + capture.SourceBounds.Width / 2,
+            capture.SourceBounds.Y + capture.SourceBounds.Height / 2);
+        var mon = MonitorEnumerator.FromPoint(pt);
+        return mon?.DpiX.ToString() ?? "96";
     }
 
     private static string SanitizeFilename(string raw)
