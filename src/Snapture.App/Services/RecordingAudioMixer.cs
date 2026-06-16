@@ -17,6 +17,7 @@ internal sealed class RecordingAudioMixer : IDisposable
     private readonly object _stateLock = new();
     private readonly float[] _mixBuffer;
     private readonly int _targetProcessId;
+    private readonly RecordingClickSoundMixer _clickSound = new();
 
     private IWaveIn? _systemCapture;
     private WasapiCapture? _microphoneCapture;
@@ -128,6 +129,13 @@ internal sealed class RecordingAudioMixer : IDisposable
         }
     }
 
+    public void PlayClick()
+    {
+        ThrowIfDisposed();
+        if (!_paused)
+            _clickSound.QueueClick();
+    }
+
     private async Task MixLoop()
     {
         while (!_cts.IsCancellationRequested)
@@ -159,6 +167,8 @@ internal sealed class RecordingAudioMixer : IDisposable
             _systemSource.MixInto(_mixBuffer);
         if (_microphoneSource.Enabled)
             _microphoneSource.MixInto(_mixBuffer);
+
+        _clickSound.MixInto(_mixBuffer);
 
         var pcm = PcmAudioConverter.FloatStereoToPcm16(_mixBuffer);
         long sampleTime = PcmAudioConverter.FramesToHundredNanoseconds(_writtenFrames);
