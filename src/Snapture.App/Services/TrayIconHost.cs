@@ -180,6 +180,26 @@ public sealed class TrayIconHost : IDisposable
         var captureText = new MenuItem { Header = "Capture Text → clipboard" };
         captureText.Click += async (_, _) => await SafeRun(_orchestrator.CaptureTextAsync);
         tools.Items.Add(captureText);
+        var ocrFromFile = new MenuItem { Header = "OCR from file…" };
+        ocrFromFile.Click += async (_, _) =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Image (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp"
+            };
+            if (dlg.ShowDialog() != true) return;
+            try
+            {
+                var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(dlg.FileName));
+                var result = await OcrService.RecognizeAsync(bi);
+                string text = result?.Text ?? string.Empty;
+                if (!string.IsNullOrEmpty(text))
+                    try { System.Windows.Clipboard.SetText(text); } catch { }
+                new Views.OcrResultWindow(text).Show();
+            }
+            catch (Exception ex) { MessageBox.Show($"OCR failed:\n{ex.Message}", "Snapture"); }
+        };
+        tools.Items.Add(ocrFromFile);
         var recordGif = new MenuItem { Header = "Record GIF" };
         var recGifWindow = new MenuItem { Header = "…of foreground window" };
         recGifWindow.Click += (_, _) =>
