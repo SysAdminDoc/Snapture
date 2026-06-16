@@ -11,6 +11,7 @@ public partial class VideoRecordingWindow : Window
     private readonly VideoRecorder _recorder;
     private readonly DispatcherTimer _ui;
     private readonly string _tempPath;
+    private bool _updatingAudioChecks;
 
     public enum Mode { ForegroundWindow, Monitor }
 
@@ -51,7 +52,8 @@ public partial class VideoRecordingWindow : Window
             return;
         }
 
-        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}. Frames stream to disk.";
+        SyncAudioControls();
+        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
         UpdateProgress();
     }
 
@@ -62,6 +64,33 @@ public partial class VideoRecordingWindow : Window
         ProgressText.Text = $"{_recorder.FrameCount} frames - {_recorder.SkippedCleanFrameCount} skipped - {ts:mm\\:ss\\.ff} - MP4 {_recorder.SelectedCodecName}";
         StatusLabel.Text = status;
         PauseButton.Content = _recorder.IsPaused ? "Resume" : "Pause";
+        UpdateAudioMeters();
+    }
+
+    private void SyncAudioControls()
+    {
+        _updatingAudioChecks = true;
+        try
+        {
+            SystemAudioCheckBox.IsEnabled = _recorder.HasAudioStream;
+            MicrophoneCheckBox.IsEnabled = _recorder.HasAudioStream;
+            SystemAudioCheckBox.IsChecked = _recorder.IsSystemAudioEnabled;
+            MicrophoneCheckBox.IsChecked = _recorder.IsMicrophoneEnabled;
+        }
+        finally
+        {
+            _updatingAudioChecks = false;
+        }
+    }
+
+    private void UpdateAudioMeters()
+    {
+        double system = Math.Round(Math.Clamp(_recorder.SystemAudioLevel, 0f, 1f) * 100);
+        double mic = Math.Round(Math.Clamp(_recorder.MicrophoneLevel, 0f, 1f) * 100);
+        SystemAudioMeter.Value = system;
+        MicrophoneMeter.Value = mic;
+        SystemAudioLevelText.Text = $"{system:0}%";
+        MicrophoneLevelText.Text = $"{mic:0}%";
     }
 
     private void OnPauseClicked(object sender, RoutedEventArgs e)
@@ -70,6 +99,40 @@ public partial class VideoRecordingWindow : Window
             _recorder.Resume();
         else
             _recorder.Pause();
+        UpdateProgress();
+    }
+
+    private void OnSystemAudioToggled(object sender, RoutedEventArgs e)
+    {
+        if (_updatingAudioChecks) return;
+
+        bool requested = SystemAudioCheckBox.IsChecked == true;
+        bool applied = _recorder.SetSystemAudioEnabled(requested);
+        if (requested && !applied)
+        {
+            _updatingAudioChecks = true;
+            SystemAudioCheckBox.IsChecked = false;
+            _updatingAudioChecks = false;
+        }
+
+        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
+        UpdateProgress();
+    }
+
+    private void OnMicrophoneToggled(object sender, RoutedEventArgs e)
+    {
+        if (_updatingAudioChecks) return;
+
+        bool requested = MicrophoneCheckBox.IsChecked == true;
+        bool applied = _recorder.SetMicrophoneEnabled(requested);
+        if (requested && !applied)
+        {
+            _updatingAudioChecks = true;
+            MicrophoneCheckBox.IsChecked = false;
+            _updatingAudioChecks = false;
+        }
+
+        FormatText.Text = $"Recording to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}. Frames stream to disk.";
         UpdateProgress();
     }
 

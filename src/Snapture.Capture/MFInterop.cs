@@ -69,7 +69,13 @@ public static class MFInterop
     // ---- Well-known GUIDs ----
 
     // Major types
+    public static readonly Guid MFMediaType_Audio = new("73647561-0000-0010-8000-00AA00389B71");
     public static readonly Guid MFMediaType_Video = new("73646976-0000-0010-8000-00AA00389B71");
+
+    // Subtypes (audio codecs/formats)
+    public static readonly Guid MFAudioFormat_AAC = new("00001610-0000-0010-8000-00AA00389B71");
+    public static readonly Guid MFAudioFormat_PCM = new("00000001-0000-0010-8000-00AA00389B71");
+    public static readonly Guid MFAudioFormat_Float = new("00000003-0000-0010-8000-00AA00389B71");
 
     // Subtypes (output codecs)
     public static readonly Guid MFVideoFormat_AV1 = new("31305641-0000-0010-8000-00AA00389B71");
@@ -88,6 +94,15 @@ public static class MFInterop
     public static readonly Guid MF_MT_FRAME_SIZE = new("1652C33D-D6B2-4012-B834-72030849A37D");
     public static readonly Guid MF_MT_FRAME_RATE = new("C459A2E8-3D2C-4E44-B132-FEE5156C7BB0");
     public static readonly Guid MF_MT_PIXEL_ASPECT_RATIO = new("C6376A1E-8D0A-4027-BE45-6D9A0AD39BB6");
+    public static readonly Guid MF_MT_ALL_SAMPLES_INDEPENDENT = new("C9173739-5E56-461C-B713-46FB995CB95F");
+    public static readonly Guid MF_MT_AUDIO_NUM_CHANNELS = new("37E48BF5-645E-4C5B-89DE-ADA9E29B696A");
+    public static readonly Guid MF_MT_AUDIO_SAMPLES_PER_SECOND = new("5FAEEAE7-0290-4C31-9E8A-C534F68D9DBA");
+    public static readonly Guid MF_MT_AUDIO_AVG_BYTES_PER_SECOND = new("1AAB75C8-CFEF-451C-AB95-AC034B8E1731");
+    public static readonly Guid MF_MT_AUDIO_BLOCK_ALIGNMENT = new("322DE230-9EEB-43BD-AB7A-FF412251541D");
+    public static readonly Guid MF_MT_AUDIO_BITS_PER_SAMPLE = new("F2DEB57F-40FA-4764-AA33-ED4F2D1FF669");
+    public static readonly Guid MF_MT_AUDIO_CHANNEL_MASK = new("55FB5765-644A-4CAF-8479-938983BB1588");
+    public static readonly Guid MF_MT_AAC_PAYLOAD_TYPE = new("BFBABE79-7434-4D1C-94F0-72A3B9E17188");
+    public static readonly Guid MF_MT_AAC_AUDIO_PROFILE_LEVEL_INDICATION = new("7632F0E6-9538-4D61-ACDA-EA29C8C14456");
 
     // Sink writer attributes
     public static readonly Guid MF_READWRITE_ENABLE_HARDWARE_TRANSFORMS = new("A634A91C-822B-41B9-A494-4DE4643612B0");

@@ -26,6 +26,9 @@ public sealed class VideoRecorder : IDisposable
 {
     public enum RecordSource { ForegroundWindow, Monitor, VirtualScreen }
 
+    public VideoRecorder(RecordingAudioOptions? audioOptions = null)
+        => _audioOptions = (audioOptions ?? new RecordingAudioOptions()).Clone();
+
     public bool IsRecording { get; private set; }
     public bool IsPaused { get; private set; }
     public int FrameCount { get; private set; }
@@ -37,13 +40,23 @@ public sealed class VideoRecorder : IDisposable
         ? "dirty-region skip enabled"
         : "dirty-region skip unavailable";
     public string ContainerDescription { get; private set; } = "fragmented MP4";
+    public bool HasAudioStream => _audioStreamEnabled;
+    public bool IsSystemAudioEnabled => _audioCapture?.IsSystemAudioEnabled ?? _audioOptions.IncludeSystemAudio;
+    public bool IsMicrophoneEnabled => _audioCapture?.IsMicrophoneEnabled ?? _audioOptions.IncludeMicrophone;
+    public float SystemAudioLevel => _audioCapture?.SystemLevel ?? 0f;
+    public float MicrophoneLevel => _audioCapture?.MicrophoneLevel ?? 0f;
+    public string AudioDescription { get; private set; } = "AAC audio pending";
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
     private readonly object _lock = new();
     private readonly DirtyRegionFrameFilter _dirtyRegionFilter = new();
+    private readonly RecordingAudioOptions _audioOptions;
     private MFInterop.IMFSinkWriter? _writer;
     private uint _videoStreamIndex;
+    private uint _audioStreamIndex;
+    private bool _audioStreamEnabled;
+    private RecordingAudioMixer? _audioCapture;
     private int _sourceWidth, _sourceHeight;
     private int _width, _height;
     private long _frameDurationHns;
@@ -63,6 +76,8 @@ public sealed class VideoRecorder : IDisposable
     private bool _mfStarted;
 
     private const ulong Mp4FragmentDurationHns = 20_000_000; // two seconds
+    private const int AudioBitrate = 128_000;
+    private const uint FrontLeftRightChannelMask = 0x3;
 
     /// <summary>
     /// Start recording the foreground window to the given output path.
@@ -93,6 +108,7 @@ public sealed class VideoRecorder : IDisposable
         if (!IsRecording || IsPaused) return;
         IsPaused = true;
         _pauseStartTicks = _sw.ElapsedTicks;
+        _audioCapture?.SetPaused(true);
         _sw.Stop();
         Log.Information("VideoRecorder.Paused");
     }
@@ -103,6 +119,7 @@ public sealed class VideoRecorder : IDisposable
         _pauseOffsetTicks += _sw.ElapsedTicks - _pauseStartTicks;
         IsPaused = false;
         _dirtyRegionFilter.ForceNextFrame();
+        _audioCapture?.SetPaused(false);
         _sw.Start();
         Log.Information("VideoRecorder.Resumed");
     }
@@ -120,6 +137,8 @@ public sealed class VideoRecorder : IDisposable
         _session = null;
         _framePool?.Dispose();
         _framePool = null;
+        _audioCapture?.Dispose();
+        _audioCapture = null;
 
         if (_writer is not null)
         {
@@ -135,9 +154,29 @@ public sealed class VideoRecorder : IDisposable
             _mfStarted = false;
         }
 
-        Log.Information("VideoRecorder.Stopped {Frames} {SkippedCleanFrames} {Duration}",
-            FrameCount, SkippedCleanFrameCount, Elapsed);
+        Log.Information("VideoRecorder.Stopped {Frames} {SkippedCleanFrames} {Duration} Audio={Audio}",
+            FrameCount, SkippedCleanFrameCount, Elapsed, _audioStreamEnabled);
         return _outputPath;
+    }
+
+    public bool SetSystemAudioEnabled(bool enabled)
+    {
+        _audioOptions.IncludeSystemAudio = enabled;
+        if (_audioCapture is null) return !enabled;
+        bool applied = _audioCapture.SetSystemAudioEnabled(enabled);
+        if (!applied) _audioOptions.IncludeSystemAudio = false;
+        AudioDescription = _audioCapture.Description;
+        return applied;
+    }
+
+    public bool SetMicrophoneEnabled(bool enabled)
+    {
+        _audioOptions.IncludeMicrophone = enabled;
+        if (_audioCapture is null) return !enabled;
+        bool applied = _audioCapture.SetMicrophoneEnabled(enabled);
+        if (!applied) _audioOptions.IncludeMicrophone = false;
+        AudioDescription = _audioCapture.Description;
+        return applied;
     }
 
     private void StartInternal(GraphicsCaptureItem item, string outputPath, int fps, int bitrateMbps)
@@ -195,10 +234,11 @@ public sealed class VideoRecorder : IDisposable
         IsPaused = false;
         IsRecording = true;
         _sw.Restart();
+        StartAudioCapture();
 
         _session.StartCapture();
-        Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions}",
-            _width, _height, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled);
+        Log.Information("VideoRecorder.Started {Width}x{Height} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
+            _width, _height, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled);
     }
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
@@ -208,24 +248,33 @@ public sealed class VideoRecorder : IDisposable
             throw new InvalidOperationException("No Media Foundation video encoder was found.");
 
         Exception? lastError = null;
-        foreach (var candidate in candidates)
+        foreach (bool includeAudio in new[] { true, false })
         {
-            try
+            foreach (var candidate in candidates)
             {
-                ConfigureSinkWriter(outputPath, fps, bitrateMbps, candidate);
-                SelectedCodecName = candidate.CodecName;
-                SelectedCodecDescription = candidate.EncoderSummary;
-                Log.Information("VideoRecorder.CodecSelected {Codec} {Encoder}",
-                    candidate.CodecName, candidate.EncoderSummary);
-                return;
+                try
+                {
+                    ConfigureSinkWriter(outputPath, fps, bitrateMbps, candidate, includeAudio);
+                    SelectedCodecName = candidate.CodecName;
+                    SelectedCodecDescription = candidate.EncoderSummary;
+                    Log.Information("VideoRecorder.CodecSelected {Codec} {Encoder} Audio={Audio}",
+                        candidate.CodecName, candidate.EncoderSummary, includeAudio && _audioStreamEnabled);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    lastError = ex;
+                    Log.Warning(ex, "VideoRecorder.CodecConfigureFailed {Codec} {Encoder} Audio={Audio}",
+                        candidate.CodecName, candidate.EncoderSummary, includeAudio);
+                    ReleaseWriter();
+                    TryDeletePartialFile(outputPath);
+                }
             }
-            catch (Exception ex)
+
+            if (includeAudio)
             {
-                lastError = ex;
-                Log.Warning(ex, "VideoRecorder.CodecConfigureFailed {Codec} {Encoder}",
-                    candidate.CodecName, candidate.EncoderSummary);
-                ReleaseWriter();
-                TryDeletePartialFile(outputPath);
+                AudioDescription = "audio unavailable";
+                Log.Warning("VideoRecorder.Audio.ConfigureFallbackToVideoOnly");
             }
         }
 
@@ -236,7 +285,8 @@ public sealed class VideoRecorder : IDisposable
         string outputPath,
         int fps,
         int bitrateMbps,
-        MediaFoundationVideoCodecDiscovery.EncoderCandidate candidate)
+        MediaFoundationVideoCodecDiscovery.EncoderCandidate candidate,
+        bool includeAudio)
     {
         // Create attributes for the sink writer: enable HW transforms and fragmented MP4.
         int hr = MFInterop.MFCreateAttributes(out var writerAttrs, 4);
@@ -305,6 +355,10 @@ public sealed class VideoRecorder : IDisposable
             inputType.SetUINT64(ref parKey, MFInterop.Pack2x32(1, 1));
 
             _writer.SetInputMediaType(_videoStreamIndex, inputType, null);
+            _audioStreamEnabled = false;
+            if (includeAudio)
+                ConfigureAudioStream();
+
             _writer.BeginWriting();
         }
         finally
@@ -312,6 +366,97 @@ public sealed class VideoRecorder : IDisposable
             if (inputType is not null) Marshal.ReleaseComObject(inputType);
             if (outputType is not null) Marshal.ReleaseComObject(outputType);
             Marshal.ReleaseComObject(writerAttrs);
+        }
+    }
+
+    private void ConfigureAudioStream()
+    {
+        MFInterop.IMFMediaType? outputType = null;
+        MFInterop.IMFMediaType? inputType = null;
+        try
+        {
+            int hr = MFInterop.MFCreateMediaType(out outputType);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+            var majorTypeKey = MFInterop.MF_MT_MAJOR_TYPE;
+            var audioType = MFInterop.MFMediaType_Audio;
+            outputType.SetGUID(ref majorTypeKey, ref audioType);
+
+            var subtypeKey = MFInterop.MF_MT_SUBTYPE;
+            var aac = MFInterop.MFAudioFormat_AAC;
+            outputType.SetGUID(ref subtypeKey, ref aac);
+
+            var channelsKey = MFInterop.MF_MT_AUDIO_NUM_CHANNELS;
+            outputType.SetUINT32(ref channelsKey, PcmAudioConverter.OutputChannels);
+
+            var sampleRateKey = MFInterop.MF_MT_AUDIO_SAMPLES_PER_SECOND;
+            outputType.SetUINT32(ref sampleRateKey, PcmAudioConverter.OutputSampleRate);
+
+            var bitsKey = MFInterop.MF_MT_AUDIO_BITS_PER_SAMPLE;
+            outputType.SetUINT32(ref bitsKey, PcmAudioConverter.OutputBitsPerSample);
+
+            var avgBytesKey = MFInterop.MF_MT_AUDIO_AVG_BYTES_PER_SECOND;
+            outputType.SetUINT32(ref avgBytesKey, AudioBitrate / 8);
+
+            var blockAlignKey = MFInterop.MF_MT_AUDIO_BLOCK_ALIGNMENT;
+            outputType.SetUINT32(ref blockAlignKey, 1);
+
+            var channelMaskKey = MFInterop.MF_MT_AUDIO_CHANNEL_MASK;
+            outputType.SetUINT32(ref channelMaskKey, FrontLeftRightChannelMask);
+
+            var payloadTypeKey = MFInterop.MF_MT_AAC_PAYLOAD_TYPE;
+            outputType.SetUINT32(ref payloadTypeKey, 0);
+
+            var independentKey = MFInterop.MF_MT_ALL_SAMPLES_INDEPENDENT;
+            outputType.SetUINT32(ref independentKey, 1);
+
+            _writer!.AddStream(outputType, out _audioStreamIndex);
+
+            hr = MFInterop.MFCreateMediaType(out inputType);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+            inputType.SetGUID(ref majorTypeKey, ref audioType);
+
+            var pcm = MFInterop.MFAudioFormat_PCM;
+            inputType.SetGUID(ref subtypeKey, ref pcm);
+            inputType.SetUINT32(ref channelsKey, PcmAudioConverter.OutputChannels);
+            inputType.SetUINT32(ref sampleRateKey, PcmAudioConverter.OutputSampleRate);
+            inputType.SetUINT32(ref bitsKey, PcmAudioConverter.OutputBitsPerSample);
+            inputType.SetUINT32(ref avgBytesKey, PcmAudioConverter.OutputAverageBytesPerSecond);
+            inputType.SetUINT32(ref blockAlignKey, PcmAudioConverter.OutputBlockAlign);
+            inputType.SetUINT32(ref channelMaskKey, FrontLeftRightChannelMask);
+            inputType.SetUINT32(ref independentKey, 1);
+
+            _writer.SetInputMediaType(_audioStreamIndex, inputType, null);
+            _audioStreamEnabled = true;
+            AudioDescription = "AAC audio armed";
+        }
+        finally
+        {
+            if (inputType is not null) Marshal.ReleaseComObject(inputType);
+            if (outputType is not null) Marshal.ReleaseComObject(outputType);
+        }
+    }
+
+    private void StartAudioCapture()
+    {
+        if (!_audioStreamEnabled)
+        {
+            AudioDescription = "audio unavailable";
+            return;
+        }
+
+        try
+        {
+            _audioCapture = new RecordingAudioMixer(_audioOptions, WriteAudioSample);
+            _audioCapture.Start();
+            AudioDescription = _audioCapture.Description;
+        }
+        catch (Exception ex)
+        {
+            _audioStreamEnabled = false;
+            AudioDescription = "audio unavailable";
+            Log.Warning(ex, "VideoRecorder.Audio.StartFailed");
         }
     }
 
@@ -438,11 +583,54 @@ public sealed class VideoRecorder : IDisposable
         finally { Marshal.Release(texPtr); }
     }
 
+    private void WriteAudioSample(byte[] pcm, int byteCount, long sampleTime, long duration)
+    {
+        if (!IsRecording || IsPaused || !_audioStreamEnabled || _writer is null || byteCount <= 0)
+            return;
+
+        int hr = MFInterop.MFCreateMemoryBuffer((uint)byteCount, out var mfBuffer);
+        if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+        MFInterop.IMFSample? sample = null;
+        try
+        {
+            mfBuffer.Lock(out nint bufferPtr, out _, out _);
+            try
+            {
+                Marshal.Copy(pcm, 0, bufferPtr, byteCount);
+            }
+            finally
+            {
+                mfBuffer.Unlock();
+            }
+
+            mfBuffer.SetCurrentLength((uint)byteCount);
+
+            hr = MFInterop.MFCreateSample(out sample);
+            if (hr < 0) Marshal.ThrowExceptionForHR(hr);
+
+            sample.AddBuffer(mfBuffer);
+            sample.SetSampleTime(sampleTime);
+            sample.SetSampleDuration(duration);
+
+            lock (_lock)
+            {
+                _writer?.WriteSample(_audioStreamIndex, sample);
+            }
+        }
+        finally
+        {
+            if (sample is not null) Marshal.ReleaseComObject(sample);
+            Marshal.ReleaseComObject(mfBuffer);
+        }
+    }
+
     private void ReleaseWriter()
     {
         if (_writer is null) return;
         Marshal.ReleaseComObject(_writer);
         _writer = null;
+        _audioStreamEnabled = false;
     }
 
     private static void TryDeletePartialFile(string outputPath)
@@ -575,6 +763,8 @@ public sealed class VideoRecorder : IDisposable
         if (_disposed) return;
         _disposed = true;
         if (IsRecording) Stop();
+        _audioCapture?.Dispose();
+        _audioCapture = null;
         if (_d3dContext != 0) { Marshal.Release(_d3dContext); _d3dContext = 0; }
         if (_d3dDevice != 0) { Marshal.Release(_d3dDevice); _d3dDevice = 0; }
     }

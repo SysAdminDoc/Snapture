@@ -109,7 +109,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 record (Media Foundation SinkWriter + hardware encoder discovery), HDR tonemap (ACES) + AVIF / JPEG XR, RapidOCR bundle, DOCX / PPTX from Step Capture, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, auto-update via Velopack
+- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / mic capture, and live VU meters; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, RapidOCR bundle, DOCX / PPTX from Step Capture, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, and auto-update via Velopack
 
 ## Install
 
