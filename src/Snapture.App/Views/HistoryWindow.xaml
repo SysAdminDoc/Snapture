@@ -17,27 +17,22 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,0,0,1"
-                Padding="14,10">
+                Style="{StaticResource HeaderBar}">
             <DockPanel LastChildFill="True">
-                <TextBlock Text="✦ Capture History"
+                <TextBlock Text="Capture History"
+                           Style="{StaticResource WindowTitleText}"
                            Foreground="{DynamicResource AppAccent}"
-                           FontWeight="SemiBold"
                            VerticalAlignment="Center"
-                           Margin="0,0,16,0"
+                           Margin="0,0,18,0"
                            DockPanel.Dock="Left" />
                 <TextBox x:Name="SearchBox"
                          DockPanel.Dock="Left"
-                         Width="280"
+                         Width="310"
                          KeyUp="OnSearchKey"
-                         BorderBrush="{DynamicResource AppBorder}"
-                         Padding="6"
                          ToolTip="Full-text search over OCR text + window title + process name. SQLite FTS5 syntax allowed." />
                 <ComboBox x:Name="AppFilter"
                           DockPanel.Dock="Left"
-                          Width="140"
+                          Width="160"
                           Margin="8,0,0,0"
                           SelectionChanged="OnFilterChanged"
                           ToolTip="Filter by source application" />
@@ -60,64 +55,112 @@
             </DockPanel>
         </Border>
 
-        <ListView x:Name="HistoryList"
-                  Grid.Row="1"
-                  Background="{DynamicResource AppCanvas}"
-                  BorderThickness="0"
-                  Margin="0"
-                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                  MouseDoubleClick="OnRowDoubleClick">
-            <ListView.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal" />
-                </ItemsPanelTemplate>
-            </ListView.ItemsPanel>
-            <ListView.ItemTemplate>
-                <DataTemplate>
-                    <Border Background="{DynamicResource AppSurface}"
-                            BorderBrush="{DynamicResource AppBorder}"
-                            BorderThickness="1"
-                            CornerRadius="4"
-                            Margin="6"
-                            Padding="6"
-                            Width="220">
-                        <StackPanel>
-                            <Image Source="{Binding Thumbnail}"
-                                   Stretch="Uniform"
-                                   Height="120"
-                                   Margin="0,0,0,6" />
-                            <TextBlock Text="{Binding TitleLine}"
-                                       Foreground="{DynamicResource AppForeground}"
-                                       FontWeight="SemiBold"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding SubLine}"
-                                       Foreground="{DynamicResource AppMutedForeground}"
-                                       FontSize="11"
-                                       TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding TimeLine}"
-                                       Foreground="{DynamicResource AppSubtleForeground}"
-                                       FontSize="11" />
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-            <ListView.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="Open in editor" Click="OnOpenInEditor" />
-                    <MenuItem Header="Pin"             Click="OnPinSelected" />
-                    <MenuItem Header="Run OCR"         Click="OnRunOcr" />
-                    <MenuItem Header="Reveal in folder" Click="OnRevealInFolder" />
-                    <MenuItem Header="Send to LAN-share"  Click="OnSendToLanShare" />
-                    <Separator />
-                    <MenuItem Header="Delete from history" Click="OnDeleteSelected" />
-                </ContextMenu>
-            </ListView.ContextMenu>
-        </ListView>
+        <Grid Grid.Row="1" Background="{DynamicResource AppCanvas}">
+            <ListView x:Name="HistoryList"
+                      Background="Transparent"
+                      BorderThickness="0"
+                      Margin="8"
+                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      MouseDoubleClick="OnRowDoubleClick">
+                <ListView.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListView.ItemsPanel>
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Background="{DynamicResource AppSurface}"
+                                BorderBrush="{DynamicResource AppBorder}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Margin="6"
+                                Padding="8"
+                                Width="230">
+                            <StackPanel>
+                                <Border Background="{DynamicResource AppCanvas}"
+                                        BorderBrush="{DynamicResource AppBorder}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Height="128"
+                                        Margin="0,0,0,8">
+                                    <Grid>
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="Uniform">
+                                            <Image.Style>
+                                                <Style TargetType="{x:Type Image}">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Image.Style>
+                                        </Image>
+                                        <TextBlock Text="File unavailable"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center">
+                                            <TextBlock.Style>
+                                                <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource HelpText}">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding Thumbnail}" Value="{x:Null}">
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Grid>
+                                </Border>
+                                <TextBlock Text="{Binding TitleLine}"
+                                           Foreground="{DynamicResource AppForeground}"
+                                           FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding SubLine}"
+                                           Foreground="{DynamicResource AppMutedForeground}"
+                                           FontSize="11"
+                                           Margin="0,3,0,0"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding TimeLine}"
+                                           Foreground="{DynamicResource AppSubtleForeground}"
+                                           FontSize="11"
+                                           Margin="0,2,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+                <ListView.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Open in editor" Click="OnOpenInEditor" />
+                        <MenuItem Header="Pin"             Click="OnPinSelected" />
+                        <MenuItem Header="Run OCR"         Click="OnRunOcr" />
+                        <MenuItem Header="Reveal in folder" Click="OnRevealInFolder" />
+                        <MenuItem Header="Send to LAN share"  Click="OnSendToLanShare" />
+                        <Separator />
+                        <MenuItem Header="Delete from history" Click="OnDeleteSelected" />
+                    </ContextMenu>
+                </ListView.ContextMenu>
+            </ListView>
+
+            <Border x:Name="EmptyState"
+                    Style="{StaticResource SectionPanel}"
+                    Width="420"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="No captures found"
+                               Style="{StaticResource SectionTitleText}"
+                               Foreground="{DynamicResource AppForeground}" />
+                    <TextBlock Text="New captures appear here automatically. Try clearing search or filters if you expected existing results."
+                               Style="{StaticResource HelpText}" />
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <Border Grid.Row="2"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,1,0,0"
+                Style="{StaticResource FooterBar}"
                 Padding="14,8">
             <TextBlock x:Name="DbPathText"
                        Foreground="{DynamicResource AppSubtleForeground}"

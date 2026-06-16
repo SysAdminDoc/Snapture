@@ -20,61 +20,72 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="56" />
+            <ColumnDefinition Width="60" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="240" />
+            <ColumnDefinition Width="280" />
         </Grid.ColumnDefinitions>
 
         <!--  Top bar  -->
         <Border Grid.Row="0"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,0,0,1"
-                Padding="14,8">
-            <DockPanel LastChildFill="True">
-                <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                    <TextBlock Text="✦ Snapture Editor"
-                               Foreground="{DynamicResource AppAccent}"
-                               FontWeight="SemiBold"
-                               VerticalAlignment="Center"
-                               Margin="0,0,16,0" />
-                    <Button x:Name="OpenButton" Content="Open…" Click="OnOpenClicked" AutomationProperties.Name="Open file" />
-                    <Button x:Name="SaveProjectButton" Content="Save .snapture" Click="OnSaveProjectClicked" AutomationProperties.Name="Save project" />
+                Style="{StaticResource HeaderBar}"
+                Padding="12,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0"
+                           Text="Snapture Editor"
+                           Style="{StaticResource WindowTitleText}"
+                           Foreground="{DynamicResource AppAccent}"
+                           Margin="0,0,14,0" />
+
+                <ScrollViewer Grid.Column="1"
+                              HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <StackPanel Orientation="Horizontal">
+                    <Button x:Name="OpenButton" Content="Open" Click="OnOpenClicked" AutomationProperties.Name="Open file" />
+                    <Button x:Name="SaveProjectButton" Content="Save project" Click="OnSaveProjectClicked" AutomationProperties.Name="Save project" />
                     <Separator Margin="6,0" Background="{DynamicResource AppBorder}" />
                     <Button x:Name="ExportButton"
                             Content="Export PNG"
                             Style="{StaticResource AccentButton}"
                             Click="OnExportPngClicked"
                             Padding="14,6" />
-                    <Button x:Name="ExportAsButton" Content="Export As…" Click="OnExportAsClicked" AutomationProperties.Name="Export as" />
+                    <Button x:Name="ExportAsButton" Content="Export as" Click="OnExportAsClicked" AutomationProperties.Name="Export as" />
                     <Button x:Name="CopyButton" Content="Copy" Click="OnCopyClicked" AutomationProperties.Name="Copy to clipboard" />
                     <Button x:Name="PinButton" Content="Pin" Click="OnPinClicked" AutomationProperties.Name="Pin as overlay" />
                     <Separator Margin="6,0" Background="{DynamicResource AppBorder}" />
                     <Button x:Name="RetakeButton" Content="Retake" Click="OnRetakeClicked"
-                            ToolTip="Retake: discard and recapture.&#x0a;Shift+click: refresh background, keep annotations." Visibility="Collapsed" />
+                            ToolTip="Retake the capture. Hold Shift while clicking to refresh the background and keep annotations." Visibility="Collapsed" />
                     <Separator x:Name="RetakeSep" Margin="6,0" Background="{DynamicResource AppBorder}" Visibility="Collapsed" />
                     <Button x:Name="AutoRedactButton"
-                            Content="Auto-redact secrets"
+                            Content="Auto-redact"
                             Click="OnAutoRedactClicked"
-                            ToolTip="Run OCR + Gitleaks rule pack and add solid-fill redactions to detected API keys, JWTs, AWS keys, JWTs, IPs, etc." />
+                            ToolTip="Run OCR and the local rule pack, then add solid redactions for detected secrets." />
                     <Button x:Name="ShareLanButton"
-                            Content="Share to LAN"
+                            Content="LAN share"
                             Click="OnShareLanClicked"
                             ToolTip="Save the current document and copy a single-fetch LAN URL to the clipboard." />
-                </StackPanel>
-                <StackPanel Orientation="Horizontal"
+                    </StackPanel>
+                </ScrollViewer>
+
+                <StackPanel Grid.Column="2"
+                            Orientation="Horizontal"
                             HorizontalAlignment="Right"
-                            DockPanel.Dock="Right">
-                    <Button x:Name="UndoButton" Content="↶ Undo" Click="OnUndoClicked" AutomationProperties.Name="Undo" />
-                    <Button x:Name="RedoButton" Content="↷ Redo" Click="OnRedoClicked" AutomationProperties.Name="Redo" />
+                            Margin="12,0,0,0">
+                    <Button x:Name="UndoButton" Content="Undo" Click="OnUndoClicked" AutomationProperties.Name="Undo" />
+                    <Button x:Name="RedoButton" Content="Redo" Click="OnRedoClicked" AutomationProperties.Name="Redo" />
                     <TextBlock x:Name="DimensionText"
                                Foreground="{DynamicResource AppMutedForeground}"
                                VerticalAlignment="Center"
                                Margin="12,0,0,0" />
                 </StackPanel>
-            </DockPanel>
+            </Grid>
         </Border>
 
         <!--  Tool palette (left rail)  -->
@@ -83,7 +94,7 @@
                 Background="{DynamicResource AppSurface}"
                 BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="0,0,1,0"
-                Padding="6,12">
+                Padding="8,12">
             <StackPanel x:Name="ToolStack" />
         </Border>
 
@@ -91,7 +102,7 @@
         <Border Grid.Row="1"
                 Grid.Column="1"
                 Background="{DynamicResource AppCanvas}"
-                Padding="12">
+                Padding="16">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto"
                           Background="Transparent">
@@ -113,113 +124,85 @@
                 Background="{DynamicResource AppSurface}"
                 BorderBrush="{DynamicResource AppBorder}"
                 BorderThickness="1,0,0,0"
-                Padding="12">
+                Padding="14">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <TextBlock Text="Style"
-                               Foreground="{DynamicResource AppAccent}"
-                               FontWeight="SemiBold"
-                               Margin="0,0,0,6" />
-                    <TextBlock Text="Color" Foreground="{DynamicResource AppMutedForeground}" Margin="0,4,0,4" />
-                    <UniformGrid x:Name="ColorPalette" Columns="6" />
+                    <Border Style="{StaticResource SectionPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Style" Style="{StaticResource SectionTitleText}" />
+                            <TextBlock Text="Color" Style="{StaticResource HelpText}" Margin="0,2,0,5" />
+                            <UniformGrid x:Name="ColorPalette" Columns="6" />
 
-                    <TextBlock Text="Recent" Foreground="{DynamicResource AppMutedForeground}" Margin="0,8,0,4" />
-                    <UniformGrid x:Name="RecentColors" Columns="6" Height="24" />
+                            <TextBlock Text="Recent" Style="{StaticResource HelpText}" Margin="0,10,0,5" />
+                            <UniformGrid x:Name="RecentColors" Columns="6" Height="24" />
 
-                    <DockPanel Margin="0,8,0,4">
-                        <TextBlock Text="Saved" Foreground="{DynamicResource AppMutedForeground}" VerticalAlignment="Center" />
-                        <Button Content="+ Save" FontSize="10" Padding="4,1" Margin="6,0,0,0"
-                                Click="OnSaveSwatchClicked" VerticalAlignment="Center" />
-                    </DockPanel>
-                    <UniformGrid x:Name="SavedSwatches" Columns="6" />
+                            <DockPanel Margin="0,10,0,5">
+                                <TextBlock Text="Saved" Style="{StaticResource HelpText}" VerticalAlignment="Center" />
+                                <Button Content="Save swatch"
+                                        FontSize="11"
+                                        Padding="8,3"
+                                        Margin="8,0,0,0"
+                                        Click="OnSaveSwatchClicked"
+                                        VerticalAlignment="Center" />
+                            </DockPanel>
+                            <UniformGrid x:Name="SavedSwatches" Columns="6" />
 
-                    <TextBlock Text="Opacity" Foreground="{DynamicResource AppMutedForeground}" Margin="0,12,0,4" />
-                    <Slider x:Name="OpacitySlider"
-                            Minimum="0" Maximum="255"
-                            Value="255"
-                            ValueChanged="OnOpacityChanged"
-                            ToolTip="Adjust color opacity (alpha channel)" />
+                            <TextBlock Text="Opacity" Style="{StaticResource HelpText}" Margin="0,14,0,4" />
+                            <Slider x:Name="OpacitySlider"
+                                    Minimum="0" Maximum="255"
+                                    Value="255"
+                                    ValueChanged="OnOpacityChanged"
+                                    ToolTip="Adjust color opacity." />
 
-                    <TextBlock Text="Stroke" Foreground="{DynamicResource AppMutedForeground}" Margin="0,12,0,4" />
-                    <Slider x:Name="StrokeSlider"
-                            Minimum="1" Maximum="24"
-                            Value="3"
-                            ValueChanged="OnStrokeChanged" />
+                            <TextBlock Text="Stroke" Style="{StaticResource HelpText}" Margin="0,12,0,4" />
+                            <Slider x:Name="StrokeSlider"
+                                    Minimum="1" Maximum="24"
+                                    Value="3"
+                                    ValueChanged="OnStrokeChanged" />
 
-                    <CheckBox x:Name="DashedCheck"
-                              Content="Dashed line/arrow"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,8,0,0" />
-                    <CheckBox x:Name="BidirCheck"
-                              Content="Bidirectional arrow"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0" />
-                    <CheckBox x:Name="ReversedCheck"
-                              Content="Reversed arrow direction"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0" />
-                    <CheckBox x:Name="FilledCheck"
-                              Content="Filled rectangle/ellipse"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0" />
-                    <CheckBox x:Name="PixelateCheck"
-                              Content="Pixelate (instead of blur)"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0" />
-                    <CheckBox x:Name="DropShadowCheck"
-                              Content="Drop shadow on shapes"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0" />
+                            <CheckBox x:Name="DashedCheck" Content="Dashed line or arrow" Margin="0,10,0,0" />
+                            <CheckBox x:Name="BidirCheck" Content="Arrowheads at both ends" />
+                            <CheckBox x:Name="ReversedCheck" Content="Reverse arrow direction" />
+                            <CheckBox x:Name="FilledCheck" Content="Fill rectangles and ellipses" />
+                            <CheckBox x:Name="PixelateCheck" Content="Pixelate blur regions" />
+                            <CheckBox x:Name="DropShadowCheck" Content="Shape shadow" />
+                        </StackPanel>
+                    </Border>
 
-                    <TextBlock Text="Adjustments"
-                               Foreground="{DynamicResource AppAccent}"
-                               FontWeight="SemiBold"
-                               Margin="0,16,0,6" />
-                    <TextBlock Text="Brightness" Foreground="{DynamicResource AppMutedForeground}" />
-                    <Slider x:Name="BrightnessSlider" Minimum="-100" Maximum="100" Value="0" ValueChanged="OnAdjustmentChanged" />
-                    <TextBlock Text="Contrast" Foreground="{DynamicResource AppMutedForeground}" Margin="0,4,0,0" />
-                    <Slider x:Name="ContrastSlider" Minimum="-100" Maximum="100" Value="0" ValueChanged="OnAdjustmentChanged" />
-                    <CheckBox x:Name="GrayscaleCheck"
-                              Content="Grayscale"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,8,0,0"
-                              Click="OnAdjustmentClicked" />
-                    <CheckBox x:Name="InvertCheck"
-                              Content="Invert"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0"
-                              Click="OnAdjustmentClicked" />
+                    <Border Style="{StaticResource SectionPanel}">
+                        <StackPanel>
+                            <TextBlock Text="Image" Style="{StaticResource SectionTitleText}" />
+                            <TextBlock Text="Brightness" Style="{StaticResource HelpText}" />
+                            <Slider x:Name="BrightnessSlider" Minimum="-100" Maximum="100" Value="0" ValueChanged="OnAdjustmentChanged" />
+                            <TextBlock Text="Contrast" Style="{StaticResource HelpText}" Margin="0,8,0,0" />
+                            <Slider x:Name="ContrastSlider" Minimum="-100" Maximum="100" Value="0" ValueChanged="OnAdjustmentChanged" />
+                            <CheckBox x:Name="GrayscaleCheck"
+                                      Content="Grayscale"
+                                      Margin="0,10,0,0"
+                                      Click="OnAdjustmentClicked" />
+                            <CheckBox x:Name="InvertCheck"
+                                      Content="Invert colors"
+                                      Click="OnAdjustmentClicked" />
+                        </StackPanel>
+                    </Border>
 
-                    <TextBlock Text="Frame"
-                               Foreground="{DynamicResource AppAccent}"
-                               FontWeight="SemiBold"
-                               Margin="0,16,0,6" />
-                    <CheckBox x:Name="ShadowCheck"
-                              Content="Drop shadow"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Click="OnFrameClicked" />
-                    <CheckBox x:Name="RoundedCheck"
-                              Content="Rounded corners"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0"
-                              Click="OnFrameClicked" />
-                    <CheckBox x:Name="GradientCheck"
-                              Content="Gradient backdrop"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0"
-                              Click="OnFrameClicked" />
-                    <CheckBox x:Name="CodeChromeCheck"
-                              Content="Code window chrome (Carbon-style)"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0"
-                              ToolTip="Wraps the image in a macOS-style window with red / yellow / green traffic-light dots."
-                              Click="OnFrameClicked" />
-                    <CheckBox x:Name="BeautifierCheck"
-                              Content="Background Beautifier"
-                              Foreground="{DynamicResource AppMutedForeground}"
-                              Margin="0,4,0,0"
-                              ToolTip="Adds margin, rounded corners, and a gradient backdrop for polished screenshots."
-                              Click="OnFrameClicked" />
+                    <Border Style="{StaticResource SectionPanel}" Margin="0">
+                        <StackPanel>
+                            <TextBlock Text="Frame" Style="{StaticResource SectionTitleText}" />
+                            <TextBlock Text="Export-ready wrappers for cleaner screenshots." Style="{StaticResource HelpText}" Margin="0,0,0,6" />
+                            <CheckBox x:Name="ShadowCheck" Content="Drop shadow" Click="OnFrameClicked" />
+                            <CheckBox x:Name="RoundedCheck" Content="Rounded corners" Click="OnFrameClicked" />
+                            <CheckBox x:Name="GradientCheck" Content="Gradient backdrop" Click="OnFrameClicked" />
+                            <CheckBox x:Name="CodeChromeCheck"
+                                      Content="Code window chrome"
+                                      ToolTip="Wraps the image in a compact code-window frame on export."
+                                      Click="OnFrameClicked" />
+                            <CheckBox x:Name="BeautifierCheck"
+                                      Content="Background beautifier"
+                                      ToolTip="Adds margin, corners, and a gradient backdrop for polished screenshots."
+                                      Click="OnFrameClicked" />
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </ScrollViewer>
         </Border>
@@ -228,10 +211,8 @@
         <Border Grid.Row="2"
                 Grid.Column="0"
                 Grid.ColumnSpan="3"
-                Background="{DynamicResource AppSurface}"
-                BorderBrush="{DynamicResource AppBorder}"
-                BorderThickness="0,1,0,0"
-                Padding="14,6">
+                Style="{StaticResource FooterBar}"
+                Padding="14,7">
             <DockPanel LastChildFill="True">
                 <TextBlock x:Name="StatusText"
                            Foreground="{DynamicResource AppMutedForeground}"

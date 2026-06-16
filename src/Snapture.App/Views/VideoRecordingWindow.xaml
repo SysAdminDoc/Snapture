@@ -1,17 +1,23 @@
 <Window x:Class="Snapture.App.Views.VideoRecordingWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Snapture — Video recording"
-        Width="380" Height="296"
+        Title="Snapture - Video recording"
+        Width="404" Height="326"
         WindowStartupLocation="Manual"
         ResizeMode="NoResize"
         Topmost="True"
         ShowInTaskbar="False"
-        Background="{DynamicResource AppSurface}"
+        Background="{DynamicResource AppBackground}"
         Foreground="{DynamicResource AppForeground}"
         FontFamily="{StaticResource UiFont}"
         FontSize="13">
-    <Grid Margin="16">
+    <Border Margin="12"
+            Background="{DynamicResource AppSurface}"
+            BorderBrush="{DynamicResource AppBorderStrong}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="14">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -32,11 +38,16 @@
                     </EventTrigger>
                 </Ellipse.Triggers>
             </Ellipse>
-            <TextBlock x:Name="StatusLabel"
-                       Text="REC"
-                       Foreground="{DynamicResource AppDestructive}"
-                       FontWeight="SemiBold"
-                       FontSize="14" />
+            <StackPanel>
+                <TextBlock x:Name="StatusLabel"
+                           Text="REC"
+                           Foreground="{DynamicResource AppDestructive}"
+                           FontWeight="SemiBold"
+                           FontSize="14" />
+                <TextBlock Text="Video recording"
+                           Style="{StaticResource HelpText}"
+                           FontSize="11" />
+            </StackPanel>
         </DockPanel>
         <TextBlock x:Name="ProgressText"
                    Grid.Row="1"
@@ -50,7 +61,7 @@
                    FontSize="11"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"
-                   Text="Recording to MP4. Frames stream to disk — safe to record long sessions." />
+                   Text="Frames stream to disk for long-session safety." />
         <Grid Grid.Row="3" Margin="0,10,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -133,7 +144,7 @@
                           Unchecked="OnZoomSuggestionsToggled" />
         </Grid>
 
-        <DockPanel Grid.Row="4" LastChildFill="True" Margin="0,10,0,0">
+        <DockPanel Grid.Row="4" LastChildFill="True" Margin="0,12,0,0">
             <Button x:Name="StopButton"
                     DockPanel.Dock="Right"
                     Content="Stop &amp; save"
@@ -153,4 +164,5 @@
                     Margin="0,0,6,0" />
         </DockPanel>
     </Grid>
+    </Border>
 </Window>

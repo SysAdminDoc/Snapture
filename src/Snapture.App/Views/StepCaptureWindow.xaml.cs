@@ -29,6 +29,8 @@ public partial class StepCaptureWindow : Window
             StartStopButton.Content = "Start recording";
             StatusText.Text = $"Stopped — {_session.Frames.Count} steps captured.";
             FooterText.Text = $"Session folder: {_session.SessionFolder}";
+            UpdateEmptyState(_session.Frames.Count == 0, "No steps captured",
+                "Start recording again and click through the workflow you want to document.");
             return;
         }
 
@@ -51,6 +53,8 @@ public partial class StepCaptureWindow : Window
 
         StepsList.Children.Clear();
         _captionBoxes.Clear();
+        UpdateEmptyState(true, "Recording is active",
+            "Click through the workflow. Each left-click captures the foreground window after a short settle delay.");
         StartStopButton.Content = "Stop recording";
         StatusText.Text = "Recording — click anywhere to capture a step.";
         FooterText.Text = $"Session folder: {_session.SessionFolder}";
@@ -64,28 +68,38 @@ public partial class StepCaptureWindow : Window
 
     private void AppendStep(StepCaptureFrame frame)
     {
+        EmptyState.Visibility = Visibility.Collapsed;
         var card = new Border
         {
             BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(6),
-            Padding = new Thickness(12),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(14),
             Margin = new Thickness(0, 0, 0, 12)
         };
-        card.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+        card.SetResourceReference(Border.BackgroundProperty, "AppSurfaceRaised");
         card.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(360) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
+        var imageFrame = new Border
+        {
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(6),
+            Margin = new Thickness(0, 0, 14, 0),
+            Padding = new Thickness(4)
+        };
+        imageFrame.SetResourceReference(Border.BackgroundProperty, "AppCanvas");
+        imageFrame.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
         var img = new Image
         {
             Stretch = Stretch.Uniform,
             MaxHeight = 220,
-            Margin = new Thickness(0, 0, 12, 0),
             Source = LoadThumbnail(frame.FilePath)
         };
-        Grid.SetColumn(img, 0);
-        grid.Children.Add(img);
+        imageFrame.Child = img;
+        Grid.SetColumn(imageFrame, 0);
+        grid.Children.Add(imageFrame);
 
         var stack = new StackPanel();
         var stepTitle = new TextBlock
@@ -102,7 +116,8 @@ public partial class StepCaptureWindow : Window
             {
                 FontSize = 12,
                 Text = $"{frame.ProcessName ?? "?"} · {frame.WindowTitle ?? ""}",
-                TextTrimming = TextTrimming.CharacterEllipsis
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                Margin = new Thickness(0, 2, 0, 0)
             };
             sourceText.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
             stack.Children.Add(sourceText);
@@ -127,6 +142,13 @@ public partial class StepCaptureWindow : Window
         card.Child = grid;
         StepsList.Children.Add(card);
         StatusText.Text = $"{(_session?.Frames.Count ?? 0)} steps recorded · click to add more, or Stop";
+    }
+
+    private void UpdateEmptyState(bool visible, string title, string body)
+    {
+        EmptyState.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
+        EmptyTitleText.Text = title;
+        EmptyBodyText.Text = body;
     }
 
     private static BitmapSource? LoadThumbnail(string path)

@@ -20,19 +20,17 @@ public partial class PluginsWindow : Window
         PluginList.Children.Clear();
         var loader = App.Host?.Plugins;
         StatusText.Text = $"Plugins folder: {PluginLoader.PluginsDirectory}";
-        if (loader is null) return;
+        if (loader is null)
+        {
+            PluginList.Children.Add(CreateEmptyCard("Plugin loader unavailable",
+                "Start Snapture normally from the tray to initialize plugin hosting."));
+            return;
+        }
 
         if (loader.All.Count == 0)
         {
-            var empty = new TextBlock
-            {
-                Text = "No plugins installed. Drop any DLL that references Snapture.Plugin.Abstractions " +
-                       "and is annotated with [SnapturePlugin] into the plugins folder, then click Reload.",
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 8, 0, 0)
-            };
-            empty.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
-            PluginList.Children.Add(empty);
+            PluginList.Children.Add(CreateEmptyCard("No plugins installed",
+                "Drop a DLL that references Snapture.Plugin.Abstractions and is annotated with [SnapturePlugin] into the plugins folder, then reload."));
             return;
         }
 
@@ -41,11 +39,11 @@ public partial class PluginsWindow : Window
             var card = new Border
             {
                 BorderThickness = new Thickness(1),
-                CornerRadius = new CornerRadius(6),
+                CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(14),
                 Margin = new Thickness(0, 0, 0, 10),
             };
-            card.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+            card.SetResourceReference(Border.BackgroundProperty, "AppSurfaceRaised");
             card.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
             var stack = new StackPanel();
             var header = new TextBlock
@@ -76,9 +74,10 @@ public partial class PluginsWindow : Window
                 Text = $"Capabilities: {p.Info.Capabilities}",
                 FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
                 FontSize = 12,
+                TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 0, 0, 6)
             };
-            capabilities.SetResourceReference(TextBlock.ForegroundProperty, "AppWarning");
+            capabilities.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
             stack.Children.Add(capabilities);
             if (p.Info.ContractTypes.Count > 0)
             {
@@ -105,6 +104,39 @@ public partial class PluginsWindow : Window
             card.Child = stack;
             PluginList.Children.Add(card);
         }
+    }
+
+    private static Border CreateEmptyCard(string title, string body)
+    {
+        var card = new Border
+        {
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(8),
+            Padding = new Thickness(16),
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+        card.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+        card.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
+
+        var stack = new StackPanel();
+        var heading = new TextBlock
+        {
+            Text = title,
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 6)
+        };
+        heading.SetResourceReference(TextBlock.ForegroundProperty, "AppForeground");
+        stack.Children.Add(heading);
+
+        var message = new TextBlock
+        {
+            Text = body,
+            TextWrapping = TextWrapping.Wrap
+        };
+        message.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+        stack.Children.Add(message);
+        card.Child = stack;
+        return card;
     }
 
     private void OnReloadClicked(object sender, RoutedEventArgs e)

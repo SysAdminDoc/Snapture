@@ -25,20 +25,20 @@ public partial class EditorWindow : Window
     private static readonly (EditorTool tool, string label, Key hotkey, string glyph)[] ToolButtons =
     {
         (EditorTool.Select,    "Select / move",       Key.V, "↘"),
-        (EditorTool.Rectangle, "Rectangle (R)",       Key.R, "▭"),
-        (EditorTool.Ellipse,   "Ellipse (E)",         Key.E, "◯"),
-        (EditorTool.Line,      "Line (L)",            Key.L, "／"),
-        (EditorTool.Arrow,     "Arrow (A)",           Key.A, "➜"),
-        (EditorTool.Freehand,  "Freehand pen (F)",    Key.F, "✎"),
-        (EditorTool.Text,      "Text (T)",            Key.T, "T"),
-        (EditorTool.Highlight, "Highlight (H)",       Key.H, "▣"),
-        (EditorTool.Blur,      "Blur / pixelate (B)", Key.B, "▦"),
-        (EditorTool.Redact,    "Redact secrets (X)",  Key.X, "■"),
-        (EditorTool.Step,      "Step counter (N)",    Key.N, "①"),
-        (EditorTool.Crop,      "Crop (C)",            Key.C, "✂"),
-        (EditorTool.Eyedropper,"Eyedropper (I)",      Key.I, "💧"),
-        (EditorTool.Spotlight, "Spotlight (P)",       Key.P, "◐"),
-        (EditorTool.Ruler,     "Ruler (M)",           Key.M, "📏"),
+        (EditorTool.Rectangle, "Rectangle",           Key.R, "▭"),
+        (EditorTool.Ellipse,   "Ellipse",             Key.E, "◯"),
+        (EditorTool.Line,      "Line",                Key.L, "／"),
+        (EditorTool.Arrow,     "Arrow",               Key.A, "➜"),
+        (EditorTool.Freehand,  "Freehand pen",        Key.F, "✎"),
+        (EditorTool.Text,      "Text",                Key.T, "T"),
+        (EditorTool.Highlight, "Highlight",           Key.H, "▣"),
+        (EditorTool.Blur,      "Blur / pixelate",     Key.B, "▦"),
+        (EditorTool.Redact,    "Redact secrets",      Key.X, "■"),
+        (EditorTool.Step,      "Step counter",        Key.N, "①"),
+        (EditorTool.Crop,      "Crop",                Key.C, "✂"),
+        (EditorTool.Eyedropper,"Eyedropper",          Key.I, "◎"),
+        (EditorTool.Spotlight, "Spotlight",           Key.P, "◐"),
+        (EditorTool.Ruler,     "Ruler",               Key.M, "⌁"),
     };
 
     private static readonly uint[] DefaultPalette =
@@ -185,15 +185,23 @@ public partial class EditorWindow : Window
         {
             var btn = new Button
             {
-                Content = glyph,
+                Content = new TextBlock
+                {
+                    Text = glyph,
+                    FontFamily = new FontFamily("Segoe UI Symbol, Segoe UI"),
+                    FontSize = 18,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                },
                 ToolTip = tip,
                 Width = 44,
-                Height = 36,
-                Margin = new Thickness(0, 0, 0, 4),
+                Height = 38,
+                Margin = new Thickness(0, 0, 0, 6),
                 Tag = tool,
-                FontSize = 18
+                Padding = new Thickness(0)
             };
             System.Windows.Automation.AutomationProperties.SetName(btn, tip);
+            System.Windows.Automation.AutomationProperties.SetHelpText(btn, "Annotation tool");
             EditorTool captured = tool;
             btn.Click += (_, _) => SetActiveTool(captured);
             ToolStack.Children.Add(btn);
@@ -207,10 +215,11 @@ public partial class EditorWindow : Window
         foreach (Button b in ToolStack.Children.OfType<Button>())
         {
             bool active = (EditorTool)b.Tag! == tool;
-            b.SetResourceReference(Control.BackgroundProperty, active ? "AppAccent" : "AppSurfaceRaised");
-            b.SetResourceReference(Control.ForegroundProperty, active ? "AppAccentForeground" : "AppForeground");
+            b.SetResourceReference(Control.BackgroundProperty, active ? "AppSelection" : "AppSurfaceRaised");
+            b.SetResourceReference(Control.ForegroundProperty, active ? "AppAccent" : "AppForeground");
             b.SetResourceReference(Control.BorderBrushProperty, active ? "AppAccent" : "AppBorderStrong");
-            b.BorderThickness = new Thickness(active ? 0 : 1);
+            b.BorderThickness = new Thickness(1);
+            b.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
         }
         Canvas.Cursor = tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
         StatusText.Text = $"Tool: {tool}";
@@ -233,6 +242,8 @@ public partial class EditorWindow : Window
                 Cursor = Cursors.Hand
             };
             swatch.SetResourceReference(Border.BorderBrushProperty, "AppBorderStrong");
+            swatch.ToolTip = $"Use color #{argb:X8}";
+            System.Windows.Automation.AutomationProperties.SetName(swatch, $"Use color #{argb:X8}");
             swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
             ColorPalette.Children.Add(swatch);
         }
@@ -265,6 +276,8 @@ public partial class EditorWindow : Window
             };
             swatch.SetResourceReference(Border.BorderBrushProperty, "AppBorderStrong");
             swatch.BorderThickness = new Thickness(1);
+            swatch.ToolTip = $"Use recent color #{argb:X8}";
+            System.Windows.Automation.AutomationProperties.SetName(swatch, $"Use recent color #{argb:X8}");
             swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
             RecentColors.Children.Add(swatch);
         }
@@ -300,6 +313,8 @@ public partial class EditorWindow : Window
             };
             swatch.SetResourceReference(Border.BorderBrushProperty, "AppBorderStrong");
             swatch.BorderThickness = new Thickness(1);
+            swatch.ToolTip = $"Use saved color #{argb:X8}";
+            System.Windows.Automation.AutomationProperties.SetName(swatch, $"Use saved color #{argb:X8}");
             swatch.MouseLeftButtonDown += (_, _) => SetActiveColor(captured);
             SavedSwatches.Children.Add(swatch);
         }
@@ -1293,33 +1308,49 @@ public sealed class TextInputDialog : Window
 
     public TextInputDialog()
     {
-        Title = "Add text";
-        Width = 360;
-        Height = 160;
+        Title = "Add text annotation";
+        Width = 400;
+        Height = 188;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         ResizeMode = ResizeMode.NoResize;
         FontFamily = (FontFamily)Application.Current.Resources["UiFont"];
-        SetResourceReference(BackgroundProperty, "AppSurface");
+        SetResourceReference(BackgroundProperty, "AppBackground");
         SetResourceReference(ForegroundProperty, "AppForeground");
 
-        var grid = new Grid { Margin = new Thickness(16) };
+        var grid = new Grid { Margin = new Thickness(18) };
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
         grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
-        var label = new TextBlock { Text = "Enter text:" };
-        label.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
-        Grid.SetRow(label, 0);
-        _box = new TextBox { Margin = new Thickness(0, 6, 0, 6) };
+        var label = new TextBlock
+        {
+            Text = "Text annotation",
+            FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 0, 0, 4)
+        };
+        label.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+        var helper = new TextBlock
+        {
+            Text = "Add the label exactly as it should appear on the capture.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        helper.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+        var copy = new StackPanel();
+        copy.Children.Add(label);
+        copy.Children.Add(helper);
+        Grid.SetRow(copy, 0);
+        _box = new TextBox { Margin = new Thickness(0, 0, 0, 10), MinHeight = 36 };
         Grid.SetRow(_box, 1);
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-        var ok = new Button { Content = "OK", Width = 80, IsDefault = true };
+        var ok = new Button { Content = "Add text", Width = 96, IsDefault = true };
+        ok.SetResourceReference(StyleProperty, "AccentButton");
         var cancel = new Button { Content = "Cancel", Width = 80, Margin = new Thickness(8, 0, 0, 0), IsCancel = true };
         ok.Click += (_, _) => { InputText = _box.Text; DialogResult = true; };
         cancel.Click += (_, _) => DialogResult = false;
         buttons.Children.Add(ok);
         buttons.Children.Add(cancel);
         Grid.SetRow(buttons, 2);
-        grid.Children.Add(label);
+        grid.Children.Add(copy);
         grid.Children.Add(_box);
         grid.Children.Add(buttons);
         Content = grid;

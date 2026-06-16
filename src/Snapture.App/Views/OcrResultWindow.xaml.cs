@@ -5,28 +5,31 @@ namespace Snapture.App.Views;
 
 public partial class OcrResultWindow : Window
 {
+    private readonly string _recognizedText;
+
     public OcrResultWindow(string text, string? language = null)
     {
         InitializeComponent();
-        ResultBox.Text = text ?? string.Empty;
+        _recognizedText = text ?? string.Empty;
+        ResultBox.Text = _recognizedText;
         if (!string.IsNullOrEmpty(language))
             LangText.Text = $"Language: {language}";
 
-        int chars = ResultBox.Text.Length;
-        int words = ResultBox.Text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        int chars = _recognizedText.Length;
+        int words = _recognizedText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
         StatusText.Text = $"{words} words · {chars} characters";
 
         if (chars == 0)
         {
-            ResultBox.Text = "(No text detected. If the language pack you need isn't installed, " +
-                             "open Settings → Time & Language → Language to add it.)";
-            StatusText.Text = "Empty result — see settings deeplink in the message.";
+            EmptyState.Visibility = Visibility.Visible;
+            CopyButton.IsEnabled = false;
+            StatusText.Text = "No text recognized.";
         }
     }
 
     private void OnCopyClicked(object sender, RoutedEventArgs e)
     {
-        try { Clipboard.SetText(ResultBox.Text); StatusText.Text = "Copied to clipboard."; }
+        try { Clipboard.SetText(_recognizedText); StatusText.Text = "Copied to clipboard."; }
         catch { StatusText.Text = "Clipboard busy — try again."; }
     }
 

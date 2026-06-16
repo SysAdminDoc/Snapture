@@ -56,7 +56,7 @@
                     Background="{DynamicResource AppSurface}"
                     BorderBrush="{DynamicResource AppAccent}"
                     BorderThickness="2"
-                    CornerRadius="60"
+                    CornerRadius="8"
                     Visibility="Collapsed"
                     SnapsToDevicePixels="True">
                 <Grid ClipToBounds="True">

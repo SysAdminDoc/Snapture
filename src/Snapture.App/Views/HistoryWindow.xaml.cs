@@ -84,7 +84,8 @@ public partial class HistoryWindow : Window
             });
         }
         HistoryList.ItemsSource = rows;
-        StatusText.Text = $"{rows.Count} captures";
+        EmptyState.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+        StatusText.Text = rows.Count == 0 ? "No captures" : $"{rows.Count} captures";
     }
 
     private static BitmapSource? LoadThumbnail(string path)
