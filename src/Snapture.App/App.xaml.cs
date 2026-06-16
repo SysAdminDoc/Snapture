@@ -58,6 +58,7 @@ public partial class App : Application
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(level)
+            .Enrich.With<LogRedactionEnricher>()
             .WriteTo.File(
                 Path.Combine(logDir, "snapture-.log"),
                 rollingInterval: RollingInterval.Day,
