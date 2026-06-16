@@ -38,6 +38,31 @@ public sealed class RemoveShapeCommand(Shape shape) : AnnotationCommand
     }
 }
 
+/// <summary>
+/// Groups multiple commands into a single undoable/redoable operation.
+/// </summary>
+public sealed class CompositeCommand : AnnotationCommand
+{
+    private readonly List<AnnotationCommand> _children;
+
+    public CompositeCommand(IEnumerable<AnnotationCommand> children)
+    {
+        _children = children.ToList();
+    }
+
+    public override void Apply(AnnotationDocument doc)
+    {
+        foreach (var cmd in _children) cmd.Apply(doc);
+    }
+
+    public override void Revert(AnnotationDocument doc)
+    {
+        // Revert in reverse order to maintain consistency.
+        for (int i = _children.Count - 1; i >= 0; i--)
+            _children[i].Revert(doc);
+    }
+}
+
 public sealed class CommandStack
 {
     private readonly Stack<AnnotationCommand> _undo = new();

@@ -272,7 +272,7 @@ public sealed class CaptureOrchestrator
         try
         {
             Directory.CreateDirectory(_settings.Current.OutputFolder);
-            savedPath = BuildOutputPath(_settings.Current);
+            savedPath = BuildOutputPath(_settings.Current, result);
             using var fs = File.Create(savedPath);
             var fmt = _settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
                 ? ImageFormat.Jpeg : ImageFormat.Png;
@@ -322,13 +322,34 @@ public sealed class CaptureOrchestrator
         await Task.CompletedTask;
     }
 
-    private static string BuildOutputPath(SnaptureSettings s)
+    private static string BuildOutputPath(SnaptureSettings s, CaptureResult? capture = null)
     {
         var now = DateTime.Now;
+
+        string? processName = null;
+        string? windowTitle = null;
+        if (capture?.SourceWindow is { } hwnd && hwnd != 0)
+        {
+            var (proc, title) = CaptureHistoryService.DescribeForeground(hwnd);
+            processName = proc;
+            windowTitle = title;
+        }
+
         string baseName = System.Text.RegularExpressions.Regex.Replace(
             s.FilenamePattern,
             @"\{([^}]+)\}",
-            m => now.ToString(m.Groups[1].Value));
+            m =>
+            {
+                var token = m.Groups[1].Value;
+                return token switch
+                {
+                    "ProcessName" => SanitizeFilename(processName ?? "unknown"),
+                    "WindowTitle" => SanitizeFilename(windowTitle ?? "untitled"),
+                    "Width" => capture?.Bitmap.Width.ToString() ?? "0",
+                    "Height" => capture?.Bitmap.Height.ToString() ?? "0",
+                    _ => now.ToString(token)
+                };
+            });
         string ext = s.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
         string path = Path.Combine(s.OutputFolder, baseName + ext);
         int n = 1;
@@ -337,6 +358,16 @@ public sealed class CaptureOrchestrator
             path = Path.Combine(s.OutputFolder, $"{baseName}_{n++}{ext}");
         }
         return path;
+    }
+
+    private static string SanitizeFilename(string raw)
+    {
+        var invalid = Path.GetInvalidFileNameChars();
+        var clean = new System.Text.StringBuilder(raw.Length);
+        foreach (char c in raw)
+            clean.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
+        var result = clean.ToString().Trim();
+        return result.Length > 60 ? result[..60] : result;
     }
 
     private static Snapture.Plugin.PluginCapture ToPluginCapture(CaptureResult r, string? path)
