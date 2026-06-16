@@ -54,6 +54,12 @@ public sealed class TrayIconHost : IDisposable
     {
         var m = new ContextMenu();
 
+        var picker = new MenuItem { Header = "Capture _Mode Picker…" };
+        picker.Click += async (_, _) => await SafeRun(_orchestrator.CaptureViaPickerAsync);
+        m.Items.Add(picker);
+
+        m.Items.Add(new Separator());
+
         var region = new MenuItem { Header = "Capture _Region…  (PrintScreen)" };
         region.Click += async (_, _) => await SafeRun(_orchestrator.CaptureRegionAsync);
         m.Items.Add(region);

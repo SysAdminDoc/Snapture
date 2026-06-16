@@ -93,6 +93,21 @@ public sealed class CaptureOrchestrator
         await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
 
+    public async Task CaptureViaPickerAsync()
+    {
+        var mode = Views.CapturePickerWindow.PickMode();
+        if (mode is null) return;
+        switch (mode.Value)
+        {
+            case Views.CapturePickerWindow.CaptureMode.Region: await CaptureRegionAsync(); break;
+            case Views.CapturePickerWindow.CaptureMode.Window: await CaptureForegroundWindowAsync(); break;
+            case Views.CapturePickerWindow.CaptureMode.Fullscreen: await CaptureFullscreenAsync(); break;
+            case Views.CapturePickerWindow.CaptureMode.LastRegion: await CaptureLastRegionAsync(); break;
+            case Views.CapturePickerWindow.CaptureMode.ScrollingWindow: await CaptureScrollingForegroundAsync(); break;
+            case Views.CapturePickerWindow.CaptureMode.SmartElement: await CaptureSmartElementAsync(); break;
+        }
+    }
+
     public async Task CaptureWithDelayAsync(Func<Task> capture, int delaySeconds)
     {
         if (delaySeconds > 0)

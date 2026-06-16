@@ -22,6 +22,9 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
 {
     public string Name => "WinRT";
 
+    public bool IncludeSecondaryWindows { get; set; }
+    public bool IncludeCursor { get; set; } = true;
+
     private readonly GdiCaptureEngine _fallback = new();
     private readonly object _deviceLock = new();
     private nint _d3dDevice;
@@ -175,10 +178,9 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
             size);
 
         using var session = pool.CreateCaptureSession(item);
-        // Suppress the yellow border on Win11 22H2+ when the user has consented (consent
-        // is an app-level concern handled in the App; here we just opt in if we can).
         TrySetBorderRequired(session, false);
-        TrySetCursorCapture(session, true);
+        TrySetCursorCapture(session, IncludeCursor);
+        TrySetIncludeSecondaryWindows(session, IncludeSecondaryWindows);
 
         using var ready = new ManualResetEventSlim(false);
         Direct3D11CaptureFrame? captured = null;
@@ -414,12 +416,25 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         {
             if (ApiInformation.IsPropertyPresent(typeof(GraphicsCaptureSession).FullName!, "IsCursorCaptureEnabled"))
             {
-#pragma warning disable CA1416 // Validate platform compatibility — runtime-guarded above
+#pragma warning disable CA1416
                 session.IsCursorCaptureEnabled = value;
 #pragma warning restore CA1416
             }
         }
-        catch { /* very old WGC */ }
+        catch { }
+    }
+
+    private static void TrySetIncludeSecondaryWindows(GraphicsCaptureSession session, bool value)
+    {
+        if (!value) return;
+        try
+        {
+            if (!ApiInformation.IsPropertyPresent(typeof(GraphicsCaptureSession).FullName!, "IncludeSecondaryWindows"))
+                return;
+            var prop = session.GetType().GetProperty("IncludeSecondaryWindows");
+            prop?.SetValue(session, true);
+        }
+        catch { }
     }
 
     private static unsafe bool BitmapIsEmpty(Bitmap bmp)

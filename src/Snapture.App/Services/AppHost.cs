@@ -26,6 +26,7 @@ public sealed class AppHost : IDisposable
         var (engine, name) = CaptureEngineFactory.Create(Settings.Current.CaptureEngine);
         Engine = engine;
         EngineName = name;
+        ApplyEngineSettings(engine);
         Log.Information("Engine.Initialized {EngineName}", name);
         History = new CaptureHistoryService();
         var scratch = System.IO.Path.Combine(
@@ -115,10 +116,20 @@ public sealed class AppHost : IDisposable
         if (Engine is IDisposable d) d.Dispose();
         Engine = engine;
         EngineName = actual;
+        ApplyEngineSettings(engine);
         Orchestrator.ReplaceEngine(engine);
         Settings.Current.CaptureEngine = actual;
         Settings.Save();
         Log.Information("Engine.Switched {EngineName}", actual);
+    }
+
+    private void ApplyEngineSettings(ICaptureEngine engine)
+    {
+        if (engine is WinRtCaptureEngine wrt)
+        {
+            wrt.IncludeSecondaryWindows = Settings.Current.IncludeSecondaryWindows;
+            wrt.IncludeCursor = Settings.Current.IncludeCursor;
+        }
     }
 
     public void RewireHotkeys()

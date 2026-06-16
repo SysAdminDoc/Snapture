@@ -51,6 +51,12 @@ public sealed class SnaptureSettings
     /// </summary>
     public List<string> DisabledRedactRules { get; set; } = new();
 
+    /// <summary>Include popups, menus, dropdowns in window-mode capture (Win11 22H2+).</summary>
+    public bool IncludeSecondaryWindows { get; set; } = false;
+
+    /// <summary>Include cursor in screenshot captures.</summary>
+    public bool IncludeCursor { get; set; } = true;
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");
