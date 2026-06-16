@@ -272,6 +272,20 @@ public sealed class CaptureOrchestrator
             try { System.Media.SystemSounds.Exclamation.Play(); } catch { }
         }
 
+        // Auto-border
+        if (_settings.Current.AutoBorderOnCapture)
+        {
+            try
+            {
+                using var g = Graphics.FromImage(result.Bitmap);
+                uint argb = _settings.Current.AutoBorderColor;
+                var color = Color.FromArgb((int)argb);
+                using var pen = new Pen(color, 1f);
+                g.DrawRectangle(pen, 0, 0, result.Bitmap.Width - 1, result.Bitmap.Height - 1);
+            }
+            catch { }
+        }
+
         // Save to disk
         string? savedPath = null;
         try

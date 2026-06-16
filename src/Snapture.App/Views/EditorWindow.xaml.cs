@@ -65,11 +65,15 @@ public partial class EditorWindow : Window
     // Autosave: periodic crash-recovery draft
     private AutosaveService? _autosave;
 
+    // Retake: remembers the capture source so the user can redo it
+    private CaptureResult? _captureResult;
+
     public EditorWindow(BitmapSource image, string? savedPath, CaptureResult capture)
     {
         InitializeComponent();
         _doc = new AnnotationDocument(BitmapSourceToSKBitmap(image));
         _exportPath = savedPath;
+        _captureResult = capture;
         BuildToolButtons();
         BuildColorPalette();
         UpdateRecentColors();
@@ -81,6 +85,8 @@ public partial class EditorWindow : Window
         KeyDown += OnKeyDown;
         Closed += OnEditorClosed;
         _autosave = new AutosaveService(_doc);
+        RetakeButton.Visibility = Visibility.Visible;
+        RetakeSep.Visibility = Visibility.Visible;
         Canvas.InvalidateVisual();
     }
 
@@ -899,6 +905,27 @@ public partial class EditorWindow : Window
         catch (Exception ex)
         {
             StatusText.Text = $"Share failed: {ex.Message}";
+        }
+    }
+
+    private async void OnRetakeClicked(object sender, RoutedEventArgs e)
+    {
+        if (_captureResult is null || App.Host is null) return;
+        Close();
+        try
+        {
+            var orch = App.Host.Orchestrator;
+            if (_captureResult.SourceWindow is { } hwnd && hwnd != 0)
+                await orch.CaptureWindowPickerAsync();
+            else if (_captureResult.Source == "VirtualScreen" || _captureResult.Source == "Fullscreen")
+                await orch.CaptureFullscreenAsync();
+            else
+                await orch.CaptureRegionAsync();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Retake failed:\n{ex.Message}", "Snapture",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
