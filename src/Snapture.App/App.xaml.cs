@@ -20,11 +20,13 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += (_, args) =>
         {
             Log.Fatal(args.ExceptionObject as Exception, "AppDomain.UnhandledException");
+            WriteCrashDump(args.ExceptionObject as Exception);
             Log.CloseAndFlush();
         };
         DispatcherUnhandledException += (_, args) =>
         {
             Log.Fatal(args.Exception, "Dispatcher.UnhandledException");
+            WriteCrashDump(args.Exception);
             args.Handled = true;
         };
         TaskScheduler.UnobservedTaskException += (_, args) =>
@@ -44,6 +46,29 @@ public partial class App : Application
         Host?.Dispose();
         Log.CloseAndFlush();
         base.OnExit(e);
+    }
+
+    private static void WriteCrashDump(Exception? ex)
+    {
+        try
+        {
+            var dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                "Snapture", "crashes");
+            Directory.CreateDirectory(dir);
+            var path = Path.Combine(dir, $"crash_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Snapture crash — {DateTime.UtcNow:O}");
+            sb.AppendLine($"Version: {typeof(App).Assembly.GetName().Version}");
+            sb.AppendLine($"OS: {Environment.OSVersion}");
+            sb.AppendLine($".NET: {Environment.Version}");
+            sb.AppendLine($"Working set: {Environment.WorkingSet / (1024 * 1024)} MB");
+            sb.AppendLine();
+            sb.AppendLine(ex?.ToString() ?? "(no exception)");
+            File.WriteAllText(path, sb.ToString());
+            Log.Information("CrashDump.Written {Path}", path);
+        }
+        catch { }
     }
 
     private static void ConfigureLogging(string[] args)
