@@ -22,6 +22,11 @@ public partial class CaptureFlashWindow : Window
 
     public void Flash()
     {
+        if (!SystemParameters.ClientAreaAnimation)
+        {
+            Close();
+            return;
+        }
         Show();
         var anim = new DoubleAnimation(0.4, 0.0, TimeSpan.FromMilliseconds(200))
         {
