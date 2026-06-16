@@ -9,17 +9,18 @@ public partial class CapturePickerWindow : Window
 {
     public enum CaptureMode
     {
-        Region, Window, Fullscreen, LastRegion, ScrollingWindow, SmartElement
+        Region, Window, Fullscreen, LastRegion, ScrollingWindow, SmartElement, MonitorUnderCursor
     }
 
     private static readonly (CaptureMode mode, string label, string glyph, string hotkey)[] Modes =
     {
-        (CaptureMode.Region,          "Region",                    "⊞", "1"),
-        (CaptureMode.Window,          "Foreground window",         "⊟", "2"),
-        (CaptureMode.Fullscreen,      "Fullscreen (all monitors)", "⊠", "3"),
-        (CaptureMode.LastRegion,      "Last region",               "↺", "4"),
-        (CaptureMode.ScrollingWindow, "Scrolling window",          "⇕", "5"),
-        (CaptureMode.SmartElement,    "Smart element",             "◎", "6"),
+        (CaptureMode.Region,             "Region",                    "⊞", "1"),
+        (CaptureMode.Window,             "Foreground window",         "⊟", "2"),
+        (CaptureMode.Fullscreen,         "Fullscreen (all monitors)", "⊠", "3"),
+        (CaptureMode.MonitorUnderCursor, "Monitor under cursor",      "▣", "4"),
+        (CaptureMode.LastRegion,         "Last region",               "↺", "5"),
+        (CaptureMode.ScrollingWindow,    "Scrolling window",          "⇕", "6"),
+        (CaptureMode.SmartElement,       "Smart element",             "◎", "7"),
     };
 
     public CaptureMode? SelectedMode { get; private set; }
@@ -65,9 +66,10 @@ public partial class CapturePickerWindow : Window
             case Key.D1: SelectedMode = CaptureMode.Region; Close(); break;
             case Key.D2: SelectedMode = CaptureMode.Window; Close(); break;
             case Key.D3: SelectedMode = CaptureMode.Fullscreen; Close(); break;
-            case Key.D4: SelectedMode = CaptureMode.LastRegion; Close(); break;
-            case Key.D5: SelectedMode = CaptureMode.ScrollingWindow; Close(); break;
-            case Key.D6: SelectedMode = CaptureMode.SmartElement; Close(); break;
+            case Key.D4: SelectedMode = CaptureMode.MonitorUnderCursor; Close(); break;
+            case Key.D5: SelectedMode = CaptureMode.LastRegion; Close(); break;
+            case Key.D6: SelectedMode = CaptureMode.ScrollingWindow; Close(); break;
+            case Key.D7: SelectedMode = CaptureMode.SmartElement; Close(); break;
         }
     }
 
