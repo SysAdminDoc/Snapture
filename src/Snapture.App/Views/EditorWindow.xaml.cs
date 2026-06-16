@@ -306,6 +306,8 @@ public partial class EditorWindow : Window
         {
             if (e.Key == Key.Z) { _selectedShapes.Clear(); _commands.Undo(_doc); Canvas.InvalidateVisual(); e.Handled = true; return; }
             if (e.Key == Key.Y) { _selectedShapes.Clear(); _commands.Redo(_doc); Canvas.InvalidateVisual(); e.Handled = true; return; }
+            if (e.Key == Key.A && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            { SelectAllOfType(); e.Handled = true; return; }
             if (e.Key == Key.A) { SelectAll(); e.Handled = true; return; }
             if (e.Key == Key.S) { OnSaveProjectClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.E) { OnExportPngClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
@@ -361,6 +363,17 @@ public partial class EditorWindow : Window
         foreach (var s in _doc.Shapes) _selectedShapes.Add(s);
         int count = _selectedShapes.Count;
         StatusText.Text = count == 0 ? "No shapes" : $"{count} shapes selected";
+        Canvas.InvalidateVisual();
+    }
+
+    private void SelectAllOfType()
+    {
+        if (_selectedShapes.Count == 0) { SelectAll(); return; }
+        var type = _selectedShapes.First().GetType();
+        _selectedShapes.Clear();
+        foreach (var s in _doc.Shapes)
+            if (s.GetType() == type) _selectedShapes.Add(s);
+        StatusText.Text = $"{_selectedShapes.Count} {type.Name.Replace("Shape", "")}(s) selected";
         Canvas.InvalidateVisual();
     }
 
