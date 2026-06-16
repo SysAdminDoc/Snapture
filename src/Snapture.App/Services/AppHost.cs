@@ -48,7 +48,7 @@ public sealed class AppHost : IDisposable
         RewireHotkeys();
 
         _tray?.ShowToast("Snapture is running",
-            $"Engine: {EngineName.ToUpperInvariant()}. PrintScreen for region · Alt+PS for window · Ctrl+PS fullscreen · Shift+PS recapture last region.");
+            $"Engine: {EngineName.ToUpperInvariant()}. PrintScreen captures a region; Alt+PrintScreen captures a window.");
 
         // First-run consent for borderless capture (Win11 22H2+).
         if (!Settings.Current.BorderlessConsentGiven)
@@ -59,7 +59,7 @@ public sealed class AppHost : IDisposable
         if (!Settings.Current.WinRtUpgradeToastShown && EngineName == CaptureEngineFactory.WinRt)
         {
             _tray?.ShowToast("Capture engine upgraded",
-                "Snapture is using the modern WinRT engine. If anything looks off, switch back in Settings → Capture → Engine.");
+                "Snapture is using the modern WinRT engine. You can switch engines in Settings > Capture > Engine.");
             Settings.Current.WinRtUpgradeToastShown = true;
             Settings.Save();
         }
@@ -109,7 +109,7 @@ public sealed class AppHost : IDisposable
         if (!Settings.Current.PrintScreenHijackToastShown && PrintScreenHijackDetector.IsHijacked())
         {
             _tray?.ShowToast("PrintScreen is hijacked",
-                "Windows is sending PrintScreen to the Snipping Tool. Right-click the Snapture tray → Reclaim PrintScreen.");
+                "Windows is sending PrintScreen to the Snipping Tool. Use the tray menu's Restore PrintScreen shortcut action.");
             Settings.Current.PrintScreenHijackToastShown = true;
             Settings.Save();
         }
@@ -126,8 +126,8 @@ public sealed class AppHost : IDisposable
 
             var result = MessageBox.Show(
                 $"Snapture found {pending.Count} unsaved editing session(s) from a previous run.\n\n" +
-                "Would you like to recover them?",
-                "Snapture — Recover unsaved work",
+                "Reopen them now?",
+                "Snapture - Recover unsaved work",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 

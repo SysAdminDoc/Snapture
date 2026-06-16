@@ -93,7 +93,7 @@ public partial class SettingsWindow : Window
 
         bool hijacked = PrintScreenHijackDetector.IsHijacked();
         PrintScreenStatus.Text = hijacked
-            ? "Windows is currently sending PrintScreen to the Snipping Tool. Click Reclaim to send it back to apps."
+            ? "Windows is currently sending PrintScreen to the Snipping Tool. Restore the shortcut to let apps receive it again."
             : "PrintScreen is not hijacked.";
         ReclaimPrintScreenButton.IsEnabled = hijacked;
     }
@@ -185,7 +185,7 @@ public partial class SettingsWindow : Window
     {
         if (PrintScreenHijackDetector.Reclaim())
         {
-            PrintScreenStatus.Text = "Reclaimed. Sign out + back in for the change to take full effect.";
+            PrintScreenStatus.Text = "PrintScreen is restored. Sign out and back in for the change to take full effect.";
             ReclaimPrintScreenButton.IsEnabled = false;
         }
         else

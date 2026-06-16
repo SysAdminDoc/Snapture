@@ -10,13 +10,15 @@ namespace Snapture.App.Views;
 public partial class PinWindow : Window
 {
     private static readonly List<PinWindow> AllPins = new();
-    private static bool _hidden;
 
     private double _scale = 1.0;
     private double _opacity = 1.0;
     private bool _clickThrough;
     private bool _borderVisible = true;
     private bool _shadowVisible = true;
+    private MenuItem? _borderMenu;
+    private MenuItem? _shadowMenu;
+    private MenuItem? _clickThroughMenu;
 
     public PinWindow(BitmapSource image)
     {
@@ -26,10 +28,10 @@ public partial class PinWindow : Window
         PinnedImage.Height = image.PixelHeight;
 
         MouseLeftButtonDown += OnLeftDown;
-        MouseRightButtonDown += (_, _) => Close();
         PreviewMouseWheel += OnWheel;
         KeyDown += OnKeyDown;
         ContextMenu = BuildMenu();
+        ContextMenu.Opened += (_, _) => SyncMenuState();
         Loaded += OnLoaded;
         Closed += (_, _) => AllPins.Remove(this);
         AllPins.Add(this);
@@ -84,14 +86,17 @@ public partial class PinWindow : Window
             case Key.Escape: Close(); break;
             case Key.B when Keyboard.Modifiers == ModifierKeys.None: ToggleBorder(); break;
             case Key.S when Keyboard.Modifiers == ModifierKeys.None: ToggleShadow(); break;
-            case Key.H when Keyboard.Modifiers == ModifierKeys.None: ToggleAllVisibility(); break;
+            case Key.H when Keyboard.Modifiers == ModifierKeys.None: ToggleOtherPinsVisibility(); break;
             case Key.O when Keyboard.Modifiers == ModifierKeys.None: SoloThis(); break;
         }
     }
 
     private void ToggleClickThrough()
+        => SetClickThrough(!_clickThrough);
+
+    private void SetClickThrough(bool enabled)
     {
-        _clickThrough = !_clickThrough;
+        _clickThrough = enabled;
         var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
         const int GWL_EXSTYLE = -20;
         const int WS_EX_TRANSPARENT = 0x00000020;
@@ -99,18 +104,27 @@ public partial class PinWindow : Window
         if (_clickThrough) ex |= WS_EX_TRANSPARENT;
         else ex &= ~WS_EX_TRANSPARENT;
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, (nint)ex);
+        if (_clickThroughMenu is not null) _clickThroughMenu.IsChecked = _clickThrough;
     }
 
     private void ToggleBorder()
+        => SetBorderVisible(!_borderVisible);
+
+    private void SetBorderVisible(bool visible)
     {
-        _borderVisible = !_borderVisible;
+        _borderVisible = visible;
         FrameBorder.BorderThickness = _borderVisible ? new Thickness(2) : new Thickness(0);
+        if (_borderMenu is not null) _borderMenu.IsChecked = _borderVisible;
     }
 
     private void ToggleShadow()
+        => SetShadowVisible(!_shadowVisible);
+
+    private void SetShadowVisible(bool visible)
     {
-        _shadowVisible = !_shadowVisible;
+        _shadowVisible = visible;
         FrameBorder.Effect = _shadowVisible ? DropShadow : null;
+        if (_shadowMenu is not null) _shadowMenu.IsChecked = _shadowVisible;
     }
 
     private void SetOpacity(double v)
@@ -119,13 +133,19 @@ public partial class PinWindow : Window
         Opacity = _opacity;
     }
 
-    private static void ToggleAllVisibility()
+    private void ToggleOtherPinsVisibility()
     {
-        _hidden = !_hidden;
-        foreach (var p in AllPins.ToArray())
+        var hiddenOtherExists = AllPins.Any(p => !ReferenceEquals(p, this) && !p.IsVisible);
+        if (hiddenOtherExists)
         {
-            if (_hidden) p.Hide(); else p.Show();
+            foreach (var p in AllPins.ToArray()) p.Show();
+            Activate();
+            return;
         }
+
+        foreach (var p in AllPins.ToArray())
+            if (!ReferenceEquals(p, this))
+                p.Hide();
     }
 
     private void SoloThis()
@@ -138,11 +158,11 @@ public partial class PinWindow : Window
     private ContextMenu BuildMenu()
     {
         var menu = new ContextMenu();
-        var copy = new MenuItem { Header = "Copy" };
+        var copy = new MenuItem { Header = "Copy image" };
         copy.Click += (_, _) => Clipboard.SetImage((BitmapSource)PinnedImage.Source);
         menu.Items.Add(copy);
 
-        var resetScale = new MenuItem { Header = "Reset 100% (scroll-wheel zooms)" };
+        var resetScale = new MenuItem { Header = "Actual size" };
         resetScale.Click += (_, _) =>
         {
             _scale = 1.0;
@@ -156,37 +176,44 @@ public partial class PinWindow : Window
         foreach (var pct in new[] { 25, 50, 75, 100 })
         {
             int p = pct;
-            var mi = new MenuItem { Header = $"{p}%" };
+            var mi = new MenuItem { Header = $"{p}% opacity" };
             mi.Click += (_, _) => SetOpacity(p / 100.0);
             opacityMenu.Items.Add(mi);
         }
         menu.Items.Add(opacityMenu);
 
-        var border = new MenuItem { Header = "Toggle border (B)" };
-        border.Click += (_, _) => ToggleBorder();
-        menu.Items.Add(border);
+        _borderMenu = new MenuItem { Header = "Show border", IsCheckable = true, IsChecked = _borderVisible, InputGestureText = "B" };
+        _borderMenu.Click += (_, _) => SetBorderVisible(_borderMenu.IsChecked);
+        menu.Items.Add(_borderMenu);
 
-        var shadow = new MenuItem { Header = "Toggle shadow (S)" };
-        shadow.Click += (_, _) => ToggleShadow();
-        menu.Items.Add(shadow);
+        _shadowMenu = new MenuItem { Header = "Show shadow", IsCheckable = true, IsChecked = _shadowVisible, InputGestureText = "S" };
+        _shadowMenu.Click += (_, _) => SetShadowVisible(_shadowMenu.IsChecked);
+        menu.Items.Add(_shadowMenu);
 
-        var clickThrough = new MenuItem { Header = "Click-through (Alt+click toggles)" };
-        clickThrough.Click += (_, _) => ToggleClickThrough();
-        menu.Items.Add(clickThrough);
+        _clickThroughMenu = new MenuItem { Header = "Let clicks pass through", IsCheckable = true, IsChecked = _clickThrough, InputGestureText = "Alt+click" };
+        _clickThroughMenu.Click += (_, _) => SetClickThrough(_clickThroughMenu.IsChecked);
+        menu.Items.Add(_clickThroughMenu);
 
-        var solo = new MenuItem { Header = "Solo this pin (O)" };
+        var solo = new MenuItem { Header = "Show only this pin", InputGestureText = "O" };
         solo.Click += (_, _) => SoloThis();
         menu.Items.Add(solo);
 
-        var hideAll = new MenuItem { Header = "Hide / show all pins (H)" };
-        hideAll.Click += (_, _) => ToggleAllVisibility();
-        menu.Items.Add(hideAll);
+        var hideOthers = new MenuItem { Header = "Hide or restore other pins", InputGestureText = "H" };
+        hideOthers.Click += (_, _) => ToggleOtherPinsVisibility();
+        menu.Items.Add(hideOthers);
 
         menu.Items.Add(new Separator());
-        var close = new MenuItem { Header = "Close (Esc)" };
+        var close = new MenuItem { Header = "Close pin", InputGestureText = "Esc" };
         close.Click += (_, _) => Close();
         menu.Items.Add(close);
         return menu;
+    }
+
+    private void SyncMenuState()
+    {
+        if (_borderMenu is not null) _borderMenu.IsChecked = _borderVisible;
+        if (_shadowMenu is not null) _shadowMenu.IsChecked = _shadowVisible;
+        if (_clickThroughMenu is not null) _clickThroughMenu.IsChecked = _clickThrough;
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int nIndex);

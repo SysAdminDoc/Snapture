@@ -22,11 +22,7 @@
                        Fill="{DynamicResource SelectionFill}"
                        Visibility="Collapsed" />
             <Border x:Name="DescBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppAccent}"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="8,4"
+                    Style="{StaticResource OverlayInfoBadge}"
                     MaxWidth="520"
                     Visibility="Collapsed">
                 <StackPanel>
@@ -45,21 +41,12 @@
                 </StackPanel>
             </Border>
             <Border x:Name="HintBadge"
-                    Background="{DynamicResource AppSurface}"
-                    BorderBrush="{DynamicResource AppBorderStrong}"
-                    BorderThickness="1"
-                    CornerRadius="6"
-                    Padding="14,8">
-                <TextBlock Foreground="{DynamicResource AppMutedForeground}" FontSize="13">
-                    <Run Foreground="{DynamicResource AppAccent}" Text="Hover" />
-                    <Run Text=" any control to highlight it · " />
-                    <Run Foreground="{DynamicResource AppAccent}" Text="click" />
-                    <Run Text=" to capture · " />
-                    <Run Foreground="{DynamicResource AppAccent}" Text="PgUp/PgDn" />
-                    <Run Text=" walks parent/child · " />
-                    <Run Foreground="{DynamicResource AppAccent}" Text="Esc" />
-                    <Run Text=" cancels" />
-                </TextBlock>
+                    Style="{StaticResource OverlayHintBadge}">
+                <StackPanel>
+                    <TextBlock Text="Smart element capture" Style="{StaticResource OverlayHintTitleText}" />
+                    <TextBlock Text="Hover a control, then click to capture it. PgUp/PgDn refines the target; Esc cancels."
+                               Style="{StaticResource OverlayHintBodyText}" />
+                </StackPanel>
             </Border>
         </Canvas>
     </Grid>
