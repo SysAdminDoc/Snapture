@@ -37,6 +37,19 @@ public abstract class Shape
     /// <summary>Translates the shape by the given pixel offset.</summary>
     public abstract void Offset(float dx, float dy);
 
+    /// <summary>Resizes this shape to fit the given bounds rectangle.</summary>
+    public virtual void ResizeTo(SKRect newBounds)
+    {
+        var old = GetBounds();
+        if (old.Width <= 0 || old.Height <= 0) return;
+        float sx = newBounds.Width / old.Width;
+        float sy = newBounds.Height / old.Height;
+        Offset(newBounds.Left - old.Left, newBounds.Top - old.Top);
+        ScaleFrom(newBounds.Left, newBounds.Top, sx, sy);
+    }
+
+    protected virtual void ScaleFrom(float originX, float originY, float sx, float sy) { }
+
     protected void ApplyShadowIfNeeded(SKPaint paint)
     {
         if (DropShadow)
@@ -111,6 +124,7 @@ public sealed class RectangleShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }
 
 /// <summary>Drops a measurement line onto the canvas showing pixel distance and angle.</summary>
@@ -179,6 +193,14 @@ public sealed class RulerShape : Shape
     };
 
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
+    public override void ResizeTo(SKRect r)
+    {
+        var old = GetBounds();
+        if (old.Width > 0) { X1 = r.Left + (X1 - old.Left) / old.Width * r.Width; X2 = r.Left + (X2 - old.Left) / old.Width * r.Width; }
+        else { X1 = r.MidX; X2 = r.MidX; }
+        if (old.Height > 0) { Y1 = r.Top + (Y1 - old.Top) / old.Height * r.Height; Y2 = r.Top + (Y2 - old.Top) / old.Height * r.Height; }
+        else { Y1 = r.MidY; Y2 = r.MidY; }
+    }
 }
 
 /// <summary>Darkens everything outside the rectangle while keeping the inside sharp.</summary>
@@ -215,6 +237,7 @@ public sealed class SpotlightShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }
 
 public sealed class EllipseShape : Shape
@@ -248,6 +271,7 @@ public sealed class EllipseShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }
 
 public sealed class LineShape : Shape
@@ -278,6 +302,14 @@ public sealed class LineShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
+    public override void ResizeTo(SKRect r)
+    {
+        var old = GetBounds();
+        if (old.Width > 0) { X1 = r.Left + (X1 - old.Left) / old.Width * r.Width; X2 = r.Left + (X2 - old.Left) / old.Width * r.Width; }
+        else { X1 = r.MidX; X2 = r.MidX; }
+        if (old.Height > 0) { Y1 = r.Top + (Y1 - old.Top) / old.Height * r.Height; Y2 = r.Top + (Y2 - old.Top) / old.Height * r.Height; }
+        else { Y1 = r.MidY; Y2 = r.MidY; }
+    }
 }
 
 public sealed class ArrowShape : Shape
@@ -331,6 +363,14 @@ public sealed class ArrowShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
+    public override void ResizeTo(SKRect r)
+    {
+        var old = GetBounds();
+        if (old.Width > 0) { X1 = r.Left + (X1 - old.Left) / old.Width * r.Width; X2 = r.Left + (X2 - old.Left) / old.Width * r.Width; }
+        else { X1 = r.MidX; X2 = r.MidX; }
+        if (old.Height > 0) { Y1 = r.Top + (Y1 - old.Top) / old.Height * r.Height; Y2 = r.Top + (Y2 - old.Top) / old.Height * r.Height; }
+        else { Y1 = r.MidY; Y2 = r.MidY; }
+    }
 }
 
 public sealed class FreehandShape : Shape
@@ -372,6 +412,17 @@ public sealed class FreehandShape : Shape
     {
         for (int i = 0; i < Points.Count; i++)
             Points[i] = new SKPoint(Points[i].X + dx, Points[i].Y + dy);
+    }
+    public override void ResizeTo(SKRect r)
+    {
+        var old = GetBounds();
+        if (old.Width <= 0 || old.Height <= 0 || Points.Count == 0) return;
+        for (int i = 0; i < Points.Count; i++)
+        {
+            float nx = r.Left + (Points[i].X - old.Left) / old.Width * r.Width;
+            float ny = r.Top + (Points[i].Y - old.Top) / old.Height * r.Height;
+            Points[i] = new SKPoint(nx, ny);
+        }
     }
 }
 
@@ -445,6 +496,7 @@ public sealed class HighlightShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }
 
 public sealed class BlurShape : Shape
@@ -502,6 +554,7 @@ public sealed class BlurShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }
 
 /// <summary>Solid-fill redaction. The only safe way to hide secrets — blur is reversible.</summary>
@@ -528,6 +581,7 @@ public sealed class RedactShape : Shape
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }
 
 public sealed class StepShape : Shape
