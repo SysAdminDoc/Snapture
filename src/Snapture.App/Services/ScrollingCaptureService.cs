@@ -23,6 +23,9 @@ namespace Snapture.App.Services;
 [SupportedOSPlatform("windows")]
 public sealed class ScrollingCaptureService
 {
+    private const int LazySettleAttempts = 3;
+    private const int LazySettleDelayMilliseconds = 160;
+
     private readonly ICaptureEngine _engine;
 
     public ScrollingCaptureService(ICaptureEngine engine)
@@ -76,8 +79,9 @@ public sealed class ScrollingCaptureService
             const int MaxFrames = 40;
             while (safety++ < MaxFrames)
             {
-                var capture = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
-                frames.Add(capture.Bitmap);
+                Bitmap settledFrame = await CaptureSettledFrameAsync(hwnd, progress)
+                    .ConfigureAwait(true);
+                frames.Add(settledFrame);
                 progress?.Report($"Frame {frames.Count} ({(int)scroll.Current.VerticalScrollPercent}%)");
 
                 if (scroll.Current.VerticalScrollPercent >= 99) break;
@@ -103,6 +107,49 @@ public sealed class ScrollingCaptureService
         finally
         {
             try { scroll.SetScrollPercent(ScrollPattern.NoScroll, originalPercent); } catch { }
+        }
+    }
+
+    private async Task<Bitmap> CaptureSettledFrameAsync(
+        nint hwnd,
+        IProgress<string>? progress)
+    {
+        CaptureResult? latest = null;
+        try
+        {
+            for (int attempt = 1; attempt <= LazySettleAttempts; attempt++)
+            {
+                var candidate = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
+                if (latest is not null)
+                {
+                    bool stable = LazyContentStability.IsStable(latest.Bitmap, candidate.Bitmap);
+                    latest.Bitmap.Dispose();
+                    latest = candidate;
+                    if (stable)
+                    {
+                        progress?.Report("Lazy content settled");
+                        return candidate.Bitmap;
+                    }
+                }
+                else
+                {
+                    latest = candidate;
+                }
+
+                if (attempt < LazySettleAttempts)
+                {
+                    progress?.Report($"Waiting for lazy content ({attempt}/{LazySettleAttempts - 1})");
+                    await Task.Delay(LazySettleDelayMilliseconds).ConfigureAwait(true);
+                }
+            }
+
+            return latest?.Bitmap
+                ?? throw new InvalidOperationException("The capture engine returned no frame.");
+        }
+        catch
+        {
+            latest?.Bitmap.Dispose();
+            throw;
         }
     }
 
