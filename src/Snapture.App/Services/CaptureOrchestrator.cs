@@ -175,19 +175,32 @@ public sealed class CaptureOrchestrator
         var hwnd = Native2.GetForegroundWindow();
         if (hwnd == 0) return;
         var svc = new ScrollingCaptureService(_engine);
-        var bmp = await svc.CaptureScrollingForegroundAsync(hwnd, new Progress<string>(_ => { })).ConfigureAwait(true);
-        if (bmp is null)
+        var preview = new ScrollingPreviewWindow();
+        preview.Show();
+        try
         {
-            MessageBox.Show(
-                "Snapture could not drive a scrolling capture on the active window.\n\n" +
-                "This means the window does not expose a UIA scroll pattern. Most browsers, " +
-                "Word, Excel and PowerPoint route scroll through their own custom hosts; " +
-                "image-stitching fallback ships in v0.4.",
-                "Snapture", MessageBoxButton.OK, MessageBoxImage.Information);
-            return;
+            var bmp = await svc.CaptureScrollingForegroundAsync(
+                hwnd,
+                new Progress<string>(preview.UpdateStatus),
+                preview.UpdateFrame).ConfigureAwait(true);
+            if (bmp is null)
+            {
+                MessageBox.Show(
+                    "Snapture could not drive a scrolling capture on the active window.\n\n" +
+                    "The window did not expose a usable UIA scroll pattern. Chromium 130+, " +
+                    "Word, Excel and PowerPoint are supported when their scroll host is available.",
+                    "Snapture", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+            preview.UpdateStatus("Stitching complete");
+            await DeliverCaptureAsync(new CaptureResult(
+                bmp, new Rectangle(0, 0, bmp.Width, bmp.Height),
+                DateTime.UtcNow, "Scrolling", hwnd)).ConfigureAwait(true);
         }
-        await DeliverCaptureAsync(new CaptureResult(bmp, new Rectangle(0, 0, bmp.Width, bmp.Height),
-            DateTime.UtcNow, "Scrolling", hwnd)).ConfigureAwait(true);
+        finally
+        {
+            preview.Close();
+        }
     }
 
     public async Task OcrRegionAsync()

@@ -88,6 +88,7 @@ All notable changes to Snapture will be documented in this file.
 - Screen and monitor captures now detect visible layered or tool-topmost overlays and route those rectangles through a short-lived STA Magnification API helper when WGC/GDI would omit the composed overlay; ordinary captures keep their existing fast path.
 - Scrolling capture now recognizes Chromium-family windows, searches the default UIA tree for the largest visible document scroll provider, and falls back from `LargeIncrement` to a viewport-percent step when Chromium does not advance the provider.
 - Scrolling capture now waits for lazy-loaded content to settle at each scroll position with bounded sampled-frame comparisons; animated pages remain bounded and use their newest frame.
+- Scrolling capture now shows a non-modal live viewport preview with frame count and scroll progress while UIA drives the source window; the preview closes before the stitched result is delivered.
 
 ### Fixed
 

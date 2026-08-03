@@ -33,7 +33,10 @@ public sealed class ScrollingCaptureService
         _engine = engine;
     }
 
-    public async Task<Bitmap?> CaptureScrollingForegroundAsync(nint hwnd, IProgress<string>? progress = null)
+    public async Task<Bitmap?> CaptureScrollingForegroundAsync(
+        nint hwnd,
+        IProgress<string>? progress = null,
+        Action<Bitmap, int, double>? preview = null)
     {
         if (hwnd == 0) { progress?.Report("No foreground window."); return null; }
         if (!WindowEnumerator.GetExtendedFrameBounds(hwnd, out var bounds))
@@ -82,7 +85,10 @@ public sealed class ScrollingCaptureService
                 Bitmap settledFrame = await CaptureSettledFrameAsync(hwnd, progress)
                     .ConfigureAwait(true);
                 frames.Add(settledFrame);
-                progress?.Report($"Frame {frames.Count} ({(int)scroll.Current.VerticalScrollPercent}%)");
+                double scrollPercent = scroll.Current.VerticalScrollPercent;
+                try { preview?.Invoke(settledFrame, frames.Count, scrollPercent); }
+                catch (Exception ex) { progress?.Report($"Preview unavailable: {ex.Message}"); }
+                progress?.Report($"Frame {frames.Count} ({(int)scrollPercent}%)");
 
                 if (scroll.Current.VerticalScrollPercent >= 99) break;
 
