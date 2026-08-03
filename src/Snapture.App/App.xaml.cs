@@ -4,6 +4,7 @@ using System.Windows.Threading;
 using Serilog;
 using Serilog.Events;
 using Snapture.App.Services;
+using Snapture.Capture;
 
 namespace Snapture.App;
 
@@ -13,6 +14,15 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        if (MagnificationHelperHost.IsHelperRequest(e.Args))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            base.OnStartup(e);
+            Environment.ExitCode = MagnificationHelperHost.Run(e.Args);
+            Shutdown();
+            return;
+        }
+
         AppIdentity.SetAumid();
         ConfigureLogging(e.Args);
 

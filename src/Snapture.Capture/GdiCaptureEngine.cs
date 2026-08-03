@@ -14,7 +14,7 @@ public sealed class GdiCaptureEngine : ICaptureEngine
         => Task.Run(() =>
         {
             ct.ThrowIfCancellationRequested();
-            var bmp = CaptureScreenRect(virtualRegion);
+            var bmp = CaptureScreenRect(virtualRegion, ct);
             return new CaptureResult(bmp, virtualRegion, DateTime.UtcNow, "Region");
         }, ct);
 
@@ -22,14 +22,14 @@ public sealed class GdiCaptureEngine : ICaptureEngine
         => Task.Run(() =>
         {
             var v = MonitorEnumerator.GetVirtualScreen();
-            var bmp = CaptureScreenRect(v);
+            var bmp = CaptureScreenRect(v, ct);
             return new CaptureResult(bmp, v, DateTime.UtcNow, "VirtualScreen");
         }, ct);
 
     public Task<CaptureResult> CaptureMonitorAsync(MonitorInfo monitor, CancellationToken ct = default)
         => Task.Run(() =>
         {
-            var bmp = CaptureScreenRect(monitor.Bounds);
+            var bmp = CaptureScreenRect(monitor.Bounds, ct);
             return new CaptureResult(bmp, monitor.Bounds, DateTime.UtcNow, $"Monitor:{monitor.DeviceName}");
         }, ct);
 
@@ -42,10 +42,18 @@ public sealed class GdiCaptureEngine : ICaptureEngine
             return new CaptureResult(bmp, bounds, DateTime.UtcNow, "Window", hwnd);
         }, ct);
 
-    private static Bitmap CaptureScreenRect(Rectangle bounds)
+    private static Bitmap CaptureScreenRect(Rectangle bounds, CancellationToken ct = default)
     {
         if (bounds.Width <= 0 || bounds.Height <= 0)
             throw new ArgumentException("Capture region has zero or negative size.");
+
+        ct.ThrowIfCancellationRequested();
+        if (LayeredWindowDetector.HasVisibleOverlay(bounds))
+        {
+            var magnified = MagnificationCapture.TryCapture(bounds, ct);
+            if (magnified is not null) return magnified;
+        }
+
         var bmp = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format32bppArgb);
         using var g = Graphics.FromImage(bmp);
         g.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size, CopyPixelOperation.SourceCopy);

@@ -68,6 +68,17 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         {
             try
             {
+                if (LayeredWindowDetector.HasVisibleOverlay(monitor.Bounds))
+                {
+                    var magnified = MagnificationCapture.TryCapture(monitor.Bounds, ct);
+                    if (magnified is not null)
+                    {
+                        return new CaptureResult(
+                            magnified, monitor.Bounds, DateTime.UtcNow,
+                            $"Monitor:{monitor.DeviceName}");
+                    }
+                }
+
                 var captured = CaptureMonitorFrame(monitor.Handle);
                 if (BitmapIsEmpty(captured.Bitmap))
                 {
@@ -115,6 +126,13 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         {
             try
             {
+                if (LayeredWindowDetector.HasVisibleOverlay(virtualRegion))
+                {
+                    var magnified = MagnificationCapture.TryCapture(virtualRegion, ct);
+                    if (magnified is not null)
+                        return new CaptureResult(magnified, virtualRegion, DateTime.UtcNow, source);
+                }
+
                 // Strategy: capture each intersecting monitor, blit each piece into the
                 // composite bitmap. This handles per-monitor DPI cleanly because WGC
                 // surfaces are already in device pixels.

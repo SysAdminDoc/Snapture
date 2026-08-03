@@ -85,6 +85,7 @@ All notable changes to Snapture will be documented in this file.
 - Video recording now probes Media Foundation AV1/HEVC/H.264 encoders and the WIC HEIF encoder, reports missing Store codec extensions, and falls back to the next available encoder.
 - HDR capture and recording now expose an HDR screenshot color-correction toggle; disabling it uses a direct scRGB clamp and clearly surfaces possible highlight clipping.
 - PNG saves now embed the active single-monitor ICC profile as a compressed `iCCP` chunk when WCS exposes one; multi-monitor composites and JPEG output remain untagged.
+- Screen and monitor captures now detect visible layered or tool-topmost overlays and route those rectangles through a short-lived STA Magnification API helper when WGC/GDI would omit the composed overlay; ordinary captures keep their existing fast path.
 
 ### Fixed
 
