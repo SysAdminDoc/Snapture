@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Media.Imaging;
 using ImageMagick;
@@ -23,27 +22,26 @@ internal sealed record HdrSaveResult(
 /// Writes the fixed HDR delivery set. The capture/editor boundary is currently a
 /// tone-mapped Bitmap so annotations and redactions are identical across variants;
 /// PNG remains the history/editor primary while modern siblings serve archival and
-/// sharing workflows.
+/// sharing workflows. A display ICC profile is embedded in the PNG when WCS exposes
+/// one for the single-monitor source.
 /// </summary>
 internal static class HdrSavePolicy
 {
     private static readonly string[] ModernExtensions = { ".png", ".jxl", ".avif" };
 
-    public static HdrSaveResult Save(string outputStem, Bitmap bitmap, bool writeJxr)
+    public static HdrSaveResult Save(
+        string outputStem,
+        Bitmap bitmap,
+        bool writeJxr,
+        byte[]? iccProfile = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputStem);
         ArgumentNullException.ThrowIfNull(bitmap);
 
         string stem = ResolveUniqueStem(outputStem, writeJxr);
         string pngPath = stem + ".png";
-        bitmap.Save(pngPath, ImageFormat.Png);
-
-        byte[] pngBytes;
-        using (var png = new MemoryStream())
-        {
-            bitmap.Save(png, ImageFormat.Png);
-            pngBytes = png.ToArray();
-        }
+        byte[] pngBytes = PngIccProfileEmbedder.Encode(bitmap, iccProfile);
+        File.WriteAllBytes(pngPath, pngBytes);
 
         string? jxlPath = TryWriteMagickVariant(pngBytes, stem + ".jxl", MagickFormat.Jxl, quality: 100);
         string? avifPath = TryWriteMagickVariant(pngBytes, stem + ".avif", MagickFormat.Avif, quality: 90);

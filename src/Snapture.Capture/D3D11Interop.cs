@@ -196,6 +196,12 @@ public static class D3D11Interop
         return false;
     }
 
+    public static unsafe string GetOutputDeviceName(DXGI_OUTPUT_DESC1 description)
+    {
+        char* name = description.DeviceName;
+        return new string(name);
+    }
+
     [DllImport("dxgi.dll", EntryPoint = "CreateDXGIFactory1", ExactSpelling = true)]
     private static extern int CreateDXGIFactory1(in Guid riid, out nint ppFactory);
 }

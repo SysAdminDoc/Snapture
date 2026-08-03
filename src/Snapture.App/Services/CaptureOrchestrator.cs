@@ -292,25 +292,42 @@ public sealed class CaptureOrchestrator
         {
             Directory.CreateDirectory(_settings.Current.OutputFolder);
             string configuredPath = BuildOutputPath(_settings.Current, result);
+            bool writesPng = result.IsHdr
+                || !_settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase);
+            string? colorProfilePath = null;
+            byte[]? iccProfile = writesPng
+                ? TryGetIccProfile(result.SourceBounds, out colorProfilePath)
+                : null;
             if (result.IsHdr)
             {
                 string stem = Path.Combine(
                     Path.GetDirectoryName(configuredPath) ?? _settings.Current.OutputFolder,
                     Path.GetFileNameWithoutExtension(configuredPath));
-                var variants = HdrSavePolicy.Save(stem, result.Bitmap, _settings.Current.HdrWriteJxr);
+                var variants = HdrSavePolicy.Save(
+                    stem, result.Bitmap, _settings.Current.HdrWriteJxr, iccProfile);
                 savedPath = variants.PngPath;
-                Log.Information("Capture.SavedHdr {Source} {Width}x{Height} Variants={Variants}",
-                    result.Source, result.Bitmap.Width, result.Bitmap.Height, variants.WrittenCount);
+                Log.Information(
+                    "Capture.SavedHdr {Source} {Width}x{Height} Variants={Variants} ColorProfile={ColorProfile}",
+                    result.Source, result.Bitmap.Width, result.Bitmap.Height,
+                    variants.WrittenCount, colorProfilePath ?? "none");
             }
             else
             {
                 savedPath = configuredPath;
-                using var fs = File.Create(savedPath);
                 var fmt = _settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
                     ? ImageFormat.Jpeg : ImageFormat.Png;
-                result.Bitmap.Save(fs, fmt);
-                Log.Information("Capture.Saved {Source} {Width}x{Height}",
-                    result.Source, result.Bitmap.Width, result.Bitmap.Height);
+                if (fmt == ImageFormat.Png)
+                {
+                    File.WriteAllBytes(savedPath, PngIccProfileEmbedder.Encode(result.Bitmap, iccProfile));
+                }
+                else
+                {
+                    using var fs = File.Create(savedPath);
+                    result.Bitmap.Save(fs, fmt);
+                }
+                Log.Information("Capture.Saved {Source} {Width}x{Height} ColorProfile={ColorProfile}",
+                    result.Source, result.Bitmap.Width, result.Bitmap.Height,
+                    colorProfilePath ?? "none");
             }
         }
         catch (Exception ex)
@@ -353,6 +370,24 @@ public sealed class CaptureOrchestrator
         }
 
         await Task.CompletedTask;
+    }
+
+    private static byte[]? TryGetIccProfile(Rectangle bounds, out string? profilePath)
+    {
+        profilePath = null;
+        try
+        {
+            if (!DisplayColorProfileProbe.TryGetForBounds(bounds, out var profile))
+                return null;
+
+            profilePath = profile.ProfilePath;
+            return profile.Data;
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "Capture.ColorProfile.Unavailable");
+            return null;
+        }
     }
 
     private static string BuildOutputPath(SnaptureSettings s, CaptureResult? capture = null)

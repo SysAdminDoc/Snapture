@@ -32,7 +32,7 @@ public static class HdrCalibrationProbe
         if (!D3D11Interop.TryGetOutputDescription1(hMonitor, out var description))
             return false;
 
-        string deviceName = GetDeviceName(description);
+        string deviceName = D3D11Interop.GetOutputDeviceName(description);
         bool isHdrOutput = description.ColorSpace
             == D3D11Interop.DXGI_COLOR_SPACE_RGB_FULL_G2084_NONE_P2020;
         info = new HdrCalibrationInfo(
@@ -52,11 +52,5 @@ public static class HdrCalibrationProbe
                 suspicious.Add(info);
         }
         return suspicious;
-    }
-
-    private static unsafe string GetDeviceName(D3D11Interop.DXGI_OUTPUT_DESC1 description)
-    {
-        char* name = description.DeviceName;
-        return new string(name);
     }
 }
