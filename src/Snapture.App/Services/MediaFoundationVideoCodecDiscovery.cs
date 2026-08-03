@@ -39,15 +39,85 @@ public static class MediaFoundationVideoCodecDiscovery
         }
     }
 
-    public static IReadOnlyList<EncoderCandidate> GetPreferredEncodingCandidates()
+    public sealed record CodecAvailability(
+        bool Av1EncoderAvailable,
+        bool HevcEncoderAvailable,
+        bool H264EncoderAvailable,
+        bool HeifEncoderAvailable)
+    {
+        public IReadOnlyList<string> MissingStoreExtensions
+        {
+            get
+            {
+                var missing = new List<string>();
+                if (!Av1EncoderAvailable) missing.Add("AV1 Video Extension");
+                if (!HevcEncoderAvailable) missing.Add("HEVC Video Extension");
+                if (!HeifEncoderAvailable) missing.Add("HEIF Image Extension");
+                return missing;
+            }
+        }
+
+        public string Description
+        {
+            get
+            {
+                var missing = MissingStoreExtensions;
+                return missing.Count == 0
+                    ? "AV1, HEVC, and HEIF extensions detected."
+                    : $"Missing {string.Join(", ", missing)}; recording will fall back to an available encoder."
+                      + " Install the missing Microsoft Store extension if needed.";
+            }
+        }
+
+        public string NoEncoderDescription =>
+            "No Media Foundation video encoder is available. Install the AV1 or HEVC Video Extension, then retry recording.";
+    }
+
+    public sealed record CodecDiscoveryResult(
+        IReadOnlyList<EncoderCandidate> Candidates,
+        CodecAvailability Availability);
+
+    public static CodecDiscoveryResult Discover()
     {
         var av1Hardware = EnumerateEncoders(MFInterop.MFVideoFormat_AV1, hardwareOnly: true);
+        var av1Software = EnumerateEncoders(MFInterop.MFVideoFormat_AV1, hardwareOnly: false);
         var hevcHardware = EnumerateEncoders(MFInterop.MFVideoFormat_HEVC, hardwareOnly: true);
         var hevcSoftware = EnumerateEncoders(MFInterop.MFVideoFormat_HEVC, hardwareOnly: false);
         var h264Hardware = EnumerateEncoders(MFInterop.MFVideoFormat_H264, hardwareOnly: true);
         var h264Software = EnumerateEncoders(MFInterop.MFVideoFormat_H264, hardwareOnly: false);
 
-        var candidates = new List<EncoderCandidate>(3);
+        var candidates = BuildCandidates(
+            av1Hardware, hevcHardware, hevcSoftware, h264Hardware, h264Software);
+        var availability = new CodecAvailability(
+            Av1EncoderAvailable: av1Hardware.Count > 0 || av1Software.Count > 0,
+            HevcEncoderAvailable: hevcHardware.Count > 0 || hevcSoftware.Count > 0,
+            H264EncoderAvailable: h264Hardware.Count > 0 || h264Software.Count > 0,
+            HeifEncoderAvailable: WindowsImageCodecProbe.IsHeifEncoderAvailable());
+
+        Log.Information(
+            "VideoRecorder.CodecDiscovery AV1Hardware={Av1Hardware} AV1Software={Av1Software} HEVCHardware={HevcHardware} HEVCSoftware={HevcSoftware} H264Hardware={H264Hardware} H264Software={H264Software} HEIF={Heif}",
+            FormatEncoders(av1Hardware),
+            FormatEncoders(av1Software),
+            FormatEncoders(hevcHardware),
+            FormatEncoders(hevcSoftware),
+            FormatEncoders(h264Hardware),
+            FormatEncoders(h264Software),
+            availability.HeifEncoderAvailable);
+
+        return new CodecDiscoveryResult(candidates, availability);
+    }
+
+    public static IReadOnlyList<EncoderCandidate> GetPreferredEncodingCandidates()
+        => Discover().Candidates;
+
+    internal static IReadOnlyList<EncoderCandidate> BuildCandidates(
+        IReadOnlyList<EncoderInfo> av1Hardware,
+        IReadOnlyList<EncoderInfo> hevcHardware,
+        IReadOnlyList<EncoderInfo> hevcSoftware,
+        IReadOnlyList<EncoderInfo> h264Hardware,
+        IReadOnlyList<EncoderInfo> h264Software)
+    {
+        var candidates = new List<EncoderCandidate>(5);
 
         // AV1 software encoding is intentionally not considered. It is too slow for screen capture.
         if (av1Hardware.Count > 0)
@@ -62,14 +132,6 @@ public static class MediaFoundationVideoCodecDiscovery
             candidates.Add(new EncoderCandidate("H.264", MFInterop.MFVideoFormat_H264, true, h264Hardware));
         if (h264Software.Count > 0)
             candidates.Add(new EncoderCandidate("H.264", MFInterop.MFVideoFormat_H264, false, h264Software));
-
-        Log.Information(
-            "VideoRecorder.CodecDiscovery AV1Hardware={Av1Hardware} HEVCHardware={HevcHardware} HEVCSoftware={HevcSoftware} H264Hardware={H264Hardware} H264Software={H264Software}",
-            FormatEncoders(av1Hardware),
-            FormatEncoders(hevcHardware),
-            FormatEncoders(hevcSoftware),
-            FormatEncoders(h264Hardware),
-            FormatEncoders(h264Software));
 
         return candidates;
     }

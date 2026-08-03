@@ -44,6 +44,7 @@ public sealed class VideoRecorder : IDisposable
     public TimeSpan Elapsed => _sw.Elapsed;
     public string SelectedCodecName { get; private set; } = "H.264";
     public string SelectedCodecDescription { get; private set; } = "H.264";
+    public string CodecAvailabilityDescription { get; private set; } = "Codec extension detection pending.";
     public string DirtyRegionDescription => _dirtyRegionFilter.ReportingEnabled
         ? "dirty-region skip enabled"
         : "dirty-region skip unavailable";
@@ -384,9 +385,11 @@ public sealed class VideoRecorder : IDisposable
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
     {
-        var candidates = MediaFoundationVideoCodecDiscovery.GetPreferredEncodingCandidates();
+        var discovery = MediaFoundationVideoCodecDiscovery.Discover();
+        var candidates = discovery.Candidates;
+        CodecAvailabilityDescription = discovery.Availability.Description;
         if (candidates.Count == 0)
-            throw new InvalidOperationException("No Media Foundation video encoder was found.");
+            throw new InvalidOperationException(discovery.Availability.NoEncoderDescription);
 
         Exception? lastError = null;
         foreach (bool includeAudio in new[] { true, false })
