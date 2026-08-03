@@ -61,6 +61,8 @@ public sealed class VideoRecorder : IDisposable
     public string AutoTightenDescription => !_autoTightenEnabled
         ? "auto-tighten off"
         : _autoTightenPlan?.Description ?? "auto-tighten pending";
+    public bool IsFp16CaptureEnabled => _capturePixelFormat.UsesFp16;
+    public string CapturePixelFormatDescription => _capturePixelFormat.Description;
     public string OutputResolutionDescription => _outputWidth == _width && _outputHeight == _height
         ? $"{_outputWidth}x{_outputHeight}"
         : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
@@ -88,6 +90,7 @@ public sealed class VideoRecorder : IDisposable
     private bool _autoTightenEnabled;
     private RecordingAutoTightenPlan? _autoTightenPlan;
     private Rectangle _sourceCrop;
+    private CapturePixelFormatDecision _capturePixelFormat = CapturePixelFormatDecision.Sdr;
 
     // WGC continuous capture
     private nint _d3dDevice;
@@ -123,7 +126,8 @@ public sealed class VideoRecorder : IDisposable
         _autoTightenPlan = _autoTightenEnabled
             ? RecordingAutoTightenEngine.DetectWindow(hwnd, _captureBounds)
             : null;
-        StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight);
+        StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight,
+            ResolveMonitorHandle(_captureBounds));
     }
 
     /// <summary>
@@ -141,7 +145,7 @@ public sealed class VideoRecorder : IDisposable
         _autoTightenPlan = _autoTightenEnabled
             ? RecordingAutoTightenEngine.DetectMonitor(_captureBounds)
             : null;
-        StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight);
+        StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight, hMonitor);
     }
 
     public void Pause()
@@ -271,9 +275,17 @@ public sealed class VideoRecorder : IDisposable
 
     private int _outputWidth, _outputHeight;
 
-    private void StartInternal(GraphicsCaptureItem item, string outputPath, int fps, int bitrateMbps, int outputWidth = 0, int outputHeight = 0)
+    private void StartInternal(
+        GraphicsCaptureItem item,
+        string outputPath,
+        int fps,
+        int bitrateMbps,
+        int outputWidth = 0,
+        int outputHeight = 0,
+        nint targetMonitor = 0)
     {
         _outputPath = outputPath;
+        _capturePixelFormat = CapturePixelFormatPolicy.ResolveForMonitor(targetMonitor);
         _sourceWidth = item.Size.Width;
         _sourceHeight = item.Size.Height;
         _sourceCrop = ResolveSourceCrop(_autoTightenPlan, _captureBounds, _sourceWidth, _sourceHeight);
@@ -317,11 +329,7 @@ public sealed class VideoRecorder : IDisposable
         }
 
         // Set up continuous WGC capture with queue depth 3
-        _framePool = Direct3D11CaptureFramePool.CreateFreeThreaded(
-            _direct3DDevice!,
-            DirectXPixelFormat.B8G8R8A8UIntNormalized,
-            3,
-            item.Size);
+        _framePool = CreateFramePool(item);
 
         _framePool.FrameArrived += OnFrameArrived;
 
@@ -348,8 +356,24 @@ public sealed class VideoRecorder : IDisposable
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         _session.StartCapture();
-        Log.Information("VideoRecorder.Started {Width}x{Height}→{OutWidth}x{OutHeight} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio} AutoTighten={AutoTighten}",
-            _width, _height, _outputWidth, _outputHeight, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled, AutoTightenDescription);
+        Log.Information("VideoRecorder.Started {Width}x{Height}→{OutWidth}x{OutHeight} {Fps}fps {Bitrate}Mbps PixelFormat={PixelFormat} DirtyRegions={DirtyRegions} Audio={Audio} AutoTighten={AutoTighten}",
+            _width, _height, _outputWidth, _outputHeight, fps, bitrateMbps, _capturePixelFormat.Description, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled, AutoTightenDescription);
+    }
+
+    private Direct3D11CaptureFramePool CreateFramePool(GraphicsCaptureItem item)
+    {
+        try
+        {
+            return Direct3D11CaptureFramePool.CreateFreeThreaded(
+                _direct3DDevice!, _capturePixelFormat.WinRtPixelFormat, 3, item.Size);
+        }
+        catch when (_capturePixelFormat.UsesFp16)
+        {
+            Log.Warning("VideoRecorder.Fp16FramePoolUnavailable — falling back to BGRA8");
+            _capturePixelFormat = CapturePixelFormatDecision.Sdr;
+            return Direct3D11CaptureFramePool.CreateFreeThreaded(
+                _direct3DDevice!, _capturePixelFormat.WinRtPixelFormat, 3, item.Size);
+        }
     }
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
@@ -649,7 +673,7 @@ public sealed class VideoRecorder : IDisposable
                 Height = (uint)_sourceHeight,
                 MipLevels = 1,
                 ArraySize = 1,
-                Format = D3D11Interop.DXGI_FORMAT_B8G8R8A8_UNORM,
+                Format = (uint)_capturePixelFormat.DxgiFormat,
                 SampleDesc = new D3D11Interop.DXGI_SAMPLE_DESC { Count = 1, Quality = 0 },
                 Usage = D3D11Interop.D3D11_USAGE_STAGING,
                 BindFlags = 0,
@@ -671,15 +695,28 @@ public sealed class VideoRecorder : IDisposable
                     mfBuffer.Lock(out nint bufPtr, out _, out _);
                     try
                     {
-                        byte* src = (byte*)mapped.pData;
                         byte* dst = (byte*)bufPtr;
                         int rowBytes = _width * 4;
-                        for (int y = 0; y < _height; y++)
+                        if (_capturePixelFormat.UsesFp16)
                         {
-                            Buffer.MemoryCopy(
-                                src + ((_sourceCrop.Y + y) * (long)mapped.RowPitch) + (_sourceCrop.X * 4L),
-                                dst + y * (long)rowBytes,
-                                rowBytes, rowBytes);
+                            var source = new ReadOnlySpan<byte>(
+                                (void*)mapped.pData,
+                                checked((int)(mapped.RowPitch * (uint)_sourceHeight)));
+                            var destination = new Span<byte>(dst, checked((int)bufSize));
+                            HdrFrameConverter.ConvertRgba16FloatToBgra(
+                                source, checked((int)mapped.RowPitch), destination, rowBytes,
+                                _sourceCrop.X, _sourceCrop.Y, _width, _height);
+                        }
+                        else
+                        {
+                            byte* src = (byte*)mapped.pData;
+                            for (int y = 0; y < _height; y++)
+                            {
+                                Buffer.MemoryCopy(
+                                    src + ((_sourceCrop.Y + y) * (long)mapped.RowPitch) + (_sourceCrop.X * 4L),
+                                    dst + y * (long)rowBytes,
+                                    rowBytes, rowBytes);
+                            }
                         }
 
                         var pixels = new Span<byte>(dst, (int)bufSize);
@@ -1008,6 +1045,15 @@ public sealed class VideoRecorder : IDisposable
     {
         return MonitorEnumerator.Enumerate().FirstOrDefault(m => m.Handle == hMonitor)?.Bounds
             ?? new Rectangle(0, 0, width, height);
+    }
+
+    private static nint ResolveMonitorHandle(Rectangle bounds)
+    {
+        if (bounds.IsEmpty) return 0;
+        return MonitorEnumerator.FromPoint(
+            new System.Drawing.Point(
+                bounds.Left + Math.Max(0, bounds.Width / 2),
+                bounds.Top + Math.Max(0, bounds.Height / 2)))?.Handle ?? 0;
     }
 
     private void OnCaptureItemClosed(GraphicsCaptureItem sender, object args)

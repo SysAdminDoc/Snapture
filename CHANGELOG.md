@@ -74,6 +74,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The frame editor can now save animated PNG (`.apng`) and animated AVIF (`.avif`) files with per-frame timing, while retaining GIF as the default and reporting unavailable native delegates clearly.
 
+### Added — HDR capture pipeline
+
+- WinRT monitor and window capture now queries the target DXGI output's current color space and selects an FP16 (`R16G16B16A16_FLOAT`) frame pool only for HDR/PQ Rec. 2020 output. FP16 surfaces are tone-mapped to the existing BGRA8 boundary, with deterministic BGRA8 fallback when the monitor query or WGC pool is unavailable.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

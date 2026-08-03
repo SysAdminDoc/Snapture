@@ -152,7 +152,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         EnsureDevice();
         var item = CaptureItemFactory.CreateForMonitor(hMonitor)
             ?? throw new InvalidOperationException("CreateForMonitor returned null.");
-        return CaptureSingleFrame(item);
+        return CaptureSingleFrame(item, CapturePixelFormatPolicy.ResolveForMonitor(hMonitor));
     }
 
     private Bitmap CaptureWindowBitmap(nint hwnd)
@@ -160,10 +160,31 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         EnsureDevice();
         var item = CaptureItemFactory.CreateForWindow(hwnd)
             ?? throw new InvalidOperationException("CreateForWindow returned null.");
-        return CaptureSingleFrame(item);
+        nint hMonitor = 0;
+        if (WindowEnumerator.GetExtendedFrameBounds(hwnd, out var bounds))
+        {
+            hMonitor = MonitorEnumerator.FromPoint(
+                new System.Drawing.Point(bounds.Left + Math.Max(0, bounds.Width / 2),
+                    bounds.Top + Math.Max(0, bounds.Height / 2)))?.Handle ?? 0;
+        }
+        return CaptureSingleFrame(item, CapturePixelFormatPolicy.ResolveForMonitor(hMonitor));
     }
 
-    private Bitmap CaptureSingleFrame(GraphicsCaptureItem item)
+    private Bitmap CaptureSingleFrame(GraphicsCaptureItem item, CapturePixelFormatDecision pixelFormat)
+    {
+        try
+        {
+            return CaptureSingleFrameCore(item, pixelFormat);
+        }
+        catch when (pixelFormat.UsesFp16)
+        {
+            // Some WGC/D3D combinations advertise advanced color but reject FP16
+            // pools. Preserve capture availability by retrying the SDR path.
+            return CaptureSingleFrameCore(item, CapturePixelFormatDecision.Sdr);
+        }
+    }
+
+    private Bitmap CaptureSingleFrameCore(GraphicsCaptureItem item, CapturePixelFormatDecision pixelFormat)
     {
         if (_direct3DDevice is null) throw new InvalidOperationException("D3D device not initialised.");
 
@@ -173,7 +194,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
 
         var pool = Direct3D11CaptureFramePool.CreateFreeThreaded(
             _direct3DDevice,
-            DirectXPixelFormat.B8G8R8A8UIntNormalized,
+            pixelFormat.WinRtPixelFormat,
             2,
             size);
 
@@ -221,7 +242,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
 
         try
         {
-            return CopyFrameToBitmap(captured, size.Width, size.Height);
+            return CopyFrameToBitmap(captured, size.Width, size.Height, pixelFormat);
         }
         finally
         {
@@ -230,7 +251,11 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         }
     }
 
-    private unsafe Bitmap CopyFrameToBitmap(Direct3D11CaptureFrame frame, int width, int height)
+    private unsafe Bitmap CopyFrameToBitmap(
+        Direct3D11CaptureFrame frame,
+        int width,
+        int height,
+        CapturePixelFormatDecision pixelFormat)
     {
         // Get ID3D11Texture2D from the frame's surface.
         nint surfacePtr = Marshal.GetIUnknownForObject(frame.Surface);
@@ -266,7 +291,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
                 Height = (uint)height,
                 MipLevels = 1,
                 ArraySize = 1,
-                Format = D3D11Interop.DXGI_FORMAT_B8G8R8A8_UNORM,
+                Format = (uint)pixelFormat.DxgiFormat,
                 SampleDesc = new D3D11Interop.DXGI_SAMPLE_DESC { Count = 1, Quality = 0 },
                 Usage = D3D11Interop.D3D11_USAGE_STAGING,
                 BindFlags = 0,
@@ -294,17 +319,32 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
                     var data = bmp.LockBits(rect, ImageLockMode.WriteOnly, PixelFormat.Format32bppArgb);
                     try
                     {
-                        byte* src = (byte*)mapped.pData;
-                        byte* dst = (byte*)data.Scan0;
-                        int dstPitch = data.Stride;
-                        int rowBytes = width * 4;
-                        for (int y = 0; y < height; y++)
+                        if (pixelFormat.UsesFp16)
                         {
-                            Buffer.MemoryCopy(
-                                src + y * (long)mapped.RowPitch,
-                                dst + y * (long)dstPitch,
-                                dstPitch,
-                                rowBytes);
+                            var source = new ReadOnlySpan<byte>(
+                                (void*)mapped.pData,
+                                checked((int)(mapped.RowPitch * (uint)height)));
+                            var destination = new Span<byte>(
+                                (void*)data.Scan0,
+                                checked(data.Stride * height));
+                            HdrFrameConverter.ConvertRgba16FloatToBgra(
+                                source, checked((int)mapped.RowPitch), destination, data.Stride,
+                                0, 0, width, height);
+                        }
+                        else
+                        {
+                            byte* src = (byte*)mapped.pData;
+                            byte* dst = (byte*)data.Scan0;
+                            int dstPitch = data.Stride;
+                            int rowBytes = width * 4;
+                            for (int y = 0; y < height; y++)
+                            {
+                                Buffer.MemoryCopy(
+                                    src + y * (long)mapped.RowPitch,
+                                    dst + y * (long)dstPitch,
+                                    dstPitch,
+                                    rowBytes);
+                            }
                         }
                     }
                     finally { bmp.UnlockBits(data); }
