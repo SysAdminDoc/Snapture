@@ -69,6 +69,10 @@ All notable changes to Snapture will be documented in this file.
 
 - GIF exports now use the pinned Magick.NET-Q8-x64 14.15.0 pipeline with a shared 256-color palette, centisecond frame timing, and a bounded 1% ColorFuzz layer optimization for smaller lossy GIFs.
 
+### Added — Animated modern image output
+
+- The frame editor can now save animated PNG (`.apng`) and animated AVIF (`.avif`) files with per-frame timing, while retaining GIF as the default and reporting unavailable native delegates clearly.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

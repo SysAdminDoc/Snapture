@@ -106,12 +106,16 @@ internal sealed class GifFrameEditor : IDisposable
     }
 
     public void SaveAs(string outputPath)
+        => SaveAs(outputPath, AnimatedImageFormat.Gif);
+
+    internal void SaveAs(string outputPath, AnimatedImageFormat format)
     {
         ThrowIfDisposed();
         GifEncoder.Encode(
             outputPath,
             _frames.Select(frame => new GifFrameInput(frame.Bitmap, frame.DelayMs)),
-            GifEncodingOptions.Default);
+            GifEncodingOptions.Default,
+            format);
     }
 
     private static byte Quantize(byte value, int adjustment)

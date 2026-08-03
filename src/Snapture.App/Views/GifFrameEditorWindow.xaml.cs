@@ -144,7 +144,8 @@ public partial class GifFrameEditorWindow : Window
     {
         var dialog = new SaveFileDialog
         {
-            Filter = "Animated GIF (*.gif)|*.gif",
+            Filter = "Animated GIF (*.gif)|*.gif|Animated PNG (*.apng)|*.apng|Animated AVIF (*.avif)|*.avif",
+            FilterIndex = 1,
             FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.gif"
         };
         if (dialog.ShowDialog(this) != true)
@@ -152,15 +153,34 @@ public partial class GifFrameEditorWindow : Window
 
         try
         {
-            _editor.SaveAs(dialog.FileName);
+            var format = dialog.FilterIndex switch
+            {
+                2 => AnimatedImageFormat.Apng,
+                3 => AnimatedImageFormat.Avif,
+                _ => AnimatedImageFormat.Gif
+            };
+            if (!GifEncoder.IsFormatSupported(format))
+            {
+                MessageBox.Show(
+                    $"{GifEncoder.GetDisplayName(format)} output is unavailable in this installation.",
+                    "Snapture",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            string outputPath = Path.ChangeExtension(
+                dialog.FileName,
+                GifEncoder.GetExtension(format).TrimStart('.'));
+            _editor.SaveAs(outputPath, format);
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                "explorer.exe", $"/select,\"{dialog.FileName}\"") { UseShellExecute = true });
+                "explorer.exe", $"/select,\"{outputPath}\"") { UseShellExecute = true });
             DialogResult = true;
             Close();
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not encode GIF:\n{ex.Message}", "Snapture",
+            MessageBox.Show($"Could not encode animated image:\n{ex.Message}", "Snapture",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
