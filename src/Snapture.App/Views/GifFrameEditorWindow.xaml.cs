@@ -61,6 +61,7 @@ public partial class GifFrameEditorWindow : Window
         DuplicateButton.IsEnabled = hasSelection;
         DitherButton.IsEnabled = hasSelection;
         DelayTextBox.IsEnabled = hasSelection;
+        LosslessButton.IsEnabled = _editor.CanSaveLosslessly;
 
         if (!hasSelection)
         {
@@ -181,6 +182,31 @@ public partial class GifFrameEditorWindow : Window
         catch (Exception ex)
         {
             MessageBox.Show($"Could not encode animated image:\n{ex.Message}", "Snapture",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void OnSaveLosslessClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SaveFileDialog
+        {
+            Filter = "Lossless GIF clip (*.gif)|*.gif",
+            FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_clip.gif"
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        try
+        {
+            _editor.SaveLossless(dialog.FileName);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                "explorer.exe", $"/select,\"{dialog.FileName}\"") { UseShellExecute = true });
+            DialogResult = true;
+            Close();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not save lossless GIF clip:\n{ex.Message}", "Snapture",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }

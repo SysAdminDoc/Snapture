@@ -64,6 +64,7 @@ All notable changes to Snapture will be documented in this file.
 ### Added — GIF frame editor
 
 - Stopping a GIF recording now opens a frame-by-frame editor with thumbnail previews, delete / duplicate operations, per-frame delay editing, ordered Bayer dithering, and non-destructive GIF export.
+- Existing GIFs can be opened from Tools → Edit GIF; deletion-only edits expose a lossless clip-save action that copies the original GIF frame blocks without re-encoding.
 
 ### Changed — Magick.NET GIF output
 

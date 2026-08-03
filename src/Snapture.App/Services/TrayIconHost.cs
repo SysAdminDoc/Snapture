@@ -228,6 +228,30 @@ public sealed class TrayIconHost : IDisposable
         recordGif.Items.Add(recGifFull);
         tools.Items.Add(recordGif);
 
+        var editGif = new MenuItem { Header = "Edit GIF…" };
+        editGif.Click += (_, _) =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "Animated GIF (*.gif)|*.gif",
+                CheckFileExists = true
+            };
+            if (dlg.ShowDialog() != true)
+                return;
+
+            try
+            {
+                using var editor = GifFrameEditor.LoadGif(dlg.FileName);
+                new Views.GifFrameEditorWindow(editor).ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open GIF:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        tools.Items.Add(editGif);
+
         var recordVideo = new MenuItem { Header = "Record MP4 video" };
         var recVidWindow = new MenuItem { Header = "Foreground window" };
         recVidWindow.Click += (_, _) =>

@@ -86,6 +86,75 @@ public sealed class GifFrameEditorTests
         }
     }
 
+    [TestMethod]
+    public void ImportedGifKeepsOriginalFrameBlockWhenSavingDeletedClip()
+    {
+        using var first = CreateBitmap(Color.CornflowerBlue);
+        using var second = CreateBitmap(Color.Goldenrod);
+        string sourcePath = Path.Combine(Path.GetTempPath(), $"SnaptureGifSource_{Guid.NewGuid():N}.gif");
+        string outputPath = Path.Combine(Path.GetTempPath(), $"SnaptureGifClip_{Guid.NewGuid():N}.gif");
+
+        try
+        {
+            GifEncoder.Encode(
+                sourcePath,
+                new[]
+                {
+                    new GifFrameInput(first, 100),
+                    new GifFrameInput(second, 240)
+                },
+                GifEncodingOptions.Default);
+            var source = GifLosslessSource.Load(sourcePath);
+            byte[] expectedBlock = source.GetEncodedFrameBlock(1);
+
+            using var editor = GifFrameEditor.LoadGif(sourcePath);
+            Assert.IsTrue(editor.CanSaveLosslessly);
+            editor.Delete(0);
+            Assert.IsTrue(editor.CanSaveLosslessly);
+            editor.SaveLossless(outputPath);
+
+            var saved = GifLosslessSource.Load(outputPath);
+            Assert.HasCount(1, saved.Frames);
+            CollectionAssert.AreEqual(expectedBlock, saved.GetEncodedFrameBlock(0));
+        }
+        finally
+        {
+            if (File.Exists(sourcePath))
+                File.Delete(sourcePath);
+            if (File.Exists(outputPath))
+                File.Delete(outputPath);
+        }
+    }
+
+    [TestMethod]
+    public void ImportedGifDisablesLosslessSaveAfterTimingOrPixelEdits()
+    {
+        using var first = CreateBitmap(Color.CornflowerBlue);
+        using var second = CreateBitmap(Color.Goldenrod);
+        string sourcePath = Path.Combine(Path.GetTempPath(), $"SnaptureGifSource_{Guid.NewGuid():N}.gif");
+
+        try
+        {
+            GifEncoder.Encode(
+                sourcePath,
+                new[]
+                {
+                    new GifFrameInput(first, 100),
+                    new GifFrameInput(second, 240)
+                },
+                GifEncodingOptions.Default);
+
+            using var editor = GifFrameEditor.LoadGif(sourcePath);
+            editor.SetDelay(0, 200);
+            Assert.IsFalse(editor.CanSaveLosslessly);
+        }
+        finally
+        {
+            if (File.Exists(sourcePath))
+                File.Delete(sourcePath);
+        }
+    }
+
     private static Bitmap CreateBitmap(Color color)
     {
         var bitmap = new Bitmap(4, 4);

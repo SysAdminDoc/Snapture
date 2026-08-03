@@ -1,6 +1,8 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.IO;
+using ImageMagick;
 
 namespace Snapture.App.Services;
 
@@ -21,6 +23,7 @@ internal sealed class GifFrameEditor : IDisposable
     };
 
     private readonly List<EditableFrame> _frames;
+    private readonly GifLosslessSource? _losslessSource;
     private bool _disposed;
 
     public GifFrameEditor(IEnumerable<Bitmap> frames, int defaultDelayMs)
@@ -37,7 +40,43 @@ internal sealed class GifFrameEditor : IDisposable
             throw new ArgumentException("At least one frame is required.", nameof(frames));
     }
 
+    private GifFrameEditor(List<EditableFrame> frames, GifLosslessSource losslessSource)
+    {
+        _frames = frames;
+        _losslessSource = losslessSource;
+    }
+
+    internal static GifFrameEditor LoadGif(string path)
+    {
+        var source = GifLosslessSource.Load(path);
+        using var images = new MagickImageCollection(path);
+        if (images.Count != source.Frames.Count)
+        {
+            throw new InvalidDataException(
+                $"The GIF decoder found {images.Count} frames but the source contains {source.Frames.Count}.");
+        }
+
+        images.Coalesce();
+        var frames = new List<EditableFrame>(images.Count);
+        for (int index = 0; index < images.Count; index++)
+        {
+            using var stream = new MemoryStream();
+            images[index].Write(stream, MagickFormat.Png);
+            stream.Position = 0;
+            using var decoded = new Bitmap(stream);
+            frames.Add(new EditableFrame(
+                new Bitmap(decoded),
+                source.Frames[index].DelayMs,
+                sourceFrameIndex: index));
+        }
+
+        return new GifFrameEditor(frames, source);
+    }
+
     public int Count => _frames.Count;
+
+    internal bool CanSaveLosslessly
+        => _losslessSource is not null && _frames.All(frame => frame.CanPreserveSource);
 
     public GifFrameInfo GetInfo(int index)
     {
@@ -65,13 +104,18 @@ internal sealed class GifFrameEditor : IDisposable
     {
         ThrowIfDisposed();
         var source = _frames[index];
-        _frames.Insert(index + 1, new EditableFrame(new Bitmap(source.Bitmap), source.DelayMs, source.IsDithered));
+        _frames.Insert(index + 1, new EditableFrame(
+            new Bitmap(source.Bitmap),
+            source.DelayMs,
+            source.IsDithered));
     }
 
     public void SetDelay(int index, int delayMs)
     {
         ThrowIfDisposed();
-        _frames[index].DelayMs = Math.Clamp(delayMs, 20, 10_000);
+        var frame = _frames[index];
+        frame.DelayMs = Math.Clamp(delayMs, 20, 10_000);
+        frame.DelayWasEdited = true;
     }
 
     public void ApplyDither(int index)
@@ -118,6 +162,20 @@ internal sealed class GifFrameEditor : IDisposable
             format);
     }
 
+    internal void SaveLossless(string outputPath)
+    {
+        ThrowIfDisposed();
+        if (!CanSaveLosslessly)
+        {
+            throw new InvalidOperationException(
+                "Lossless save is available only for imported GIFs with deletion-only edits.");
+        }
+
+        _losslessSource!.Save(
+            outputPath,
+            _frames.Select(frame => frame.SourceFrameIndex!.Value));
+    }
+
     private static byte Quantize(byte value, int adjustment)
     {
         int adjusted = Math.Clamp(value + adjustment, 0, 255);
@@ -140,16 +198,25 @@ internal sealed class GifFrameEditor : IDisposable
 
     private sealed class EditableFrame : IDisposable
     {
-        public EditableFrame(Bitmap bitmap, int delayMs, bool isDithered = false)
+        public EditableFrame(
+            Bitmap bitmap,
+            int delayMs,
+            bool isDithered = false,
+            int? sourceFrameIndex = null)
         {
             Bitmap = bitmap;
             DelayMs = delayMs;
             IsDithered = isDithered;
+            SourceFrameIndex = sourceFrameIndex;
         }
 
         public Bitmap Bitmap { get; set; }
         public int DelayMs { get; set; }
         public bool IsDithered { get; set; }
+        public int? SourceFrameIndex { get; }
+        public bool DelayWasEdited { get; set; }
+        public bool CanPreserveSource
+            => SourceFrameIndex.HasValue && !DelayWasEdited && !IsDithered;
 
         public GifFrameInfo Info(int index) => new(index, DelayMs, IsDithered);
 
