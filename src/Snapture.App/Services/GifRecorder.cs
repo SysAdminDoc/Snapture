@@ -25,6 +25,7 @@ public sealed class GifRecorder : IDisposable
     private readonly ICaptureEngine _engine;
     private readonly List<Bitmap> _frames = new();
     private CancellationTokenSource? _cts;
+    private Task? _captureTask;
     private DateTime _started;
     private RecordSource _source;
     private nint _hwnd;
@@ -59,10 +60,21 @@ public sealed class GifRecorder : IDisposable
         _started = DateTime.UtcNow;
         FrameCount = 0;
         IsRunning = true;
-        _ = Task.Run(() => CaptureLoopAsync(_cts.Token));
+        _captureTask = Task.Run(() => CaptureLoopAsync(_cts.Token));
     }
 
     public void Stop() => _cts?.Cancel();
+
+    public async Task StopAsync()
+    {
+        _cts?.Cancel();
+        var task = _captureTask;
+        if (task is not null)
+        {
+            try { await task.ConfigureAwait(true); }
+            catch (OperationCanceledException) { }
+        }
+    }
 
     private async Task CaptureLoopAsync(CancellationToken ct)
     {
@@ -115,6 +127,17 @@ public sealed class GifRecorder : IDisposable
             creator.AddFrame(bmp, delay: delay, quality: GifQuality.Bit8);
         }
     }
+
+    internal GifFrameEditor CreateFrameEditor()
+    {
+        Bitmap[] snapshot;
+        lock (_frames)
+            snapshot = _frames.Select(frame => new Bitmap(frame)).ToArray();
+        return new GifFrameEditor(snapshot, _frameDelayMs, takeOwnership: true);
+    }
+
+    internal void EncodeTo(string outputPath, GifFrameEditor editor)
+        => editor.SaveAs(outputPath);
 
     public void DisposeFrames()
     {

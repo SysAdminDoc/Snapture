@@ -51,40 +51,51 @@ public partial class GifRecordingWindow : Window
         ProgressText.Text = $"{_recorder.FrameCount} frames · {ts:mm\\:ss\\.ff}";
     }
 
-    private void OnStopClicked(object sender, RoutedEventArgs e)
+    private async void OnStopClicked(object sender, RoutedEventArgs e)
     {
         _ui.Stop();
-        _recorder.Stop();
+        StopButton.IsEnabled = false;
+        DiscardButton.IsEnabled = false;
+        try
+        {
+            await _recorder.StopAsync();
+            if (_recorder.FrameCount == 0)
+            {
+                MessageBox.Show("No frames were captured.", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
 
-        var dlg = new SaveFileDialog
-        {
-            Filter = "Animated GIF (*.gif)|*.gif",
-            FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.gif"
-        };
-        if (dlg.ShowDialog(this) == true)
-        {
-            try
-            {
-                _recorder.EncodeTo(dlg.FileName);
-                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                    "explorer.exe", $"/select,\"{dlg.FileName}\"") { UseShellExecute = true });
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Could not encode GIF:\n{ex.Message}", "Snapture",
-                    MessageBoxButton.OK, MessageBoxImage.Warning);
-            }
+            using var editor = _recorder.CreateFrameEditor();
+            var editorWindow = new GifFrameEditorWindow(editor) { Owner = this };
+            editorWindow.ShowDialog();
         }
-        _recorder.DisposeFrames();
-        Close();
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not prepare GIF editor:\n{ex.Message}", "Snapture",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            _recorder.DisposeFrames();
+            Close();
+        }
     }
 
-    private void OnDiscardClicked(object sender, RoutedEventArgs e)
+    private async void OnDiscardClicked(object sender, RoutedEventArgs e)
     {
         _ui.Stop();
-        _recorder.Stop();
-        _recorder.DisposeFrames();
-        Close();
+        StopButton.IsEnabled = false;
+        DiscardButton.IsEnabled = false;
+        try
+        {
+            await _recorder.StopAsync();
+        }
+        finally
+        {
+            _recorder.DisposeFrames();
+            Close();
+        }
     }
 
     protected override void OnClosed(EventArgs e)

@@ -61,6 +61,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Tools → Record MP4 video → Ring buffer can continuously retain a bounded foreground-window or primary-monitor recording and save the last 30, 60, or 90 seconds on demand. The rolling source rotates at 90 seconds, stays in the Snapture temp area, and is deleted after save, stop, or shutdown.
 
+### Added — GIF frame editor
+
+- Stopping a GIF recording now opens a frame-by-frame editor with thumbnail previews, delete / duplicate operations, per-frame delay editing, ordered Bayer dithering, and non-destructive GIF export.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

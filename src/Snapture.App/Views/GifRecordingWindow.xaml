@@ -58,7 +58,7 @@
                    FontSize="11"
                    TextWrapping="Wrap"
                    Margin="0,8,0,0"
-                   Text="Frames are kept in memory until you stop. Stop and pick a file to encode the GIF." />
+                   Text="Frames are kept in memory until you stop. Stop to edit frames before encoding the GIF." />
         <DockPanel Grid.Row="3" LastChildFill="True" Margin="0,10,0,0">
             <Button x:Name="StopButton"
                     DockPanel.Dock="Right"
