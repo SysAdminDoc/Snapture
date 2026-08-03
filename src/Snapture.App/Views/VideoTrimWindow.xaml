@@ -1,0 +1,101 @@
+<Window x:Class="Snapture.App.Views.VideoTrimWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snapture - Trim or split video"
+        Width="500"
+        Height="410"
+        MinWidth="460"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13"
+        Loaded="OnLoaded">
+    <Border Margin="12"
+            Background="{DynamicResource AppSurface}"
+            BorderBrush="{DynamicResource AppBorderStrong}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="18">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0"
+                       Text="Trim or split a recording"
+                       Style="{StaticResource SectionTitleText}"
+                       FontSize="17" />
+            <TextBlock x:Name="SourceText"
+                       Grid.Row="1"
+                       Margin="0,4,0,0"
+                       Text="Loading recording…"
+                       Style="{StaticResource HelpText}"
+                       TextTrimming="CharacterEllipsis" />
+
+            <Grid Grid.Row="2" Margin="0,16,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="14" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="Start (seconds)" Style="{StaticResource HelpText}" />
+                    <TextBox x:Name="StartTextBox" Margin="0,4,0,0" Text="0" />
+                </StackPanel>
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="End (seconds)" Style="{StaticResource HelpText}" />
+                    <TextBox x:Name="EndTextBox" Margin="0,4,0,0" />
+                </StackPanel>
+                <Button Grid.Column="3"
+                        x:Name="TrimButton"
+                        Content="Trim copy"
+                        Style="{StaticResource AccentButton}"
+                        Margin="12,21,0,0"
+                        Padding="12,5"
+                        Click="OnTrimClicked" />
+            </Grid>
+
+            <Separator Grid.Row="3" Margin="0,18,0,14" />
+
+            <TextBlock Grid.Row="4"
+                       Text="Split at markers"
+                       Style="{StaticResource SectionTitleText}" />
+            <Grid Grid.Row="5" Margin="0,6,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <TextBlock Grid.Row="0"
+                           Text="Enter comma-separated seconds, for example 12.5, 28"
+                           Style="{StaticResource HelpText}" />
+                <DockPanel Grid.Row="1" Margin="0,6,0,0">
+                    <Button x:Name="SplitButton"
+                            DockPanel.Dock="Right"
+                            Content="Split files"
+                            Style="{StaticResource AccentButton}"
+                            Padding="12,5"
+                            Click="OnSplitClicked" />
+                    <TextBox x:Name="MarkersTextBox"
+                             Margin="0,0,10,0"
+                             VerticalContentAlignment="Center" />
+                </DockPanel>
+            </Grid>
+
+            <TextBlock x:Name="StatusText"
+                       Grid.Row="6"
+                       Margin="0,16,0,0"
+                       Text=""
+                       Foreground="{DynamicResource AppMutedForeground}"
+                       TextWrapping="Wrap" />
+        </Grid>
+    </Border>
+</Window>

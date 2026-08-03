@@ -53,6 +53,10 @@ All notable changes to Snapture will be documented in this file.
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.
 
+### Added — Video trim and segment split
+
+- The Tools → Record MP4 video menu can open a recording in a local trim/split window. Trim and split operations render new MP4 files through Windows Media Composition, preserve the source, reject invalid or sub-frame ranges, and expose clear errors when the OS codec cannot render the input.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

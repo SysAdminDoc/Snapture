@@ -319,6 +319,19 @@ public sealed class TrayIconHost : IDisposable
         };
         recordVideo.Items.Add(autoTighten);
 
+        var editVideo = new MenuItem { Header = "Trim or split a video…" };
+        editVideo.Click += (_, _) =>
+        {
+            var dlg = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "MP4 video (*.mp4)|*.mp4|All files (*.*)|*.*",
+                CheckFileExists = true
+            };
+            if (dlg.ShowDialog() == true)
+                new Views.VideoTrimWindow(dlg.FileName).Show();
+        };
+        recordVideo.Items.Add(editVideo);
+
         tools.Items.Add(recordVideo);
 
         var stepCapture = new MenuItem { Header = "Step capture…" };
