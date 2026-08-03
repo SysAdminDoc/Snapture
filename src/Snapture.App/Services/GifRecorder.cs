@@ -1,6 +1,4 @@
 using System.Drawing;
-using System.IO;
-using AnimatedGif;
 using Snapture.Capture;
 
 namespace Snapture.App.Services;
@@ -119,13 +117,11 @@ public sealed class GifRecorder : IDisposable
         if (snapshot.Length == 0)
             throw new InvalidOperationException("No frames recorded.");
 
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
         int delay = overrideDelayMs ?? _frameDelayMs;
-        using var creator = AnimatedGif.AnimatedGif.Create(outputPath, delay);
-        foreach (var bmp in snapshot)
-        {
-            creator.AddFrame(bmp, delay: delay, quality: GifQuality.Bit8);
-        }
+        GifEncoder.Encode(
+            outputPath,
+            snapshot.Select(bitmap => new GifFrameInput(bitmap, delay)),
+            GifEncodingOptions.Default);
     }
 
     internal GifFrameEditor CreateFrameEditor()
@@ -135,9 +131,6 @@ public sealed class GifRecorder : IDisposable
             snapshot = _frames.Select(frame => new Bitmap(frame)).ToArray();
         return new GifFrameEditor(snapshot, _frameDelayMs, takeOwnership: true);
     }
-
-    internal void EncodeTo(string outputPath, GifFrameEditor editor)
-        => editor.SaveAs(outputPath);
 
     public void DisposeFrames()
     {

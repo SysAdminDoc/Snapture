@@ -1,8 +1,6 @@
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.IO;
-using AnimatedGif;
 
 namespace Snapture.App.Services;
 
@@ -110,10 +108,10 @@ internal sealed class GifFrameEditor : IDisposable
     public void SaveAs(string outputPath)
     {
         ThrowIfDisposed();
-        Directory.CreateDirectory(Path.GetDirectoryName(outputPath) ?? ".");
-        using var creator = AnimatedGif.AnimatedGif.Create(outputPath, _frames[0].DelayMs);
-        foreach (var frame in _frames)
-            creator.AddFrame(frame.Bitmap, delay: frame.DelayMs, quality: GifQuality.Bit8);
+        GifEncoder.Encode(
+            outputPath,
+            _frames.Select(frame => new GifFrameInput(frame.Bitmap, frame.DelayMs)),
+            GifEncodingOptions.Default);
     }
 
     private static byte Quantize(byte value, int adjustment)

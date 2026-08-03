@@ -65,6 +65,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Stopping a GIF recording now opens a frame-by-frame editor with thumbnail previews, delete / duplicate operations, per-frame delay editing, ordered Bayer dithering, and non-destructive GIF export.
 
+### Changed — Magick.NET GIF output
+
+- GIF exports now use the pinned Magick.NET-Q8-x64 14.15.0 pipeline with a shared 256-color palette, centisecond frame timing, and a bounded 1% ColorFuzz layer optimization for smaller lossy GIFs.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.
@@ -94,7 +98,7 @@ The "more polish, less repeat work" pass. Sticky-strip detection, animated GIF r
 
 ### Added — GIF recording (v0.6.4)
 
-- `Services/GifRecorder` captures the foreground window or the full virtual screen on a fixed cadence (default 10 fps), keeps frames in memory while recording, encodes via the `AnimatedGif` library on stop. Bit8 quality, frame delay configurable.
+- `Services/GifRecorder` captures the foreground window or the full virtual screen on a fixed cadence (default 10 fps), keeps frames in memory while recording, and encodes animated GIF output on stop. Frame delay is configurable.
 - `Views/GifRecordingWindow` — small always-on-top REC-indicator parked top-right of the work area; live frame-count + elapsed timer; Stop & save / Discard.
 - Tray menu **Tools → Record GIF** with two entries: …of foreground window · …of all monitors.
 - Animated GIF output is saved through a standard SaveFileDialog; reveals in Explorer on success.
