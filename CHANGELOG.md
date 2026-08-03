@@ -90,6 +90,10 @@ All notable changes to Snapture will be documented in this file.
 - Scrolling capture now waits for lazy-loaded content to settle at each scroll position with bounded sampled-frame comparisons; animated pages remain bounded and use their newest frame.
 - Scrolling capture now shows a non-modal live viewport preview with frame count and scroll progress while UIA drives the source window; the preview closes before the stitched result is delivered.
 
+### Added — ARM64 distribution
+
+- ARM64 publishing now selects the native `Magick.NET-Q8-arm64` package while x64 keeps the existing native package; both runtime-specific publish paths produce architecture-matched hosts and ZIP artifacts.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.
