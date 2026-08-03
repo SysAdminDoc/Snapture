@@ -14,7 +14,8 @@ public static class HdrFrameConverter
         int sourceY,
         int width,
         int height,
-        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard,
+        bool applyColorCorrection = true)
     {
         if (sourceRowPitch <= 0 || destinationRowPitch <= 0
             || sourceX < 0 || sourceY < 0 || width < 0 || height < 0)
@@ -42,9 +43,9 @@ public static class HdrFrameConverter
                 float alpha = ReadHalf(source, pixelOffset + 6);
 
                 int outputOffset = destinationOffset + x * 4;
-                destination[outputOffset] = ToSrgbByte(blue, toneMapOperator);
-                destination[outputOffset + 1] = ToSrgbByte(green, toneMapOperator);
-                destination[outputOffset + 2] = ToSrgbByte(red, toneMapOperator);
+                destination[outputOffset] = ToSrgbByte(blue, toneMapOperator, applyColorCorrection);
+                destination[outputOffset + 1] = ToSrgbByte(green, toneMapOperator, applyColorCorrection);
+                destination[outputOffset + 2] = ToSrgbByte(red, toneMapOperator, applyColorCorrection);
                 destination[outputOffset + 3] = ToAlphaByte(alpha);
             }
         }
@@ -54,13 +55,22 @@ public static class HdrFrameConverter
         => (float)BitConverter.UInt16BitsToHalf(
             BinaryPrimitives.ReadUInt16LittleEndian(source.Slice(offset, sizeof(ushort))));
 
-    private static byte ToSrgbByte(float linear, HdrToneMapOperator toneMapOperator)
+    private static byte ToSrgbByte(
+        float linear,
+        HdrToneMapOperator toneMapOperator,
+        bool applyColorCorrection)
     {
         if (!float.IsFinite(linear) || linear <= 0f) return 0;
-        float toneMapped = ToneMap(linear, toneMapOperator);
-        float srgb = toneMapped <= 0.0031308f
-            ? toneMapped * 12.92f
-            : 1.055f * MathF.Pow(toneMapped, 1f / 2.4f) - 0.055f;
+        // The corrected path compresses scRGB highlights before sRGB encoding.
+        // Turning the corrector off intentionally uses a direct clamp: this keeps
+        // the uncorrected compositor values visible, while making highlight clipping
+        // explicit at the unavoidable BGRA8 boundary.
+        float normalized = applyColorCorrection
+            ? ToneMap(linear, toneMapOperator)
+            : Math.Clamp(linear, 0f, 1f);
+        float srgb = normalized <= 0.0031308f
+            ? normalized * 12.92f
+            : 1.055f * MathF.Pow(normalized, 1f / 2.4f) - 0.055f;
         return (byte)MathF.Round(Math.Clamp(srgb, 0f, 1f) * 255f);
     }
 

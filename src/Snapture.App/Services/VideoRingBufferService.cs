@@ -25,6 +25,7 @@ internal sealed class VideoRingBufferService : IDisposable
     private int _outputHeight;
     private bool _autoTighten;
     private HdrToneMapOperator _toneMapOperator = HdrToneMapOperator.Reinhard;
+    private bool _hdrColorCorrection = true;
     private bool _running;
     private bool _disposed;
 
@@ -40,12 +41,13 @@ internal sealed class VideoRingBufferService : IDisposable
         int outputWidth,
         int outputHeight,
         bool autoTighten,
-        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard,
+        bool hdrColorCorrection = true)
     {
         if (hwnd == 0)
             throw new ArgumentException("A foreground window is required.", nameof(hwnd));
 
-        Start(new RingSource(RingSourceMode.Window, hwnd), fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator);
+        Start(new RingSource(RingSourceMode.Window, hwnd), fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator, hdrColorCorrection);
     }
 
     public void StartMonitor(
@@ -55,12 +57,13 @@ internal sealed class VideoRingBufferService : IDisposable
         int outputWidth,
         int outputHeight,
         bool autoTighten,
-        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard,
+        bool hdrColorCorrection = true)
     {
         if (hMonitor == 0)
             throw new ArgumentException("A monitor is required.", nameof(hMonitor));
 
-        Start(new RingSource(RingSourceMode.Monitor, hMonitor), fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator);
+        Start(new RingSource(RingSourceMode.Monitor, hMonitor), fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator, hdrColorCorrection);
     }
 
     public void Stop()
@@ -111,7 +114,7 @@ internal sealed class VideoRingBufferService : IDisposable
             await VideoSegmentService.TrimAsync(sourcePath, outputPath, start, duration, cancellationToken);
             TryDelete(sourcePath);
 
-            StartCoreLocked(source.Value, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator);
+            StartCoreLocked(source.Value, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator, _hdrColorCorrection);
             Status = $"Ring buffer saved last {requestedDuration.TotalSeconds:0}s";
             RaiseStateChanged();
             return outputPath;
@@ -125,7 +128,7 @@ internal sealed class VideoRingBufferService : IDisposable
             {
                 try
                 {
-                    StartCoreLocked(restartSource, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator);
+                    StartCoreLocked(restartSource, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator, _hdrColorCorrection);
                 }
                 catch (Exception ex)
                 {
@@ -152,7 +155,8 @@ internal sealed class VideoRingBufferService : IDisposable
         int outputWidth,
         int outputHeight,
         bool autoTighten,
-        HdrToneMapOperator toneMapOperator)
+        HdrToneMapOperator toneMapOperator,
+        bool hdrColorCorrection)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(VideoRingBufferService));
@@ -169,7 +173,8 @@ internal sealed class VideoRingBufferService : IDisposable
             _outputHeight = outputHeight;
             _autoTighten = autoTighten;
             _toneMapOperator = toneMapOperator;
-            StartCoreLocked(source, fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator);
+            _hdrColorCorrection = hdrColorCorrection;
+            StartCoreLocked(source, fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator, hdrColorCorrection);
             _maintenance = new Timer(MaintainBuffer, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         }
         catch
@@ -190,14 +195,16 @@ internal sealed class VideoRingBufferService : IDisposable
         int outputWidth,
         int outputHeight,
         bool autoTighten,
-        HdrToneMapOperator toneMapOperator)
+        HdrToneMapOperator toneMapOperator,
+        bool hdrColorCorrection)
     {
         Directory.CreateDirectory(BufferDirectory);
         string path = Path.Combine(BufferDirectory, $"active-{Guid.NewGuid():N}.mp4");
         var recorder = new VideoRecorder(
             new RecordingAudioOptions { IncludeSystemAudio = false },
             autoTightenEnabled: autoTighten,
-            toneMapOperator: toneMapOperator);
+            toneMapOperator: toneMapOperator,
+            hdrColorCorrection: hdrColorCorrection);
         try
         {
             if (source.Mode == RingSourceMode.Window)
@@ -235,7 +242,7 @@ internal sealed class VideoRingBufferService : IDisposable
                 return;
 
             StopCurrentLocked(deleteFile: true);
-            StartCoreLocked(source, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator);
+            StartCoreLocked(source, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator, _hdrColorCorrection);
         }
         catch (Exception ex)
         {

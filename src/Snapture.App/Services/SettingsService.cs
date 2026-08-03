@@ -75,6 +75,9 @@ public sealed class SnaptureSettings
     /// <summary>HDR FP16-to-SDR operator: "reinhard" (default), "aces", or "hable".</summary>
     public string HdrToneMapOperator { get; set; } = HdrToneMapOperators.DefaultKey;
 
+    /// <summary>Apply HDR screenshot color correction before the BGRA8 export boundary.</summary>
+    public bool HdrColorCorrection { get; set; } = true;
+
     /// <summary>Also write an optional SDR-clamped JXR copy for Game Bar compatibility.</summary>
     public bool HdrWriteJxr { get; set; } = false;
 

@@ -103,6 +103,10 @@
                                     <ComboBoxItem Tag="aces" Content="ACES" />
                                     <ComboBoxItem Tag="hable" Content="Hable" />
                                 </ComboBox>
+                                <CheckBox x:Name="HdrColorCorrectionCheck"
+                                          Content="HDR screenshot color correction (recommended)"
+                                          ToolTip="Tone-map HDR highlights for SDR viewers. Turn off to use a direct scRGB clamp; bright highlights may clip."
+                                          Margin="0,10,0,0" />
                                 <CheckBox x:Name="HdrWriteJxrCheck"
                                           Content="Also write JXR (Game Bar compatibility; SDR-clamped)"
                                           Margin="0,10,0,0" />

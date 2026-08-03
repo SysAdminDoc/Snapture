@@ -224,6 +224,7 @@ public sealed class AppHost : IDisposable
             wrt.IncludeSecondaryWindows = Settings.Current.IncludeSecondaryWindows;
             wrt.IncludeCursor = Settings.Current.IncludeCursor;
             wrt.ToneMapOperator = HdrToneMapOperators.Parse(Settings.Current.HdrToneMapOperator);
+            wrt.HdrColorCorrection = Settings.Current.HdrColorCorrection;
         }
     }
 

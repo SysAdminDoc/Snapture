@@ -30,11 +30,13 @@ public sealed class VideoRecorder : IDisposable
     public VideoRecorder(
         RecordingAudioOptions? audioOptions = null,
         bool autoTightenEnabled = false,
-        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard,
+        bool hdrColorCorrection = true)
     {
         _audioOptions = (audioOptions ?? new RecordingAudioOptions()).Clone();
         _autoTightenEnabled = autoTightenEnabled;
         _toneMapOperator = toneMapOperator;
+        _hdrColorCorrection = hdrColorCorrection;
     }
 
     public bool IsRecording { get; private set; }
@@ -69,6 +71,9 @@ public sealed class VideoRecorder : IDisposable
     public bool IsFp16CaptureEnabled => _capturePixelFormat.UsesFp16;
     public string CapturePixelFormatDescription => _capturePixelFormat.Description;
     public string ToneMapOperatorDescription => HdrToneMapOperators.DisplayName(_toneMapOperator);
+    public string HdrColorCorrectionDescription => _hdrColorCorrection
+        ? "HDR color correction on"
+        : "HDR color correction off (highlight clamp)";
     public string OutputResolutionDescription => _outputWidth == _width && _outputHeight == _height
         ? $"{_outputWidth}x{_outputHeight}"
         : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
@@ -98,6 +103,7 @@ public sealed class VideoRecorder : IDisposable
     private Rectangle _sourceCrop;
     private CapturePixelFormatDecision _capturePixelFormat = CapturePixelFormatDecision.Sdr;
     private readonly HdrToneMapOperator _toneMapOperator;
+    private readonly bool _hdrColorCorrection;
 
     // WGC continuous capture
     private nint _d3dDevice;
@@ -714,7 +720,8 @@ public sealed class VideoRecorder : IDisposable
                             var destination = new Span<byte>(dst, checked((int)bufSize));
                             HdrFrameConverter.ConvertRgba16FloatToBgra(
                                 source, checked((int)mapped.RowPitch), destination, rowBytes,
-                                _sourceCrop.X, _sourceCrop.Y, _width, _height, _toneMapOperator);
+                                _sourceCrop.X, _sourceCrop.Y, _width, _height,
+                                _toneMapOperator, _hdrColorCorrection);
                         }
                         else
                         {

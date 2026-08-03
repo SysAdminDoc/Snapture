@@ -41,6 +41,7 @@ public partial class SettingsWindow : Window
         SelectComboByTag(EngineCombo, _draft.CaptureEngine);
         SelectComboByTag(ToneMapCombo, HdrToneMapOperators.ToKey(
             HdrToneMapOperators.Parse(_draft.HdrToneMapOperator)));
+        HdrColorCorrectionCheck.IsChecked = _draft.HdrColorCorrection;
         HdrWriteJxrCheck.IsChecked = _draft.HdrWriteJxr;
         BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
@@ -411,6 +412,7 @@ public partial class SettingsWindow : Window
         _draft.FilenamePattern        = FilenameTemplateBox.Text;
         _draft.OutputFormat           = ((ComboBoxItem)FormatCombo.SelectedItem).Tag as string ?? "PNG";
         _draft.HdrToneMapOperator     = ((ComboBoxItem)ToneMapCombo.SelectedItem).Tag as string ?? HdrToneMapOperators.DefaultKey;
+        _draft.HdrColorCorrection    = HdrColorCorrectionCheck.IsChecked == true;
         _draft.HdrWriteJxr            = HdrWriteJxrCheck.IsChecked == true;
         var newTheme                  = ((ComboBoxItem)ThemeCombo.SelectedItem).Tag as string ?? ThemeManager.SystemMode;
         var newEngine                 = ((ComboBoxItem)EngineCombo.SelectedItem).Tag as string ?? "auto";
@@ -471,6 +473,7 @@ public partial class SettingsWindow : Window
         dst.CaptureEngine = src.CaptureEngine;
         dst.HdrToneMapOperator = HdrToneMapOperators.ToKey(
             HdrToneMapOperators.Parse(src.HdrToneMapOperator));
+        dst.HdrColorCorrection = src.HdrColorCorrection;
         dst.HdrWriteJxr = src.HdrWriteJxr;
         dst.BorderlessConsentGiven = src.BorderlessConsentGiven;
         dst.PrintScreenHijackToastShown = src.PrintScreenHijackToastShown;

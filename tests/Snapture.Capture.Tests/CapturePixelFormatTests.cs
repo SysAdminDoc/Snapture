@@ -72,6 +72,29 @@ public class CapturePixelFormatTests
     }
 
     [Fact]
+    public void ColorCorrectorToggle_UsesToneMapOrDirectScRgbClamp()
+    {
+        Span<byte> source = stackalloc byte[8];
+        WriteHalf(source, 0, 4f);
+        WriteHalf(source, 2, 4f);
+        WriteHalf(source, 4, 4f);
+        WriteHalf(source, 6, 1f);
+        Span<byte> corrected = stackalloc byte[4];
+        Span<byte> uncorrected = stackalloc byte[4];
+
+        HdrFrameConverter.ConvertRgba16FloatToBgra(
+            source, 8, corrected, 4, 0, 0, 1, 1,
+            HdrToneMapOperator.Reinhard, applyColorCorrection: true);
+        HdrFrameConverter.ConvertRgba16FloatToBgra(
+            source, 8, uncorrected, 4, 0, 0, 1, 1,
+            HdrToneMapOperator.Reinhard, applyColorCorrection: false);
+
+        Assert.True(corrected[2] < 255);
+        Assert.Equal(255, uncorrected[2]);
+        Assert.Equal(255, uncorrected[3]);
+    }
+
+    [Fact]
     public void ResolveForMonitor_ReturnsAValidDecisionWithoutRequiringHdrHardware()
     {
         foreach (var monitor in MonitorEnumerator.Enumerate())

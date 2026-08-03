@@ -83,6 +83,7 @@ All notable changes to Snapture will be documented in this file.
 - HDR captures now write a PNG primary plus JPEG XL archival and AVIF sharing siblings automatically; optional WIC JXR output is exposed for Game Bar compatibility and is documented as SDR-clamped.
 - Settings now flags suspiciously low HDR peak luminance and deep-links to Windows HDR calibration before capture.
 - Video recording now probes Media Foundation AV1/HEVC/H.264 encoders and the WIC HEIF encoder, reports missing Store codec extensions, and falls back to the next available encoder.
+- HDR capture and recording now expose an HDR screenshot color-correction toggle; disabling it uses a direct scRGB clamp and clearly surfaces possible highlight clipping.
 
 ### Fixed
 
