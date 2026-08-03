@@ -27,10 +27,14 @@ public sealed class VideoRecorder : IDisposable
 {
     public enum RecordSource { ForegroundWindow, Monitor, VirtualScreen }
 
-    public VideoRecorder(RecordingAudioOptions? audioOptions = null, bool autoTightenEnabled = false)
+    public VideoRecorder(
+        RecordingAudioOptions? audioOptions = null,
+        bool autoTightenEnabled = false,
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
     {
         _audioOptions = (audioOptions ?? new RecordingAudioOptions()).Clone();
         _autoTightenEnabled = autoTightenEnabled;
+        _toneMapOperator = toneMapOperator;
     }
 
     public bool IsRecording { get; private set; }
@@ -63,6 +67,7 @@ public sealed class VideoRecorder : IDisposable
         : _autoTightenPlan?.Description ?? "auto-tighten pending";
     public bool IsFp16CaptureEnabled => _capturePixelFormat.UsesFp16;
     public string CapturePixelFormatDescription => _capturePixelFormat.Description;
+    public string ToneMapOperatorDescription => HdrToneMapOperators.DisplayName(_toneMapOperator);
     public string OutputResolutionDescription => _outputWidth == _width && _outputHeight == _height
         ? $"{_outputWidth}x{_outputHeight}"
         : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
@@ -91,6 +96,7 @@ public sealed class VideoRecorder : IDisposable
     private RecordingAutoTightenPlan? _autoTightenPlan;
     private Rectangle _sourceCrop;
     private CapturePixelFormatDecision _capturePixelFormat = CapturePixelFormatDecision.Sdr;
+    private readonly HdrToneMapOperator _toneMapOperator;
 
     // WGC continuous capture
     private nint _d3dDevice;
@@ -705,7 +711,7 @@ public sealed class VideoRecorder : IDisposable
                             var destination = new Span<byte>(dst, checked((int)bufSize));
                             HdrFrameConverter.ConvertRgba16FloatToBgra(
                                 source, checked((int)mapped.RowPitch), destination, rowBytes,
-                                _sourceCrop.X, _sourceCrop.Y, _width, _height);
+                                _sourceCrop.X, _sourceCrop.Y, _width, _height, _toneMapOperator);
                         }
                         else
                         {

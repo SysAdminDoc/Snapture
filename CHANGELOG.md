@@ -78,6 +78,8 @@ All notable changes to Snapture will be documented in this file.
 
 - WinRT monitor and window capture now queries the target DXGI output's current color space and selects an FP16 (`R16G16B16A16_FLOAT`) frame pool only for HDR/PQ Rec. 2020 output. FP16 surfaces are tone-mapped to the existing BGRA8 boundary, with deterministic BGRA8 fallback when the monitor query or WGC pool is unavailable.
 
+- HDR tone mapping is selectable in Settings → Capture — Reinhard (default), ACES, or Hable — and the choice applies to still captures, MP4 recordings, and the rolling ring buffer.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

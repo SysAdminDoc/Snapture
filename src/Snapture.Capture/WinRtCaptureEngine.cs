@@ -24,6 +24,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
 
     public bool IncludeSecondaryWindows { get; set; }
     public bool IncludeCursor { get; set; } = true;
+    public HdrToneMapOperator ToneMapOperator { get; set; } = HdrToneMapOperator.Reinhard;
 
     private readonly GdiCaptureEngine _fallback = new();
     private readonly object _deviceLock = new();
@@ -329,7 +330,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
                                 checked(data.Stride * height));
                             HdrFrameConverter.ConvertRgba16FloatToBgra(
                                 source, checked((int)mapped.RowPitch), destination, data.Stride,
-                                0, 0, width, height);
+                                0, 0, width, height, ToneMapOperator);
                         }
                         else
                         {

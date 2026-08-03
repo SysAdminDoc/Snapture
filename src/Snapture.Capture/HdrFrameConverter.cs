@@ -13,7 +13,8 @@ public static class HdrFrameConverter
         int sourceX,
         int sourceY,
         int width,
-        int height)
+        int height,
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
     {
         if (sourceRowPitch <= 0 || destinationRowPitch <= 0
             || sourceX < 0 || sourceY < 0 || width < 0 || height < 0)
@@ -41,9 +42,9 @@ public static class HdrFrameConverter
                 float alpha = ReadHalf(source, pixelOffset + 6);
 
                 int outputOffset = destinationOffset + x * 4;
-                destination[outputOffset] = ToSrgbByte(blue);
-                destination[outputOffset + 1] = ToSrgbByte(green);
-                destination[outputOffset + 2] = ToSrgbByte(red);
+                destination[outputOffset] = ToSrgbByte(blue, toneMapOperator);
+                destination[outputOffset + 1] = ToSrgbByte(green, toneMapOperator);
+                destination[outputOffset + 2] = ToSrgbByte(red, toneMapOperator);
                 destination[outputOffset + 3] = ToAlphaByte(alpha);
             }
         }
@@ -53,10 +54,10 @@ public static class HdrFrameConverter
         => (float)BitConverter.UInt16BitsToHalf(
             BinaryPrimitives.ReadUInt16LittleEndian(source.Slice(offset, sizeof(ushort))));
 
-    private static byte ToSrgbByte(float linear)
+    private static byte ToSrgbByte(float linear, HdrToneMapOperator toneMapOperator)
     {
         if (!float.IsFinite(linear) || linear <= 0f) return 0;
-        float toneMapped = linear / (1f + linear);
+        float toneMapped = ToneMap(linear, toneMapOperator);
         float srgb = toneMapped <= 0.0031308f
             ? toneMapped * 12.92f
             : 1.055f * MathF.Pow(toneMapped, 1f / 2.4f) - 0.055f;
@@ -67,4 +68,43 @@ public static class HdrFrameConverter
         => !float.IsFinite(alpha)
             ? (byte)0
             : (byte)MathF.Round(Math.Clamp(alpha, 0f, 1f) * 255f);
+
+    private static float ToneMap(float linear, HdrToneMapOperator toneMapOperator)
+    {
+        return toneMapOperator switch
+        {
+            HdrToneMapOperator.Aces => Aces(linear),
+            HdrToneMapOperator.Hable => Hable(linear),
+            _ => linear / (1f + linear)
+        };
+    }
+
+    private static float Aces(float linear)
+    {
+        const float a = 2.51f;
+        const float b = 0.03f;
+        const float c = 2.43f;
+        const float d = 0.59f;
+        const float e = 0.14f;
+        return Math.Clamp((linear * (a * linear + b))
+            / (linear * (c * linear + d) + e), 0f, 1f);
+    }
+
+    private static float Hable(float linear)
+    {
+        const float a = 0.15f;
+        const float b = 0.50f;
+        const float c = 0.10f;
+        const float d = 0.20f;
+        const float e = 0.02f;
+        const float f = 0.30f;
+        const float white = 11.2f;
+
+        static float Curve(float value, float a, float b, float c, float d, float e, float f)
+            => ((value * (a * value + c * b) + d * e)
+                / (value * (a * value + b) + d * f)) - e / f;
+
+        float whiteScale = 1f / Curve(white, a, b, c, d, e, f);
+        return Math.Clamp(Curve(linear, a, b, c, d, e, f) * whiteScale, 0f, 1f);
+    }
 }

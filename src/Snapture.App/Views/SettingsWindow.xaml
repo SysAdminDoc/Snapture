@@ -91,6 +91,23 @@
 
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
+                                <TextBlock Text="HDR tone mapping" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="When Windows HDR is active, Snapture captures FP16 surfaces and maps them to SDR exports and recordings with this operator. Reinhard is the conservative default."
+                                           Style="{StaticResource HelpText}"
+                                           Margin="0,0,0,8"
+                                           TextWrapping="Wrap" />
+                                <ComboBox x:Name="ToneMapCombo"
+                                          Width="260"
+                                          HorizontalAlignment="Left">
+                                    <ComboBoxItem Tag="reinhard" Content="Reinhard (default)" />
+                                    <ComboBoxItem Tag="aces" Content="ACES" />
+                                    <ComboBoxItem Tag="hable" Content="Hable" />
+                                </ComboBox>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
                                 <TextBlock Text="Borderless capture" Style="{StaticResource SectionTitleText}" />
                                 <TextBlock Text="Windows 11 22H2+ can draw a yellow border around captured windows unless Snapture has borderless-capture access. The consent persists across reinstalls."
                                            Style="{StaticResource HelpText}" />

@@ -1,5 +1,6 @@
 using System.IO;
 using Serilog;
+using Snapture.Capture;
 
 namespace Snapture.App.Services;
 
@@ -23,6 +24,7 @@ internal sealed class VideoRingBufferService : IDisposable
     private int _outputWidth;
     private int _outputHeight;
     private bool _autoTighten;
+    private HdrToneMapOperator _toneMapOperator = HdrToneMapOperator.Reinhard;
     private bool _running;
     private bool _disposed;
 
@@ -37,12 +39,13 @@ internal sealed class VideoRingBufferService : IDisposable
         int bitrateMbps,
         int outputWidth,
         int outputHeight,
-        bool autoTighten)
+        bool autoTighten,
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
     {
         if (hwnd == 0)
             throw new ArgumentException("A foreground window is required.", nameof(hwnd));
 
-        Start(new RingSource(RingSourceMode.Window, hwnd), fps, bitrateMbps, outputWidth, outputHeight, autoTighten);
+        Start(new RingSource(RingSourceMode.Window, hwnd), fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator);
     }
 
     public void StartMonitor(
@@ -51,12 +54,13 @@ internal sealed class VideoRingBufferService : IDisposable
         int bitrateMbps,
         int outputWidth,
         int outputHeight,
-        bool autoTighten)
+        bool autoTighten,
+        HdrToneMapOperator toneMapOperator = HdrToneMapOperator.Reinhard)
     {
         if (hMonitor == 0)
             throw new ArgumentException("A monitor is required.", nameof(hMonitor));
 
-        Start(new RingSource(RingSourceMode.Monitor, hMonitor), fps, bitrateMbps, outputWidth, outputHeight, autoTighten);
+        Start(new RingSource(RingSourceMode.Monitor, hMonitor), fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator);
     }
 
     public void Stop()
@@ -107,7 +111,7 @@ internal sealed class VideoRingBufferService : IDisposable
             await VideoSegmentService.TrimAsync(sourcePath, outputPath, start, duration, cancellationToken);
             TryDelete(sourcePath);
 
-            StartCoreLocked(source.Value, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten);
+            StartCoreLocked(source.Value, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator);
             Status = $"Ring buffer saved last {requestedDuration.TotalSeconds:0}s";
             RaiseStateChanged();
             return outputPath;
@@ -121,7 +125,7 @@ internal sealed class VideoRingBufferService : IDisposable
             {
                 try
                 {
-                    StartCoreLocked(restartSource, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten);
+                    StartCoreLocked(restartSource, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator);
                 }
                 catch (Exception ex)
                 {
@@ -147,7 +151,8 @@ internal sealed class VideoRingBufferService : IDisposable
         int bitrateMbps,
         int outputWidth,
         int outputHeight,
-        bool autoTighten)
+        bool autoTighten,
+        HdrToneMapOperator toneMapOperator)
     {
         if (_disposed)
             throw new ObjectDisposedException(nameof(VideoRingBufferService));
@@ -163,7 +168,8 @@ internal sealed class VideoRingBufferService : IDisposable
             _outputWidth = outputWidth;
             _outputHeight = outputHeight;
             _autoTighten = autoTighten;
-            StartCoreLocked(source, fps, bitrateMbps, outputWidth, outputHeight, autoTighten);
+            _toneMapOperator = toneMapOperator;
+            StartCoreLocked(source, fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator);
             _maintenance = new Timer(MaintainBuffer, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         }
         catch
@@ -183,13 +189,15 @@ internal sealed class VideoRingBufferService : IDisposable
         int bitrateMbps,
         int outputWidth,
         int outputHeight,
-        bool autoTighten)
+        bool autoTighten,
+        HdrToneMapOperator toneMapOperator)
     {
         Directory.CreateDirectory(BufferDirectory);
         string path = Path.Combine(BufferDirectory, $"active-{Guid.NewGuid():N}.mp4");
         var recorder = new VideoRecorder(
             new RecordingAudioOptions { IncludeSystemAudio = false },
-            autoTightenEnabled: autoTighten);
+            autoTightenEnabled: autoTighten,
+            toneMapOperator: toneMapOperator);
         try
         {
             if (source.Mode == RingSourceMode.Window)
@@ -227,7 +235,7 @@ internal sealed class VideoRingBufferService : IDisposable
                 return;
 
             StopCurrentLocked(deleteFile: true);
-            StartCoreLocked(source, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten);
+            StartCoreLocked(source, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator);
         }
         catch (Exception ex)
         {

@@ -22,6 +22,16 @@ public class CapturePixelFormatTests
     }
 
     [Fact]
+    public void ToneMapOperatorParser_NormalizesUnknownValuesToReinhard()
+    {
+        Assert.Equal(HdrToneMapOperator.Reinhard, HdrToneMapOperators.Parse(null));
+        Assert.Equal(HdrToneMapOperator.Aces, HdrToneMapOperators.Parse(" ACES "));
+        Assert.Equal(HdrToneMapOperator.Hable, HdrToneMapOperators.Parse("hable"));
+        Assert.Equal(HdrToneMapOperator.Reinhard, HdrToneMapOperators.Parse("future-operator"));
+        Assert.Equal("reinhard", HdrToneMapOperators.ToKey(HdrToneMapOperator.Reinhard));
+    }
+
+    [Fact]
     public void ConvertRgba16FloatToBgra_ToneMapsHdrValues()
     {
         Span<byte> source = stackalloc byte[8];
@@ -37,6 +47,28 @@ public class CapturePixelFormatTests
         Assert.True(destination[2] > destination[1]);
         Assert.True(destination[1] > destination[0]);
         Assert.True(destination[2] < 255);
+    }
+
+    [Fact]
+    public void ToneMapOperators_ProduceBoundedDistinctCurves()
+    {
+        Span<byte> source = stackalloc byte[8];
+        WriteHalf(source, 0, 4f);
+        WriteHalf(source, 2, 4f);
+        WriteHalf(source, 4, 4f);
+        WriteHalf(source, 6, 1f);
+        Span<byte> reinhard = stackalloc byte[4];
+        Span<byte> aces = stackalloc byte[4];
+        Span<byte> hable = stackalloc byte[4];
+
+        HdrFrameConverter.ConvertRgba16FloatToBgra(source, 8, reinhard, 4, 0, 0, 1, 1);
+        HdrFrameConverter.ConvertRgba16FloatToBgra(source, 8, aces, 4, 0, 0, 1, 1, HdrToneMapOperator.Aces);
+        HdrFrameConverter.ConvertRgba16FloatToBgra(source, 8, hable, 4, 0, 0, 1, 1, HdrToneMapOperator.Hable);
+
+        Assert.All(new[] { reinhard[0], reinhard[1], reinhard[2], aces[0], aces[1], aces[2], hable[0], hable[1], hable[2] },
+            value => Assert.InRange(value, (byte)0, (byte)255));
+        Assert.NotEqual(reinhard[0], aces[0]);
+        Assert.NotEqual(reinhard[0], hable[0]);
     }
 
     [Fact]

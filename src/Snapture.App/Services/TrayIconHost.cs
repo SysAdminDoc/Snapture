@@ -268,7 +268,9 @@ public sealed class TrayIconHost : IDisposable
                 var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
                 var (ow, oh) = RecordingPresets.ResolveOutputSize(
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
-                var rec = new VideoRecorder(autoTightenEnabled: App.Host?.Settings.Current.RecordingAutoTighten ?? false);
+                var rec = new VideoRecorder(
+                    autoTightenEnabled: App.Host?.Settings.Current.RecordingAutoTighten ?? false,
+                    toneMapOperator: HdrToneMapOperators.Parse(App.Host?.Settings.Current.HdrToneMapOperator));
                 new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.ForegroundWindow, hwnd,
                     q.Fps, q.BitrateMbps, ow, oh).Show();
             }
@@ -285,7 +287,9 @@ public sealed class TrayIconHost : IDisposable
                 var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
                 var (ow, oh) = RecordingPresets.ResolveOutputSize(
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
-                var rec = new VideoRecorder(autoTightenEnabled: App.Host?.Settings.Current.RecordingAutoTighten ?? false);
+                var rec = new VideoRecorder(
+                    autoTightenEnabled: App.Host?.Settings.Current.RecordingAutoTighten ?? false,
+                    toneMapOperator: HdrToneMapOperators.Parse(App.Host?.Settings.Current.HdrToneMapOperator));
                 new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.Monitor, mon.Handle,
                     q.Fps, q.BitrateMbps, ow, oh).Show();
             }
@@ -376,7 +380,8 @@ public sealed class TrayIconHost : IDisposable
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
                 _ringBuffer.StartWindow(
                     hwnd, q.Fps, q.BitrateMbps, ow, oh,
-                    App.Host?.Settings.Current.RecordingAutoTighten ?? false);
+                    App.Host?.Settings.Current.RecordingAutoTighten ?? false,
+                    HdrToneMapOperators.Parse(App.Host?.Settings.Current.HdrToneMapOperator));
                 ShowToast("Ring buffer recording", "The last 30, 60, or 90 seconds are ready to save from the tray.");
             }
             catch (Exception ex)
@@ -399,7 +404,8 @@ public sealed class TrayIconHost : IDisposable
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
                 _ringBuffer.StartMonitor(
                     monitor.Handle, q.Fps, q.BitrateMbps, ow, oh,
-                    App.Host?.Settings.Current.RecordingAutoTighten ?? false);
+                    App.Host?.Settings.Current.RecordingAutoTighten ?? false,
+                    HdrToneMapOperators.Parse(App.Host?.Settings.Current.HdrToneMapOperator));
                 ShowToast("Ring buffer recording", "The last 30, 60, or 90 seconds are ready to save from the tray.");
             }
             catch (Exception ex)
