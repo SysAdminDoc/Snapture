@@ -243,7 +243,7 @@ public sealed class TrayIconHost : IDisposable
                 var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
                 var (ow, oh) = RecordingPresets.ResolveOutputSize(
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
-                var rec = new VideoRecorder();
+                var rec = new VideoRecorder(autoTightenEnabled: App.Host?.Settings.Current.RecordingAutoTighten ?? false);
                 new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.ForegroundWindow, hwnd,
                     q.Fps, q.BitrateMbps, ow, oh).Show();
             }
@@ -260,7 +260,7 @@ public sealed class TrayIconHost : IDisposable
                 var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
                 var (ow, oh) = RecordingPresets.ResolveOutputSize(
                     App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
-                var rec = new VideoRecorder();
+                var rec = new VideoRecorder(autoTightenEnabled: App.Host?.Settings.Current.RecordingAutoTighten ?? false);
                 new Views.VideoRecordingWindow(rec, Views.VideoRecordingWindow.Mode.Monitor, mon.Handle,
                     q.Fps, q.BitrateMbps, ow, oh).Show();
             }
@@ -303,6 +303,21 @@ public sealed class TrayIconHost : IDisposable
             resolutionMenu.Items.Add(ri);
         }
         recordVideo.Items.Add(resolutionMenu);
+
+        var autoTighten = new MenuItem
+        {
+            Header = "Auto-tighten app chrome",
+            IsCheckable = true,
+            IsChecked = App.Host?.Settings.Current.RecordingAutoTighten ?? false,
+            ToolTip = "Use UI Automation to crop edge-mounted tabs, docks, and taskbars when the crop is safe."
+        };
+        autoTighten.Click += (_, _) =>
+        {
+            if (App.Host is null) return;
+            App.Host.Settings.Current.RecordingAutoTighten = autoTighten.IsChecked;
+            App.Host.Settings.Save();
+        };
+        recordVideo.Items.Add(autoTighten);
 
         tools.Items.Add(recordVideo);
 

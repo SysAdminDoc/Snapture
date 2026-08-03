@@ -27,8 +27,11 @@ public sealed class VideoRecorder : IDisposable
 {
     public enum RecordSource { ForegroundWindow, Monitor, VirtualScreen }
 
-    public VideoRecorder(RecordingAudioOptions? audioOptions = null)
-        => _audioOptions = (audioOptions ?? new RecordingAudioOptions()).Clone();
+    public VideoRecorder(RecordingAudioOptions? audioOptions = null, bool autoTightenEnabled = false)
+    {
+        _audioOptions = (audioOptions ?? new RecordingAudioOptions()).Clone();
+        _autoTightenEnabled = autoTightenEnabled;
+    }
 
     public bool IsRecording { get; private set; }
     public bool IsPaused { get; private set; }
@@ -48,12 +51,16 @@ public sealed class VideoRecorder : IDisposable
     public bool IsAppAudioOnly => _audioCapture?.IsTargetProcessAudioEnabled ?? _audioOptions.UseTargetProcessAudio;
     public bool IsZoomSuggestionsEnabled => _zoomSuggestionsEnabled;
     public int ZoomSuggestionClickCount => _zoomSuggestions.ClickCount;
+    public bool IsAutoTightenEnabled => _autoTightenEnabled;
     public float SystemAudioLevel => _audioCapture?.SystemLevel ?? 0f;
     public float MicrophoneLevel => _audioCapture?.MicrophoneLevel ?? 0f;
     public string AudioDescription { get; private set; } = "AAC audio pending";
     public string ZoomSuggestionsDescription => _zoomSuggestionsEnabled
         ? $"auto-zoom hints: {ZoomSuggestionClickCount}"
         : "auto-zoom hints off";
+    public string AutoTightenDescription => !_autoTightenEnabled
+        ? "auto-tighten off"
+        : _autoTightenPlan?.Description ?? "auto-tighten pending";
     public string OutputResolutionDescription => _outputWidth == _width && _outputHeight == _height
         ? $"{_outputWidth}x{_outputHeight}"
         : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
@@ -78,6 +85,9 @@ public sealed class VideoRecorder : IDisposable
     private Rectangle _captureBounds = Rectangle.Empty;
     private long _frameDurationHns;
     private bool _zoomSuggestionsEnabled = true;
+    private bool _autoTightenEnabled;
+    private RecordingAutoTightenPlan? _autoTightenPlan;
+    private Rectangle _sourceCrop;
 
     // WGC continuous capture
     private nint _d3dDevice;
@@ -110,6 +120,9 @@ public sealed class VideoRecorder : IDisposable
         var item = CaptureItemFactory.CreateForWindow(hwnd)
             ?? throw new InvalidOperationException("CreateForWindow returned null.");
         _captureBounds = ResolveWindowBounds(hwnd, item.Size.Width, item.Size.Height);
+        _autoTightenPlan = _autoTightenEnabled
+            ? RecordingAutoTightenEngine.DetectWindow(hwnd, _captureBounds)
+            : null;
         StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight);
     }
 
@@ -125,6 +138,9 @@ public sealed class VideoRecorder : IDisposable
         var item = CaptureItemFactory.CreateForMonitor(hMonitor)
             ?? throw new InvalidOperationException("CreateForMonitor returned null.");
         _captureBounds = ResolveMonitorBounds(hMonitor, item.Size.Width, item.Size.Height);
+        _autoTightenPlan = _autoTightenEnabled
+            ? RecordingAutoTightenEngine.DetectMonitor(_captureBounds)
+            : null;
         StartInternal(item, outputPath, fps, bitrateMbps, outputWidth, outputHeight);
     }
 
@@ -237,6 +253,15 @@ public sealed class VideoRecorder : IDisposable
     public void SetZoomSuggestionsEnabled(bool enabled)
         => _zoomSuggestionsEnabled = enabled;
 
+    public bool SetAutoTightenEnabled(bool enabled)
+    {
+        if (IsRecording)
+            return false;
+
+        _autoTightenEnabled = enabled;
+        return true;
+    }
+
     public string? ExportZoomSuggestions(string videoPath)
     {
         return _zoomSuggestionsEnabled
@@ -251,8 +276,9 @@ public sealed class VideoRecorder : IDisposable
         _outputPath = outputPath;
         _sourceWidth = item.Size.Width;
         _sourceHeight = item.Size.Height;
-        _width = _sourceWidth;
-        _height = _sourceHeight;
+        _sourceCrop = ResolveSourceCrop(_autoTightenPlan, _captureBounds, _sourceWidth, _sourceHeight);
+        _width = _sourceCrop.Width;
+        _height = _sourceCrop.Height;
 
         // Ensure width/height are even for MP4 encoders. The WGC source texture keeps
         // its native size; WriteFrame crops the final row/column if needed.
@@ -322,8 +348,8 @@ public sealed class VideoRecorder : IDisposable
         Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
 
         _session.StartCapture();
-        Log.Information("VideoRecorder.Started {Width}x{Height}→{OutWidth}x{OutHeight} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio}",
-            _width, _height, _outputWidth, _outputHeight, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled);
+        Log.Information("VideoRecorder.Started {Width}x{Height}→{OutWidth}x{OutHeight} {Fps}fps {Bitrate}Mbps DirtyRegions={DirtyRegions} Audio={Audio} AutoTighten={AutoTighten}",
+            _width, _height, _outputWidth, _outputHeight, fps, bitrateMbps, _dirtyRegionFilter.ReportingEnabled, _audioStreamEnabled, AutoTightenDescription);
     }
 
     private void ConfigureSinkWriter(string outputPath, int fps, int bitrateMbps)
@@ -579,7 +605,7 @@ public sealed class VideoRecorder : IDisposable
 
         try
         {
-            WriteFrame(frame, pts, pointerFrame, keystrokeFrame);
+            WriteFrame(frame, pts, CropPointerFrame(pointerFrame), keystrokeFrame);
             FrameCount++;
             Progress?.Invoke(FrameCount, Elapsed);
         }
@@ -651,7 +677,7 @@ public sealed class VideoRecorder : IDisposable
                         for (int y = 0; y < _height; y++)
                         {
                             Buffer.MemoryCopy(
-                                src + y * (long)mapped.RowPitch,
+                                src + ((_sourceCrop.Y + y) * (long)mapped.RowPitch) + (_sourceCrop.X * 4L),
                                 dst + y * (long)rowBytes,
                                 rowBytes, rowBytes);
                         }
@@ -781,6 +807,63 @@ public sealed class VideoRecorder : IDisposable
             _zoomSuggestions.AddClick(_sw.Elapsed, localPoint.Value);
 
         _audioCapture?.PlayClick();
+    }
+
+    private RecordingPointerFrame? CropPointerFrame(RecordingPointerFrame? frame)
+    {
+        if (frame is not { } pointer)
+            return null;
+
+        System.Drawing.Point? Map(System.Drawing.Point point)
+        {
+            int x = point.X - _sourceCrop.Left;
+            int y = point.Y - _sourceCrop.Top;
+            return x >= 0 && y >= 0 && x < _width && y < _height
+                ? new System.Drawing.Point(x, y)
+                : null;
+        }
+
+        System.Drawing.Point? cursor = pointer.CursorPosition is { } cursorPoint ? Map(cursorPoint) : null;
+        var clicks = pointer.Clicks
+            .Select(click => Map(click.Position) is { } position
+                ? click with { Position = position }
+                : (RecordingPointerEffect?)null)
+            .Where(click => click is not null)
+            .Select(click => click!.Value)
+            .ToList();
+
+        return new RecordingPointerFrame(cursor, clicks, cursor is not null || clicks.Count > 0);
+    }
+
+    private static Rectangle ResolveSourceCrop(
+        RecordingAutoTightenPlan? plan,
+        Rectangle captureBounds,
+        int sourceWidth,
+        int sourceHeight)
+    {
+        var full = new Rectangle(0, 0, Math.Max(0, sourceWidth), Math.Max(0, sourceHeight));
+        if (full.Width <= 0 || full.Height <= 0 || plan is null || !plan.IsApplied)
+            return full;
+
+        double scaleX = captureBounds.Width > 0 ? sourceWidth / (double)captureBounds.Width : 1.0;
+        double scaleY = captureBounds.Height > 0 ? sourceHeight / (double)captureBounds.Height : 1.0;
+        int left = (int)Math.Floor((plan.Crop.Left - captureBounds.Left) * scaleX);
+        int top = (int)Math.Floor((plan.Crop.Top - captureBounds.Top) * scaleY);
+        int right = (int)Math.Ceiling((plan.Crop.Right - captureBounds.Left) * scaleX);
+        int bottom = (int)Math.Ceiling((plan.Crop.Bottom - captureBounds.Top) * scaleY);
+        var crop = Rectangle.Intersect(full, Rectangle.FromLTRB(left, top, right, bottom));
+
+        if (crop.Width < 2 || crop.Height < 2)
+            return full;
+
+        // H.264/HEVC/AV1 input types require even dimensions. Move the origin inward
+        // only when necessary so the crop never samples outside the staging texture.
+        if ((crop.X & 1) != 0) { crop.X++; crop.Width--; }
+        if ((crop.Y & 1) != 0) { crop.Y++; crop.Height--; }
+        if ((crop.Width & 1) != 0) crop.Width--;
+        if ((crop.Height & 1) != 0) crop.Height--;
+
+        return crop.Width >= 2 && crop.Height >= 2 ? crop : full;
     }
 
     private static void TryDeletePartialFile(string outputPath)

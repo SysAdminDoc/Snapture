@@ -49,6 +49,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Video recordings can collect cursor telemetry and infer click-focused zoom segments, merging nearby clicks and clamping crops to the recorded frame. The recording HUD exposes the opt-in toggle, and saved recordings receive a `.snapture-zoom.json` sidecar with versioned, editor-friendly crop metadata.
 
+### Added — UIA-driven recording auto-tighten
+
+- An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

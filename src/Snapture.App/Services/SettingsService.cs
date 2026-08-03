@@ -89,6 +89,9 @@ public sealed class SnaptureSettings
     /// <summary>Recording output resolution. "native" keeps the capture source size.</summary>
     public string RecordingResolution { get; set; } = RecordingPresets.NativeResolution;
 
+    /// <summary>Crop stable edge-mounted tabs, docks, and taskbars from new recordings when UIA can prove a safe crop.</summary>
+    public bool RecordingAutoTighten { get; set; } = false;
+
     public HotkeyBinding RegionHotkey { get; set; } = new(0, "PrintScreen");
     public HotkeyBinding WindowHotkey { get; set; } = new(1 /*Alt*/, "PrintScreen");
     public HotkeyBinding FullscreenHotkey { get; set; } = new(2 /*Ctrl*/, "PrintScreen");

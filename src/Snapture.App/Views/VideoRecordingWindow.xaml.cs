@@ -201,7 +201,7 @@ public partial class VideoRecordingWindow : Window
 
     private void UpdateFormatText()
     {
-        FormatText.Text = $"Recording {_recorder.OutputResolutionDescription} to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}; {_recorder.ZoomSuggestionsDescription}. Frames stream to disk.";
+        FormatText.Text = $"Recording {_recorder.OutputResolutionDescription} to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}; {_recorder.ZoomSuggestionsDescription}; {_recorder.AutoTightenDescription}. Frames stream to disk.";
     }
 
     private void OnStopClicked(object sender, RoutedEventArgs e)
