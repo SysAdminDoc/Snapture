@@ -7,4 +7,5 @@ public sealed record CaptureResult(
     Rectangle SourceBounds,
     DateTime CapturedAtUtc,
     string Source,
-    nint? SourceWindow = null);
+    nint? SourceWindow = null,
+    bool IsHdr = false);

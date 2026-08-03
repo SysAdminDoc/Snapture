@@ -75,6 +75,9 @@ public sealed class SnaptureSettings
     /// <summary>HDR FP16-to-SDR operator: "reinhard" (default), "aces", or "hable".</summary>
     public string HdrToneMapOperator { get; set; } = HdrToneMapOperators.DefaultKey;
 
+    /// <summary>Also write an optional SDR-clamped JXR copy for Game Bar compatibility.</summary>
+    public bool HdrWriteJxr { get; set; } = false;
+
     /// <summary>Play a shutter sound on capture.</summary>
     public bool PlayShutterSound { get; set; } = false;
 

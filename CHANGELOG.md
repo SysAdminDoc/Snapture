@@ -80,6 +80,8 @@ All notable changes to Snapture will be documented in this file.
 
 - HDR tone mapping is selectable in Settings → Capture — Reinhard (default), ACES, or Hable — and the choice applies to still captures, MP4 recordings, and the rolling ring buffer.
 
+- HDR captures now write a PNG primary plus JPEG XL archival and AVIF sharing siblings automatically; optional WIC JXR output is exposed for Game Bar compatibility and is documented as SDR-clamped.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

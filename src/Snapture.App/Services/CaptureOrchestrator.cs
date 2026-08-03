@@ -167,7 +167,7 @@ public sealed class CaptureOrchestrator
         var result = await _engine.CaptureRegionAsync(bounds.Value).ConfigureAwait(true);
         await DeliverCaptureAsync(new CaptureResult(
             result.Bitmap, bounds.Value, DateTime.UtcNow,
-            $"Smart:{picker.SelectedDescription ?? "element"}")).ConfigureAwait(true);
+            $"Smart:{picker.SelectedDescription ?? "element"}", IsHdr: result.IsHdr)).ConfigureAwait(true);
     }
 
     public async Task CaptureScrollingForegroundAsync()
@@ -291,13 +291,27 @@ public sealed class CaptureOrchestrator
         try
         {
             Directory.CreateDirectory(_settings.Current.OutputFolder);
-            savedPath = BuildOutputPath(_settings.Current, result);
-            using var fs = File.Create(savedPath);
-            var fmt = _settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
-                ? ImageFormat.Jpeg : ImageFormat.Png;
-            result.Bitmap.Save(fs, fmt);
-            Log.Information("Capture.Saved {Source} {Width}x{Height}",
-                result.Source, result.Bitmap.Width, result.Bitmap.Height);
+            string configuredPath = BuildOutputPath(_settings.Current, result);
+            if (result.IsHdr)
+            {
+                string stem = Path.Combine(
+                    Path.GetDirectoryName(configuredPath) ?? _settings.Current.OutputFolder,
+                    Path.GetFileNameWithoutExtension(configuredPath));
+                var variants = HdrSavePolicy.Save(stem, result.Bitmap, _settings.Current.HdrWriteJxr);
+                savedPath = variants.PngPath;
+                Log.Information("Capture.SavedHdr {Source} {Width}x{Height} Variants={Variants}",
+                    result.Source, result.Bitmap.Width, result.Bitmap.Height, variants.WrittenCount);
+            }
+            else
+            {
+                savedPath = configuredPath;
+                using var fs = File.Create(savedPath);
+                var fmt = _settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
+                    ? ImageFormat.Jpeg : ImageFormat.Png;
+                result.Bitmap.Save(fs, fmt);
+                Log.Information("Capture.Saved {Source} {Width}x{Height}",
+                    result.Source, result.Bitmap.Width, result.Bitmap.Height);
+            }
         }
         catch (Exception ex)
         {
@@ -368,7 +382,7 @@ public sealed class CaptureOrchestrator
                     "Height" => capture?.Bitmap.Height.ToString() ?? "0",
                     "MonitorIndex" => ResolveMonitorIndex(capture),
                     "MonitorDpi" => ResolveMonitorDpi(capture),
-                    "HDR" => "N",
+                    "HDR" => capture?.IsHdr == true ? "Y" : "N",
                     _ => now.ToString(token)
                 };
             });
@@ -469,7 +483,7 @@ public sealed class CaptureOrchestrator
 
         var newBounds = new Rectangle(0, 0, src.Width, src.Height);
         dst.Bitmap.Dispose();
-        return new CaptureResult(resized, newBounds, dst.CapturedAtUtc, dst.Source, dst.SourceWindow);
+        return new CaptureResult(resized, newBounds, dst.CapturedAtUtc, dst.Source, dst.SourceWindow, dst.IsHdr);
     }
 
     public static BitmapSource ToBitmapSource(Bitmap bmp)

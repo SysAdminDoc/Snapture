@@ -41,6 +41,7 @@ public partial class SettingsWindow : Window
         SelectComboByTag(EngineCombo, _draft.CaptureEngine);
         SelectComboByTag(ToneMapCombo, HdrToneMapOperators.ToKey(
             HdrToneMapOperators.Parse(_draft.HdrToneMapOperator)));
+        HdrWriteJxrCheck.IsChecked = _draft.HdrWriteJxr;
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
 
         EngineCapsText.Text = WinRtCaptureEngine.IsSupported
@@ -377,6 +378,7 @@ public partial class SettingsWindow : Window
         _draft.FilenamePattern        = FilenameTemplateBox.Text;
         _draft.OutputFormat           = ((ComboBoxItem)FormatCombo.SelectedItem).Tag as string ?? "PNG";
         _draft.HdrToneMapOperator     = ((ComboBoxItem)ToneMapCombo.SelectedItem).Tag as string ?? HdrToneMapOperators.DefaultKey;
+        _draft.HdrWriteJxr            = HdrWriteJxrCheck.IsChecked == true;
         var newTheme                  = ((ComboBoxItem)ThemeCombo.SelectedItem).Tag as string ?? ThemeManager.SystemMode;
         var newEngine                 = ((ComboBoxItem)EngineCombo.SelectedItem).Tag as string ?? "auto";
 
@@ -436,6 +438,7 @@ public partial class SettingsWindow : Window
         dst.CaptureEngine = src.CaptureEngine;
         dst.HdrToneMapOperator = HdrToneMapOperators.ToKey(
             HdrToneMapOperators.Parse(src.HdrToneMapOperator));
+        dst.HdrWriteJxr = src.HdrWriteJxr;
         dst.BorderlessConsentGiven = src.BorderlessConsentGiven;
         dst.PrintScreenHijackToastShown = src.PrintScreenHijackToastShown;
         dst.LastRegion = src.LastRegion;

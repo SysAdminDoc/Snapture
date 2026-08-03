@@ -103,6 +103,9 @@
                                     <ComboBoxItem Tag="aces" Content="ACES" />
                                     <ComboBoxItem Tag="hable" Content="Hable" />
                                 </ComboBox>
+                                <CheckBox x:Name="HdrWriteJxrCheck"
+                                          Content="Also write JXR (Game Bar compatibility; SDR-clamped)"
+                                          Margin="0,10,0,0" />
                             </StackPanel>
                         </Border>
 

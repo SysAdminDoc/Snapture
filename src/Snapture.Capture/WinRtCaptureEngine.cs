@@ -67,13 +67,15 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         {
             try
             {
-                var bmp = CaptureMonitorBitmap(monitor.Handle);
-                if (BitmapIsEmpty(bmp))
+                var captured = CaptureMonitorFrame(monitor.Handle);
+                if (BitmapIsEmpty(captured.Bitmap))
                 {
-                    bmp.Dispose();
+                    captured.Bitmap.Dispose();
                     return _fallback.CaptureMonitorAsync(monitor, ct).GetAwaiter().GetResult();
                 }
-                return new CaptureResult(bmp, monitor.Bounds, DateTime.UtcNow, $"Monitor:{monitor.DeviceName}");
+                return new CaptureResult(
+                    captured.Bitmap, monitor.Bounds, DateTime.UtcNow,
+                    $"Monitor:{monitor.DeviceName}", IsHdr: captured.IsHdr);
             }
             catch
             {
@@ -88,16 +90,17 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
             {
                 if (!WindowEnumerator.GetExtendedFrameBounds(hwnd, out var bounds))
                     throw new InvalidOperationException("Could not resolve window bounds.");
-                var bmp = CaptureWindowBitmap(hwnd);
-                if (BitmapIsEmpty(bmp))
+                var captured = CaptureWindowFrame(hwnd);
+                if (BitmapIsEmpty(captured.Bitmap))
                 {
                     // Likely WDA_EXCLUDEFROMCAPTURE — surface a sentinel for the orchestrator.
-                    bmp.Dispose();
+                    captured.Bitmap.Dispose();
                     throw new CaptureExcludedException(
                         "The OS marks this window as excluded from capture (WDA_EXCLUDEFROMCAPTURE). " +
                         "1Password / Bitwarden / banking windows do this on purpose.");
                 }
-                return new CaptureResult(bmp, bounds, DateTime.UtcNow, "Window", hwnd);
+                return new CaptureResult(
+                    captured.Bitmap, bounds, DateTime.UtcNow, "Window", hwnd, captured.IsHdr);
             }
             catch (CaptureExcludedException) { throw; }
             catch
@@ -149,6 +152,9 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
     // ---- WinRT capture core --------------------------------------------------
 
     private Bitmap CaptureMonitorBitmap(nint hMonitor)
+        => CaptureMonitorFrame(hMonitor).Bitmap;
+
+    private CapturedFrame CaptureMonitorFrame(nint hMonitor)
     {
         EnsureDevice();
         var item = CaptureItemFactory.CreateForMonitor(hMonitor)
@@ -157,6 +163,9 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
     }
 
     private Bitmap CaptureWindowBitmap(nint hwnd)
+        => CaptureWindowFrame(hwnd).Bitmap;
+
+    private CapturedFrame CaptureWindowFrame(nint hwnd)
     {
         EnsureDevice();
         var item = CaptureItemFactory.CreateForWindow(hwnd)
@@ -171,7 +180,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         return CaptureSingleFrame(item, CapturePixelFormatPolicy.ResolveForMonitor(hMonitor));
     }
 
-    private Bitmap CaptureSingleFrame(GraphicsCaptureItem item, CapturePixelFormatDecision pixelFormat)
+    private CapturedFrame CaptureSingleFrame(GraphicsCaptureItem item, CapturePixelFormatDecision pixelFormat)
     {
         try
         {
@@ -185,7 +194,7 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
         }
     }
 
-    private Bitmap CaptureSingleFrameCore(GraphicsCaptureItem item, CapturePixelFormatDecision pixelFormat)
+    private CapturedFrame CaptureSingleFrameCore(GraphicsCaptureItem item, CapturePixelFormatDecision pixelFormat)
     {
         if (_direct3DDevice is null) throw new InvalidOperationException("D3D device not initialised.");
 
@@ -243,7 +252,9 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
 
         try
         {
-            return CopyFrameToBitmap(captured, size.Width, size.Height, pixelFormat);
+            return new CapturedFrame(
+                CopyFrameToBitmap(captured, size.Width, size.Height, pixelFormat),
+                pixelFormat.UsesFp16);
         }
         finally
         {
@@ -251,6 +262,8 @@ public sealed class WinRtCaptureEngine : ICaptureEngine, IDisposable
             pool.Dispose();
         }
     }
+
+    private sealed record CapturedFrame(Bitmap Bitmap, bool IsHdr);
 
     private unsafe Bitmap CopyFrameToBitmap(
         Direct3D11CaptureFrame frame,
