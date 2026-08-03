@@ -57,6 +57,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The Tools → Record MP4 video menu can open a recording in a local trim/split window. Trim and split operations render new MP4 files through Windows Media Composition, preserve the source, reject invalid or sub-frame ranges, and expose clear errors when the OS codec cannot render the input.
 
+### Added — Ring-buffer recording
+
+- Tools → Record MP4 video → Ring buffer can continuously retain a bounded foreground-window or primary-monitor recording and save the last 30, 60, or 90 seconds on demand. The rolling source rotates at 90 seconds, stays in the Snapture temp area, and is deleted after save, stop, or shutdown.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

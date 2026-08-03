@@ -11,6 +11,7 @@ public sealed class TrayIconHost : IDisposable
 {
     private readonly TaskbarIcon _tray;
     private readonly CaptureOrchestrator _orchestrator;
+    private readonly VideoRingBufferService _ringBuffer = new();
 
     public TrayIconHost(CaptureOrchestrator orchestrator)
     {
@@ -332,6 +333,126 @@ public sealed class TrayIconHost : IDisposable
         };
         recordVideo.Items.Add(editVideo);
 
+        recordVideo.Items.Add(new Separator());
+        var ringMenu = new MenuItem { Header = "Ring buffer" };
+        var ringStartWindow = new MenuItem { Header = "Start for foreground window" };
+        ringStartWindow.Click += (_, _) =>
+        {
+            try
+            {
+                var hwnd = Native2.GetForegroundWindow();
+                if (hwnd == 0)
+                {
+                    ShowToast("Ring buffer unavailable", "No foreground window is available.");
+                    return;
+                }
+
+                var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
+                var (ow, oh) = RecordingPresets.ResolveOutputSize(
+                    App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
+                _ringBuffer.StartWindow(
+                    hwnd, q.Fps, q.BitrateMbps, ow, oh,
+                    App.Host?.Settings.Current.RecordingAutoTighten ?? false);
+                ShowToast("Ring buffer recording", "The last 30, 60, or 90 seconds are ready to save from the tray.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not start ring buffer:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        ringMenu.Items.Add(ringStartWindow);
+
+        var ringStartMonitor = new MenuItem { Header = "Start for primary monitor" };
+        ringStartMonitor.Click += (_, _) =>
+        {
+            try
+            {
+                var monitor = MonitorEnumerator.Enumerate().FirstOrDefault(item => item.IsPrimary)
+                    ?? MonitorEnumerator.Enumerate().First();
+                var q = RecordingPresets.GetQuality(App.Host?.Settings.Current.RecordingQuality ?? RecordingPresets.DefaultQuality);
+                var (ow, oh) = RecordingPresets.ResolveOutputSize(
+                    App.Host?.Settings.Current.RecordingResolution ?? RecordingPresets.NativeResolution, 0, 0);
+                _ringBuffer.StartMonitor(
+                    monitor.Handle, q.Fps, q.BitrateMbps, ow, oh,
+                    App.Host?.Settings.Current.RecordingAutoTighten ?? false);
+                ShowToast("Ring buffer recording", "The last 30, 60, or 90 seconds are ready to save from the tray.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not start ring buffer:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        ringMenu.Items.Add(ringStartMonitor);
+
+        var ringSave30 = new MenuItem { Header = "Save last 30 seconds…" };
+        var ringSave60 = new MenuItem { Header = "Save last 60 seconds…" };
+        var ringSave90 = new MenuItem { Header = "Save last 90 seconds…" };
+        async Task SaveRingAsync(TimeSpan duration)
+        {
+            if (!_ringBuffer.IsRunning)
+                return;
+
+            var dlg = new Microsoft.Win32.SaveFileDialog
+            {
+                Filter = "MP4 video (*.mp4)|*.mp4",
+                FileName = $"Snapture_Ring_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.mp4"
+            };
+            if (dlg.ShowDialog() != true)
+                return;
+
+            try
+            {
+                await _ringBuffer.SaveRecentAsync(duration, dlg.FileName);
+                ShowToast("Ring buffer saved", $"Saved the last {duration.TotalSeconds:0} seconds.");
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
+                    "explorer.exe", $"/select,\"{dlg.FileName}\"") { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not save ring buffer:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+        ringSave30.Click += async (_, _) => await SaveRingAsync(TimeSpan.FromSeconds(30));
+        ringSave60.Click += async (_, _) => await SaveRingAsync(TimeSpan.FromSeconds(60));
+        ringSave90.Click += async (_, _) => await SaveRingAsync(TimeSpan.FromSeconds(90));
+        ringMenu.Items.Add(ringSave30);
+        ringMenu.Items.Add(ringSave60);
+        ringMenu.Items.Add(ringSave90);
+
+        var ringStop = new MenuItem { Header = "Stop ring buffer" };
+        ringStop.Click += (_, _) =>
+        {
+            _ringBuffer.Stop();
+            ShowToast("Ring buffer stopped", "The temporary rolling recording was discarded.");
+        };
+        ringMenu.Items.Add(ringStop);
+        _ringBuffer.StateChanged += () =>
+        {
+            if (Application.Current.Dispatcher.CheckAccess())
+                SyncRingMenu();
+            else
+                _ = Application.Current.Dispatcher.BeginInvoke(SyncRingMenu);
+        };
+        void SyncRingMenu()
+        {
+            bool running = _ringBuffer.IsRunning;
+            ringStartWindow.IsEnabled = !running;
+            ringStartMonitor.IsEnabled = !running;
+            ringSave30.IsEnabled = running;
+            ringSave60.IsEnabled = running;
+            ringSave90.IsEnabled = running;
+            ringStop.IsEnabled = running;
+            ringMenu.ToolTip = running
+                ? $"{_ringBuffer.Status} · {_ringBuffer.BufferedDuration:mm\\:ss} buffered"
+                : _ringBuffer.Status;
+        }
+        SyncRingMenu();
+        ringMenu.Items.Add(new Separator());
+        recordVideo.Items.Add(ringMenu);
+
         tools.Items.Add(recordVideo);
 
         var stepCapture = new MenuItem { Header = "Step capture…" };
@@ -526,5 +647,9 @@ public sealed class TrayIconHost : IDisposable
         }
     }
 
-    public void Dispose() => _tray.Dispose();
+    public void Dispose()
+    {
+        _ringBuffer.Dispose();
+        _tray.Dispose();
+    }
 }
