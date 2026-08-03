@@ -42,6 +42,7 @@ public partial class SettingsWindow : Window
         SelectComboByTag(ToneMapCombo, HdrToneMapOperators.ToKey(
             HdrToneMapOperators.Parse(_draft.HdrToneMapOperator)));
         HdrWriteJxrCheck.IsChecked = _draft.HdrWriteJxr;
+        BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
 
         EngineCapsText.Text = WinRtCaptureEngine.IsSupported
@@ -365,6 +366,38 @@ public partial class SettingsWindow : Window
             Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{SettingsService.GetFilePath()}\"") { UseShellExecute = true });
         }
         catch { }
+    }
+
+    private void BindHdrCalibrationWarning()
+    {
+        var suspicious = HdrCalibrationProbe.FindSuspiciousMonitors();
+        if (suspicious.Count == 0)
+        {
+            HdrCalibrationPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
+        string displays = string.Join(", ", suspicious.Select(info =>
+            $"{info.DeviceName} ({info.MaxLuminance:0} nits)"));
+        HdrCalibrationText.Text =
+            $"Windows reports a very low HDR peak on {displays}. Calibrate the display before capturing to avoid dim or clipped highlights.";
+        HdrCalibrationPanel.Visibility = Visibility.Visible;
+    }
+
+    private void OnOpenHdrCalibrationClicked(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = "ms-settings:display",
+                UseShellExecute = true
+            });
+        }
+        catch (Exception ex)
+        {
+            HdrCalibrationText.Text = $"Could not open Windows HDR settings: {ex.Message}";
+        }
     }
 
     private void OnOkClicked(object sender, RoutedEventArgs e)

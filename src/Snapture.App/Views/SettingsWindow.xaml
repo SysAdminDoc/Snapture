@@ -106,6 +106,27 @@
                                 <CheckBox x:Name="HdrWriteJxrCheck"
                                           Content="Also write JXR (Game Bar compatibility; SDR-clamped)"
                                           Margin="0,10,0,0" />
+                                <Border x:Name="HdrCalibrationPanel"
+                                        Visibility="Collapsed"
+                                        Background="{DynamicResource AppSurfaceRaised}"
+                                        BorderBrush="{DynamicResource AppWarning}"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="10"
+                                        Margin="0,12,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="HDR display calibration recommended"
+                                                   Foreground="{DynamicResource AppWarning}"
+                                                   FontWeight="SemiBold" />
+                                        <TextBlock x:Name="HdrCalibrationText"
+                                                   Style="{StaticResource HelpText}"
+                                                   Margin="0,4,0,8" />
+                                        <Button x:Name="OpenHdrCalibrationButton"
+                                                Content="Open Windows HDR calibration"
+                                                HorizontalAlignment="Left"
+                                                Click="OnOpenHdrCalibrationClicked" />
+                                    </StackPanel>
+                                </Border>
                             </StackPanel>
                         </Border>
 
