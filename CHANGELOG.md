@@ -94,6 +94,10 @@ All notable changes to Snapture will be documented in this file.
 
 - ARM64 publishing now selects the native `Magick.NET-Q8-arm64` package while x64 keeps the existing native package; both runtime-specific publish paths produce architecture-matched hosts and ZIP artifacts.
 
+### Added — Canvas colour wheel
+
+- Right-clicking the editor canvas opens a vector-rendered colour wheel; choosing a colour updates the active drawing colour and recolours the shape under the pointer (or the selected group) as one undoable action.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

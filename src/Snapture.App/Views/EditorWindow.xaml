@@ -111,6 +111,7 @@
                                 MouseDown="OnCanvasMouseDown"
                                 MouseMove="OnCanvasMouseMove"
                                 MouseUp="OnCanvasMouseUp"
+                                MouseRightButtonDown="OnCanvasRightMouseDown"
                                 MouseWheel="OnCanvasMouseWheel"
                                 HorizontalAlignment="Center"
                                 VerticalAlignment="Center"
@@ -131,6 +132,10 @@
                         <StackPanel>
                             <TextBlock Text="Style" Style="{StaticResource SectionTitleText}" />
                             <TextBlock Text="Color" Style="{StaticResource HelpText}" Margin="0,2,0,5" />
+                            <TextBlock Text="Right-click the canvas or a shape for the colour wheel."
+                                       Style="{StaticResource HelpText}"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,0,6" />
                             <UniformGrid x:Name="ColorPalette" Columns="6" />
 
                             <TextBlock Text="Recent" Style="{StaticResource HelpText}" Margin="0,10,0,5" />

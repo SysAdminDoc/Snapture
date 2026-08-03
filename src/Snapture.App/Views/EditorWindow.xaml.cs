@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -64,6 +65,7 @@ public partial class EditorWindow : Window
 
     // Selection model — tracks shapes the user has clicked in Select mode
     private readonly HashSet<Shape> _selectedShapes = new();
+    private Popup? _colorWheelPopup;
 
     // Transform handles: resize selected shape via corner/edge drag
     private enum HandlePosition { None, TopLeft, Top, TopRight, Right, BottomRight, Bottom, BottomLeft, Left, Move }
@@ -155,6 +157,8 @@ public partial class EditorWindow : Window
 
     private void OnEditorClosed(object? sender, EventArgs e)
     {
+        _colorWheelPopup?.IsOpen = false;
+        _colorWheelPopup = null;
         // Clean close: delete the autosave file so no recovery prompt appears next launch.
         _autosave?.DeleteAutosave();
         _autosave?.Dispose();
@@ -690,6 +694,97 @@ public partial class EditorWindow : Window
         _dragStart = pos;
         _dragging = true;
         _draftShape = CreateDraftShape(pos);
+    }
+
+    private void OnCanvasRightMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        _dragging = false;
+        _draftShape = null;
+        _activeHandle = HandlePosition.None;
+        _handleShape = null;
+        _handleShapeSnapshot = null;
+
+        var position = ToImagePoint(e.GetPosition(Canvas));
+        var hit = FindShapeAt(position);
+        Shape[] targets = Array.Empty<Shape>();
+        if (hit is not null)
+        {
+            targets = _selectedShapes.Contains(hit) && _selectedShapes.Count > 1
+                ? _doc.Shapes.Where(_selectedShapes.Contains).ToArray()
+                : new[] { hit! };
+        }
+        ShowColorWheel(position, targets);
+    }
+
+    private Shape? FindShapeAt(SKPoint position)
+    {
+        for (int i = _doc.Shapes.Count - 1; i >= 0; i--)
+        {
+            if (_doc.Shapes[i].HitTest(position))
+                return _doc.Shapes[i];
+        }
+        return null;
+    }
+
+    private void ShowColorWheel(SKPoint imagePosition, IReadOnlyList<Shape> targets)
+    {
+        _colorWheelPopup?.IsOpen = false;
+
+        uint initialColor = targets.Count > 0 ? targets[0].StrokeColorArgb : _activeColor;
+        var wheel = new ColorWheelControl { SelectedColorArgb = initialColor };
+        var panel = new Border
+        {
+            Padding = new Thickness(10),
+            Background = new SolidColorBrush(Color.FromArgb(248, 28, 31, 38)),
+            BorderBrush = new SolidColorBrush(Color.FromArgb(230, 81, 89, 110)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(18),
+            Child = wheel
+        };
+        panel.Effect = new System.Windows.Media.Effects.DropShadowEffect
+        {
+            BlurRadius = 18,
+            ShadowDepth = 5,
+            Opacity = 0.55,
+            Color = Colors.Black
+        };
+
+        var popup = new Popup
+        {
+            Child = panel,
+            PlacementTarget = Canvas,
+            Placement = PlacementMode.RelativePoint,
+            StaysOpen = false,
+            AllowsTransparency = true,
+            Focusable = false,
+            HorizontalOffset = Math.Clamp(imagePosition.X - 130, 0, Math.Max(0, Canvas.ActualWidth - 260)),
+            VerticalOffset = Math.Clamp(imagePosition.Y - 130, 0, Math.Max(0, Canvas.ActualHeight - 260))
+        };
+        wheel.ColorSelected += (_, color) =>
+        {
+            SetActiveColor(color);
+            if (targets.Count > 0)
+            {
+                _commands.Do(_doc, new SetShapeColorCommand(targets, color));
+                StatusText.Text = targets.Count == 1
+                    ? $"Recolored {targets[0].GetType().Name.Replace("Shape", "")}: #{color:X8}"
+                    : $"Recolored {targets.Count} shapes: #{color:X8}";
+                Canvas.InvalidateVisual();
+            }
+            else
+            {
+                StatusText.Text = $"Color: #{color:X8} — ready to draw";
+            }
+            popup.IsOpen = false;
+        };
+        popup.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(_colorWheelPopup, popup))
+                _colorWheelPopup = null;
+        };
+        _colorWheelPopup = popup;
+        popup.IsOpen = true;
     }
 
     private void OnCanvasMouseMove(object sender, MouseEventArgs e)

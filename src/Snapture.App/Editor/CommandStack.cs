@@ -38,6 +38,32 @@ public sealed class RemoveShapeCommand(Shape shape) : AnnotationCommand
     }
 }
 
+public sealed class SetShapeColorCommand : AnnotationCommand
+{
+    private readonly Shape[] _shapes;
+    private readonly Dictionary<Shape, uint> _originalColors;
+    private readonly uint _newColor;
+
+    public SetShapeColorCommand(IEnumerable<Shape> shapes, uint newColor)
+    {
+        _shapes = shapes.Distinct().ToArray();
+        _originalColors = _shapes.ToDictionary(shape => shape, shape => shape.StrokeColorArgb);
+        _newColor = newColor;
+    }
+
+    public override void Apply(AnnotationDocument doc)
+    {
+        foreach (var shape in _shapes)
+            shape.StrokeColorArgb = _newColor;
+    }
+
+    public override void Revert(AnnotationDocument doc)
+    {
+        foreach (var shape in _shapes)
+            shape.StrokeColorArgb = _originalColors[shape];
+    }
+}
+
 /// <summary>
 /// Groups multiple commands into a single undoable/redoable operation.
 /// </summary>
