@@ -7,16 +7,17 @@ using Snapture.Capture;
 namespace Snapture.App.Services;
 
 /// <summary>
-/// First-pass scrolling capture using UIA's <c>IScrollProvider</c>. Drives the foreground
-/// window's scroll-pattern from top to bottom, captures each frame via the active capture
-/// engine, and stacks them vertically.
+/// Scrolling capture using UIA's <c>IScrollProvider</c>. Drives the foreground window's
+/// scroll-pattern from top to bottom, captures each frame via the active capture engine,
+/// and stacks them vertically. Chromium 130+ exposes its web document through the default
+/// Windows UIA provider; that path uses a descendant query and a percent-step fallback
+/// for providers that do not implement <c>Scroll</c> reliably.
 ///
 /// Known limitations (the v0.3.1 alpha is honest about these):
 ///   • Frame boundaries can show small visual duplicates because UIA reports scroll position
 ///     in percent, not pixels. Phase-correlation stitching ships in v0.4.
-///   • Browsers and Office mostly route scroll through their own scroll-host elements; this
-///     will fail silently for windows that don't expose <c>ScrollPattern</c>. ShareX and
-///     Greenshot have the same issue with their UIA paths.
+///   • Non-browser apps still need to expose <c>ScrollPattern</c>; browser-specific discovery
+///     is intentionally limited to Chromium-family window classes.
 ///   • Sticky headers / footers will repeat in every frame. Detection ships in v0.4.
 /// </summary>
 [SupportedOSPlatform("windows")]
@@ -42,7 +43,8 @@ public sealed class ScrollingCaptureService
         catch (Exception ex) { progress?.Report($"UIA failed: {ex.Message}"); return null; }
         if (root is null) { progress?.Report("UIA returned no element."); return null; }
 
-        var scrollable = FindScrollable(root);
+        bool isChromium = IsChromiumWindow(root);
+        var scrollable = FindScrollable(root, bounds, isChromium);
         if (scrollable is null)
         {
             progress?.Report("This window does not expose a UIA scroll pattern.");
@@ -61,12 +63,15 @@ public sealed class ScrollingCaptureService
         }
 
         double originalPercent = scroll.Current.VerticalScrollPercent;
+        var frames = new List<Bitmap>();
         try
         {
             scroll.SetScrollPercent(ScrollPattern.NoScroll, 0);
             await Task.Delay(220);
 
-            var frames = new List<Bitmap>();
+            if (isChromium)
+                progress?.Report("Chromium UIA scroll backend");
+
             int safety = 0;
             const int MaxFrames = 40;
             while (safety++ < MaxFrames)
@@ -77,13 +82,23 @@ public sealed class ScrollingCaptureService
 
                 if (scroll.Current.VerticalScrollPercent >= 99) break;
 
-                // Each LargeIncrement is one viewport-height unit. UIA returns percent; we step
-                // until we hit 100. Sleep briefly to let lazy-load handlers settle.
-                scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.LargeIncrement);
+                double before = scroll.Current.VerticalScrollPercent;
+                if (!AdvanceScroll(scroll, isChromium, before))
+                {
+                    progress?.Report("Scroll provider stopped advancing.");
+                    break;
+                }
+
+                // Sleep briefly to let browser compositing and lazy-load handlers settle.
                 await Task.Delay(280);
             }
 
             return StackVertically(frames);
+        }
+        catch
+        {
+            foreach (var frame in frames) frame.Dispose();
+            throw;
         }
         finally
         {
@@ -91,8 +106,17 @@ public sealed class ScrollingCaptureService
         }
     }
 
-    private static AutomationElement? FindScrollable(AutomationElement root)
+    private static AutomationElement? FindScrollable(
+        AutomationElement root,
+        Rectangle windowBounds,
+        bool isChromium)
     {
+        if (isChromium)
+        {
+            var browserDocument = FindChromiumDocument(root, windowBounds);
+            if (browserDocument is not null) return browserDocument;
+        }
+
         // Try the root itself first.
         if (HasScrollPattern(root)) return root;
         // Then breadth-first walk a couple of levels deep — most apps put the scroll provider
@@ -117,11 +141,98 @@ public sealed class ScrollingCaptureService
         return null;
     }
 
+    private static AutomationElement? FindChromiumDocument(
+        AutomationElement root,
+        Rectangle windowBounds)
+    {
+        try
+        {
+            if (IsVerticallyScrollable(root)) return root;
+
+            var condition = new PropertyCondition(
+                AutomationElement.IsScrollPatternAvailableProperty, true);
+            var candidates = root.FindAll(TreeScope.Descendants, condition);
+            AutomationElement? best = null;
+            double bestArea = 0;
+            int inspected = 0;
+            var captureRect = new System.Windows.Rect(
+                windowBounds.X, windowBounds.Y, windowBounds.Width, windowBounds.Height);
+
+            foreach (AutomationElement candidate in candidates)
+            {
+                if (++inspected > 256 || !IsVerticallyScrollable(candidate)) continue;
+                var rect = candidate.Current.BoundingRectangle;
+                if (rect.IsEmpty || !rect.IntersectsWith(captureRect)) continue;
+
+                double area = Math.Max(0, rect.Width) * Math.Max(0, rect.Height);
+                if (area > bestArea)
+                {
+                    best = candidate;
+                    bestArea = area;
+                }
+            }
+            return best;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     private static bool HasScrollPattern(AutomationElement el)
     {
         try { return el.GetSupportedPatterns().Any(p => p.Id == ScrollPattern.Pattern.Id); }
         catch { return false; }
     }
+
+    private static bool IsVerticallyScrollable(AutomationElement el)
+    {
+        try
+        {
+            return el.TryGetCurrentPattern(ScrollPattern.Pattern, out var rawPattern)
+                && rawPattern is ScrollPattern pattern
+                && pattern.Current.VerticallyScrollable;
+        }
+        catch { return false; }
+    }
+
+    private static bool AdvanceScroll(ScrollPattern scroll, bool isChromium, double before)
+    {
+        try
+        {
+            scroll.Scroll(ScrollAmount.NoAmount, ScrollAmount.LargeIncrement);
+            double after = scroll.Current.VerticalScrollPercent;
+            if (after > before + 0.01 || after >= 99) return true;
+        }
+        catch
+        {
+            if (!isChromium) return false;
+        }
+
+        if (!isChromium) return false;
+
+        try
+        {
+            double viewSize = scroll.Current.VerticalViewSize;
+            double step = viewSize is > 0 and < 100 ? viewSize : 50;
+            double next = Math.Min(100, before + Math.Max(5, step));
+            if (next <= before + 0.01) return false;
+            scroll.SetScrollPercent(ScrollPattern.NoScroll, next);
+            return scroll.Current.VerticalScrollPercent > before + 0.01
+                || scroll.Current.VerticalScrollPercent >= 99;
+        }
+        catch { return false; }
+    }
+
+    private static bool IsChromiumWindow(AutomationElement root)
+    {
+        try { return IsChromiumWindowClass(root.Current.ClassName); }
+        catch { return false; }
+    }
+
+    internal static bool IsChromiumWindowClass(string? className)
+        => className?.StartsWith("Chrome_WidgetWin_", StringComparison.OrdinalIgnoreCase) == true
+            || string.Equals(className, "Chrome_WidgetWin_0", StringComparison.OrdinalIgnoreCase);
 
     private static Bitmap StackVertically(IReadOnlyList<Bitmap> frames)
     {
