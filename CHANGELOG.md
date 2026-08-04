@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Encrypted plugin secrets
+
+- Added the optional `IPluginSecretStore` extension for uploader and destination plugins. Each plugin gets an identity-scoped atomic store protected with Windows DPAPI (current-user scope), including portable-mode data roots, with no plaintext credential fallback.
+
 ### Added — Plugin manager workflow
 
 - The Plugins window can install/update a selected DLL, uninstall a loaded plugin, and open a host-rendered JSON configuration editor for plugins implementing `IPluginConfigurable`.

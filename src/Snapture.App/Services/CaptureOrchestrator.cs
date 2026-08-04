@@ -389,13 +389,13 @@ public sealed class CaptureOrchestrator
                         {
                             var pluginCapture = ToPluginCapture(result, path: null);
                             var processed = await PluginProcessorInvoker.ProcessAsync(
-                                proc, pluginCapture, host.PluginHost).ConfigureAwait(true);
+                                proc, pluginCapture, plugin.Host).ConfigureAwait(true);
                             if (!ReferenceEquals(processed, pluginCapture))
                                 result = ApplyPluginCaptureBack(processed, result);
                         }
                         catch (Exception ex)
                         {
-                            host.PluginHost.Log($"Processor failed ({proc.Id}): {ex.Message}");
+                            plugin.Host.Log($"Processor failed ({proc.Id}): {ex.Message}");
                         }
                     }
                 }

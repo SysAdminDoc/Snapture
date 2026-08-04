@@ -21,6 +21,7 @@ public sealed class PluginLoader : IDisposable
         IReadOnlyList<ICaptureProcessor> CaptureProcessors,
         IReadOnlyList<IEditorEffect> EditorEffects,
         AssemblyLoadContext Context,
+        IPluginHost Host,
         IReadOnlyList<IPluginConfigurable> Configurables);
 
     private readonly List<LoadedPlugin> _plugins = new();
@@ -63,11 +64,12 @@ public sealed class PluginLoader : IDisposable
         ArgumentNullException.ThrowIfNull(capture);
 
         var processor = _plugins
-            .SelectMany(plugin => plugin.CaptureProcessors)
-            .FirstOrDefault(candidate => string.Equals(candidate.Id, processorId, StringComparison.OrdinalIgnoreCase));
-        return processor is null
+            .Select(plugin => (Plugin: plugin, Processor: plugin.CaptureProcessors.FirstOrDefault(candidate =>
+                string.Equals(candidate.Id, processorId, StringComparison.OrdinalIgnoreCase))))
+            .FirstOrDefault(candidate => candidate.Processor is not null);
+        return processor.Processor is null
             ? null
-            : await PluginProcessorInvoker.InvokeAsync(processor, capture, _host, responseMode, ct)
+            : await PluginProcessorInvoker.InvokeAsync(processor.Processor, capture, processor.Plugin.Host, responseMode, ct)
                 .ConfigureAwait(false);
     }
 
@@ -133,7 +135,10 @@ public sealed class PluginLoader : IDisposable
             dllPath, attr.Name, attr.Author, attr.Version, attr.Description,
             attr.Capabilities, contracts, attr.MinHostVersion, attr.MaxHostVersion);
 
-        var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx, configurables);
+        var pluginHost = _host is PluginHostBridge bridge
+            ? bridge.ForPlugin(attr.Name)
+            : _host;
+        var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx, pluginHost, configurables);
         _plugins.Add(loaded);
         Log.Information("Plugin.Loaded {PluginName} {PluginVersion}", info.Name, info.Version);
         _host.Log($"Plugin loaded: {info.Name} v{info.Version} by {info.Author} " +
@@ -230,6 +235,10 @@ public sealed class PluginLoader : IDisposable
     private void Unload(LoadedPlugin plugin)
     {
         try { plugin.Context.Unload(); } catch { }
+        if (plugin.Host is IDisposable disposable)
+        {
+            try { disposable.Dispose(); } catch { }
+        }
     }
 
     private static PluginManifest ReadManifest(string dllPath)
@@ -277,9 +286,7 @@ public sealed class PluginLoader : IDisposable
     public void UnloadAll()
     {
         foreach (var p in _plugins)
-        {
-            try { p.Context.Unload(); } catch { }
-        }
+            Unload(p);
         _plugins.Clear();
     }
 
@@ -287,21 +294,61 @@ public sealed class PluginLoader : IDisposable
 }
 
 /// <summary>Concrete <see cref="IPluginHost"/> exposed to plugins.</summary>
-public sealed class PluginHostBridge : IPluginHost
+public sealed class PluginHostBridge : IPluginHost, IPluginSecretStore, IDisposable
 {
     public string ScratchDirectory { get; }
 
     private readonly Action<string, string> _toast;
     private readonly Action<string> _log;
 
-    public PluginHostBridge(string scratchDir, Action<string, string> toast, Action<string> log)
+    private readonly PluginSecretStore? _secretStore;
+
+    public PluginHostBridge(
+        string scratchDir,
+        Action<string, string> toast,
+        Action<string> log,
+        PluginSecretStore? secretStore = null)
     {
         ScratchDirectory = scratchDir;
         _toast = toast;
         _log = log;
+        _secretStore = secretStore;
         Directory.CreateDirectory(scratchDir);
+    }
+
+    public PluginHostBridge ForPlugin(string pluginName)
+    {
+        string safeName = new string(pluginName
+            .Select(character => char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '_')
+            .ToArray());
+        if (string.IsNullOrWhiteSpace(safeName)) safeName = "plugin";
+        return new PluginHostBridge(
+            Path.Combine(ScratchDirectory, safeName),
+            _toast,
+            _log,
+            new PluginSecretStore(PortableMode.LocalDataDirectory, pluginName));
     }
 
     public void ShowToast(string title, string message) => _toast(title, message);
     public void Log(string message) => _log(message);
+
+    public IReadOnlyList<string> Keys => _secretStore?.Keys ?? Array.Empty<string>();
+
+    public bool TryGetSecret(string key, out string value)
+    {
+        if (_secretStore is null)
+        {
+            value = string.Empty;
+            return false;
+        }
+        return _secretStore.TryGetSecret(key, out value);
+    }
+
+    public void SetSecret(string key, string value) =>
+        (_secretStore ?? throw new InvalidOperationException("Secret storage is unavailable for this host.")).SetSecret(key, value);
+
+    public bool RemoveSecret(string key) =>
+        _secretStore?.RemoveSecret(key) == true;
+
+    public void Dispose() => _secretStore?.Dispose();
 }

@@ -131,6 +131,24 @@ public interface IPluginHost
 }
 
 /// <summary>
+/// Optional per-plugin secret storage. Implementations keep values encrypted at rest;
+/// plugins can discover the host implementation through <see cref="PluginHostExtensions"/>.
+/// </summary>
+public interface IPluginSecretStore
+{
+    IReadOnlyList<string> Keys { get; }
+    bool TryGetSecret(string key, out string value);
+    void SetSecret(string key, string value);
+    bool RemoveSecret(string key);
+}
+
+public static class PluginHostExtensions
+{
+    public static IPluginSecretStore? GetSecretStore(this IPluginHost host) =>
+        host as IPluginSecretStore;
+}
+
+/// <summary>
 /// Where a capture can be sent. First-party destinations: clipboard, file, LAN-share.
 /// Plugins typically add: HTTP upload, Slack webhook, Jira attachment, paste-into-app.
 /// </summary>
