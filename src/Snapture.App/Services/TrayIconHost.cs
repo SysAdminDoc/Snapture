@@ -688,6 +688,34 @@ public sealed class TrayIconHost : IDisposable
         uploaders.Items.Add(uploadLatest);
         tools.Items.Add(uploaders);
 
+        var selfHosted = new MenuItem { Header = "Self-hosted destinations" };
+        var configureSelfHosted = new MenuItem { Header = "Configure Nextcloud / Immich…" };
+        configureSelfHosted.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var dialog = new Views.SelfHostedDestinationsWindow(App.Host.Settings.Current);
+                if (dialog.ShowDialog() == true)
+                {
+                    App.Host.Settings.Current.Nextcloud = dialog.Nextcloud;
+                    App.Host.Settings.Current.Immich = dialog.Immich;
+                    SaveSelfHostedCredentials(dialog);
+                    App.Host.Settings.Save();
+                    ShowToast("Self-hosted destinations saved", "Nextcloud and Immich remain opt-in.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not configure self-hosted destinations:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        selfHosted.Items.Add(configureSelfHosted);
+        var uploadSelfHosted = new MenuItem { Header = "Upload latest capture" };
+        uploadSelfHosted.Click += async (_, _) => await UploadLatestSelfHostedAsync();
+        selfHosted.Items.Add(uploadSelfHosted);
+        tools.Items.Add(selfHosted);
+
         var history = new MenuItem { Header = "Capture history…" };
         history.Click += (_, _) =>
         {
@@ -993,6 +1021,72 @@ public sealed class TrayIconHost : IDisposable
     {
         var picker = new Views.DeclarativeUploaderPickerWindow(profiles);
         return picker.ShowDialog() == true ? picker.SelectedProfile : null;
+    }
+
+    private static void SaveSelfHostedCredentials(Views.SelfHostedDestinationsWindow dialog)
+    {
+        if (dialog.RemoveNextcloudCredential)
+            SelfHostedDestinationService.RemoveCredential(SelfHostedDestinationKind.Nextcloud);
+        if (dialog.NextcloudCredential is { Length: > 0 })
+            SelfHostedDestinationService.SetCredential(SelfHostedDestinationKind.Nextcloud, dialog.NextcloudCredential);
+        if (dialog.RemoveImmichCredential)
+            SelfHostedDestinationService.RemoveCredential(SelfHostedDestinationKind.Immich);
+        if (dialog.ImmichCredential is { Length: > 0 })
+            SelfHostedDestinationService.SetCredential(SelfHostedDestinationKind.Immich, dialog.ImmichCredential);
+    }
+
+    private async Task UploadLatestSelfHostedAsync()
+    {
+        if (App.Host is null) return;
+        var enabled = SelfHostedDestinationService.EnabledDestinations(App.Host.Settings.Current);
+        if (enabled.Count == 0)
+        {
+            ShowToast("No self-hosted destinations", "Enable Nextcloud or Immich in Tools → Self-hosted destinations.");
+            return;
+        }
+        var latest = App.Host.History.Recent(1).FirstOrDefault();
+        if (latest is null || !File.Exists(latest.FilePath))
+        {
+            ShowToast("No capture available", "Take or save a capture before uploading.");
+            return;
+        }
+        SelfHostedDestinationKind destination;
+        if (enabled.Count == 1)
+            destination = enabled[0];
+        else
+        {
+            var picker = new Views.SelfHostedDestinationPickerWindow(enabled);
+            if (picker.ShowDialog() != true || picker.SelectedDestination is not { } selected)
+                return;
+            destination = selected;
+        }
+        string? credential = SelfHostedDestinationService.GetCredential(destination);
+        if (string.IsNullOrWhiteSpace(credential))
+        {
+            ShowToast("Credential missing", $"Configure the {destination} credential before uploading.");
+            return;
+        }
+        try
+        {
+            ShowToast("Self-hosted upload", $"Uploading to {destination}…");
+            var request = new SelfHostedUploadRequest(
+                await File.ReadAllBytesAsync(latest.FilePath),
+                Path.GetFileName(latest.FilePath),
+                latest.Source,
+                latest.Width,
+                latest.Height,
+                latest.CapturedAtUtc);
+            var result = destination == SelfHostedDestinationKind.Nextcloud
+                ? await SelfHostedDestinationService.UploadNextcloudAsync(App.Host.Settings.Current.Nextcloud, credential, request)
+                : await SelfHostedDestinationService.UploadImmichAsync(App.Host.Settings.Current.Immich, credential, request);
+            ShowToast(
+                result.Succeeded ? "Upload complete" : "Upload failed",
+                result.Succeeded ? $"Uploaded to {destination}." : result.ErrorMessage ?? $"HTTP {result.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Upload failed", ex.Message);
+        }
     }
 
     private static async Task SafeRun(Func<Task> action)

@@ -15,6 +15,10 @@ public partial class SettingsWindow : Window
     private readonly SettingsService _settings;
     private readonly SnaptureSettings _draft;
     private CancellationTokenSource? _localAiDiscoveryCts;
+    private string? _pendingNextcloudCredential;
+    private bool _removeNextcloudCredential;
+    private string? _pendingImmichCredential;
+    private bool _removeImmichCredential;
 
     public SettingsWindow(SettingsService settings)
     {
@@ -68,6 +72,7 @@ public partial class SettingsWindow : Window
         MarkdownAttachmentFolderBox.Text = _draft.MarkdownAttachmentFolder;
         BindExternalCommandsStatus();
         BindDeclarativeUploadersStatus();
+        BindSelfHostedDestinationsStatus();
 
         RegionHotkeyBox.Text       = HotkeyToString(_draft.RegionHotkey);
         WindowHotkeyBox.Text       = HotkeyToString(_draft.WindowHotkey);
@@ -765,6 +770,34 @@ public partial class SettingsWindow : Window
             : $"{count} profile{(count == 1 ? string.Empty : "s")} imported.";
     }
 
+    private void OnConfigureSelfHostedDestinationsClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new SelfHostedDestinationsWindow(_draft)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            _draft.Nextcloud = dialog.Nextcloud;
+            _draft.Immich = dialog.Immich;
+            _pendingNextcloudCredential = dialog.NextcloudCredential;
+            _removeNextcloudCredential = dialog.RemoveNextcloudCredential;
+            _pendingImmichCredential = dialog.ImmichCredential;
+            _removeImmichCredential = dialog.RemoveImmichCredential;
+            BindSelfHostedDestinationsStatus();
+        }
+    }
+
+    private void BindSelfHostedDestinationsStatus()
+    {
+        var enabled = new List<string>();
+        if (_draft.Nextcloud?.Enabled == true) enabled.Add("Nextcloud");
+        if (_draft.Immich?.Enabled == true) enabled.Add("Immich");
+        SelfHostedDestinationsStatusText.Text = enabled.Count == 0
+            ? "Disabled by default."
+            : $"Enabled: {string.Join(", ", enabled)}.";
+    }
+
     private void OnOkClicked(object sender, RoutedEventArgs e)
     {
         // Pull edited fields from controls
@@ -797,6 +830,22 @@ public partial class SettingsWindow : Window
         bool mcpWasEnabled = _settings.Current.McpEnabled;
 
         CopyInto(_draft, _settings.Current);
+        try
+        {
+            if (_removeNextcloudCredential)
+                SelfHostedDestinationService.RemoveCredential(SelfHostedDestinationKind.Nextcloud);
+            if (_pendingNextcloudCredential is { Length: > 0 })
+                SelfHostedDestinationService.SetCredential(SelfHostedDestinationKind.Nextcloud, _pendingNextcloudCredential);
+            if (_removeImmichCredential)
+                SelfHostedDestinationService.RemoveCredential(SelfHostedDestinationKind.Immich);
+            if (_pendingImmichCredential is { Length: > 0 })
+                SelfHostedDestinationService.SetCredential(SelfHostedDestinationKind.Immich, _pendingImmichCredential);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not save a self-hosted credential: {ex.Message}";
+            return;
+        }
         _settings.Current.CaptureEngine = newEngine;
         _settings.Current.ThemeMode = ThemeManager.NormalizeMode(newTheme);
         _settings.Save();
@@ -892,6 +941,8 @@ public partial class SettingsWindow : Window
         dst.ApprovedPluginManifests = new List<string>(src.ApprovedPluginManifests);
         dst.ExternalCommands = (src.ExternalCommands ?? new()).Select(profile => profile.Clone()).ToList();
         dst.DeclarativeUploaders = (src.DeclarativeUploaders ?? new()).Select(profile => profile.Clone()).ToList();
+        dst.Nextcloud = (src.Nextcloud ?? new()).Clone();
+        dst.Immich = (src.Immich ?? new()).Clone();
         dst.DisabledRedactRules = new List<string>(src.DisabledRedactRules);
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;

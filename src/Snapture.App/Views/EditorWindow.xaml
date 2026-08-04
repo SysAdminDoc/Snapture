@@ -106,6 +106,11 @@
                             Click="OnUploadClicked"
                             AutomationProperties.Name="Upload capture"
                             ToolTip="Send the flattened PNG to an explicitly selected declarative uploader." />
+                    <Button x:Name="SelfHostedButton"
+                            Content="Self-hosted"
+                            Click="OnSelfHostedUploadClicked"
+                            AutomationProperties.Name="Upload to self-hosted destination"
+                            ToolTip="Send the flattened PNG to an enabled Nextcloud or Immich destination." />
                     </StackPanel>
                 </ScrollViewer>
 

@@ -1732,6 +1732,63 @@ public partial class EditorWindow : Window
         return (string.IsNullOrWhiteSpace(stem) ? "Snapture_capture" : stem) + ".png";
     }
 
+    private async void OnSelfHostedUploadClicked(object sender, RoutedEventArgs e)
+    {
+        var host = App.Host;
+        if (host is null) return;
+        var enabled = SelfHostedDestinationService.EnabledDestinations(host.Settings.Current);
+        if (enabled.Count == 0)
+        {
+            StatusText.Text = "No self-hosted destinations enabled — open Settings → Output.";
+            try
+            {
+                var settings = new SettingsWindow(host.Settings) { Owner = DialogOwner };
+                settings.ShowDialog();
+            }
+            catch { }
+            return;
+        }
+        var destination = enabled.Count == 1 ? enabled[0] : ChooseSelfHostedDestination(enabled);
+        if (destination is null) return;
+        string? credential = SelfHostedDestinationService.GetCredential(destination.Value);
+        if (string.IsNullOrWhiteSpace(credential))
+        {
+            StatusText.Text = $"{destination.Value} credential is missing — open Settings → Output.";
+            return;
+        }
+
+        try
+        {
+            using var flattened = RenderForExport();
+            using var image = SKImage.FromBitmap(flattened);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var request = new SelfHostedUploadRequest(
+                data.ToArray(),
+                BuildUploadFileName(),
+                _captureResult?.Source ?? "Editor",
+                _doc.Width,
+                _doc.Height,
+                DateTime.UtcNow);
+            StatusText.Text = $"Uploading to {destination.Value}…";
+            var result = destination.Value == SelfHostedDestinationKind.Nextcloud
+                ? await SelfHostedDestinationService.UploadNextcloudAsync(host.Settings.Current.Nextcloud, credential, request)
+                : await SelfHostedDestinationService.UploadImmichAsync(host.Settings.Current.Immich, credential, request);
+            StatusText.Text = result.Succeeded
+                ? result.ResourceUrl is { Length: > 0 } url ? $"Uploaded: {url}" : $"Uploaded to {destination.Value}."
+                : $"Upload failed: {result.ErrorMessage ?? $"HTTP {result.StatusCode}"}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Upload failed: {ex.Message}";
+        }
+    }
+
+    private SelfHostedDestinationKind? ChooseSelfHostedDestination(IReadOnlyList<SelfHostedDestinationKind> destinations)
+    {
+        var picker = new SelfHostedDestinationPickerWindow(destinations) { Owner = DialogOwner };
+        return picker.ShowDialog() == true ? picker.SelectedDestination : null;
+    }
+
     private async void OnRetakeClicked(object sender, RoutedEventArgs e)
     {
         if (_captureResult is null || App.Host is null) return;

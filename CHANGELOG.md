@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Opt-in self-hosted destinations
+
+- Added built-in Nextcloud WebDAV and Immich asset/album destinations. Both are disabled by default, require an explicit upload action, and are verified through mocked HTTP contracts.
+- Nextcloud app passwords and Immich API keys are stored in the existing current-user DPAPI secret store rather than `settings.json`; no external server or credential is bundled.
+
 ### Added — Declarative uploader profiles
 
 - Added ShareX-compatible `.sxcu` / JSON import for user-owned HTTP uploaders, including multipart, form-url-encoded, JSON, XML, binary, query, header, and response JSON-path handling.

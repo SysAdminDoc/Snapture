@@ -435,6 +435,25 @@
 
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
+                                <TextBlock Text="Self-hosted destinations" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="Optional built-in Nextcloud WebDAV and Immich destinations. Both stay disabled until explicitly enabled, and credentials are stored separately with Windows DPAPI."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Configure Nextcloud / Immich…"
+                                            AutomationProperties.Name="Configure self-hosted destinations"
+                                            Click="OnConfigureSelfHostedDestinationsClicked" />
+                                    <TextBlock x:Name="SelfHostedDestinationsStatusText"
+                                               Style="{StaticResource MonoCaptionText}"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
                                 <TextBlock Text="Filename template" Style="{StaticResource SectionTitleText}" />
                                 <TextBox x:Name="FilenameTemplateBox" />
                                 <TextBlock Style="{StaticResource MonoCaptionText}"

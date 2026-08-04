@@ -77,6 +77,12 @@ public sealed class SnaptureSettings
     /// <summary>Inert, user-imported ShareX-compatible HTTP uploader profiles.</summary>
     public List<DeclarativeUploaderProfile> DeclarativeUploaders { get; set; } = new();
 
+    /// <summary>Opt-in Nextcloud WebDAV destination; its credential lives in DPAPI storage.</summary>
+    public NextcloudDestinationSettings Nextcloud { get; set; } = new();
+
+    /// <summary>Opt-in Immich API destination; its API key lives in DPAPI storage.</summary>
+    public ImmichDestinationSettings Immich { get; set; } = new();
+
     /// <summary>
     /// Auto-redact: rule IDs that are disabled. Empty list = all rules enabled (the default).
     /// We persist disabled rather than enabled so a future rule pack expansion ships enabled
@@ -174,6 +180,8 @@ public sealed class SettingsService
             Current.ApprovedPluginManifests ??= new();
             Current.ExternalCommands ??= new();
             Current.DeclarativeUploaders ??= new();
+            Current.Nextcloud ??= new();
+            Current.Immich ??= new();
         }
         catch { Current = new SnaptureSettings(); }
     }
