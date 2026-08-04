@@ -165,9 +165,11 @@ public sealed class RectangleShape : Shape
         {
             using var fill = MakeFillPaint();
             if (Filled) fill.Color = ToColor(StrokeColorArgb);
-            if (Sloppiness > 0 && CornerRadius <= 0)
+            if (Sloppiness > 0)
             {
-                using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 97);
+                using var rough = CornerRadius > 0
+                    ? RoughStroke.CreateRoundedRectangle(rect, CornerRadius, Sloppiness, StrokeThickness, 97)
+                    : RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 97);
                 canvas.DrawPath(rough, fill);
             }
             else if (CornerRadius > 0) canvas.DrawRoundRect(rect, CornerRadius, CornerRadius, fill);
@@ -176,9 +178,11 @@ public sealed class RectangleShape : Shape
         if (!Filled)
         {
             using var stroke = MakeStrokePaint();
-            if (Sloppiness > 0 && CornerRadius <= 0)
+            if (Sloppiness > 0)
             {
-                using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 101);
+                using var rough = CornerRadius > 0
+                    ? RoughStroke.CreateRoundedRectangle(rect, CornerRadius, Sloppiness, StrokeThickness, 101)
+                    : RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 101);
                 canvas.DrawPath(rough, stroke);
             }
             else if (CornerRadius > 0) canvas.DrawRoundRect(rect, CornerRadius, CornerRadius, stroke);
@@ -219,28 +223,40 @@ public sealed class SpeechBalloonShape : Shape
         var tailTip = new SKPoint(tailCenter, rect.Bottom + tailLength);
         var tailRight = new SKPoint(tailCenter + tailHalfWidth, rect.Bottom);
 
+        using var body = Sloppiness > 0
+            ? RoughStroke.CreateRoundedRectangle(rect, radius, Sloppiness, StrokeThickness, 149)
+            : CreateRoundedRectanglePath(rect, radius);
+        using var tail = Sloppiness > 0
+            ? RoughStroke.CreatePolyline(new[] { tailLeft, tailTip, tailRight }, Sloppiness, StrokeThickness, 151, closed: true)
+            : CreateTailPath(tailLeft, tailTip, tailRight, closed: true);
+        using var tailStroke = Sloppiness > 0
+            ? RoughStroke.CreatePolyline(new[] { tailLeft, tailTip, tailRight }, Sloppiness, StrokeThickness, 157)
+            : CreateTailPath(tailLeft, tailTip, tailRight, closed: false);
+
         using var fill = MakeFillPaint();
-        using (var tail = new SKPath())
-        {
-            tail.MoveTo(tailLeft);
-            tail.LineTo(tailTip);
-            tail.LineTo(tailRight);
-            tail.Close();
-            canvas.DrawPath(tail, fill);
-        }
-        using (var body = new SKPath())
-        {
-            body.AddRoundRect(new SKRoundRect(rect, radius));
-            canvas.DrawPath(body, fill);
-        }
+        canvas.DrawPath(tail, fill);
+        canvas.DrawPath(body, fill);
 
         using var stroke = MakeStrokePaint();
-        canvas.DrawRoundRect(rect, radius, radius, stroke);
-        using var tailStroke = new SKPath();
-        tailStroke.MoveTo(tailLeft);
-        tailStroke.LineTo(tailTip);
-        tailStroke.LineTo(tailRight);
+        canvas.DrawPath(body, stroke);
         canvas.DrawPath(tailStroke, stroke);
+    }
+
+    private static SKPath CreateRoundedRectanglePath(SKRect rect, float radius)
+    {
+        var path = new SKPath();
+        path.AddRoundRect(new SKRoundRect(rect, radius));
+        return path;
+    }
+
+    private static SKPath CreateTailPath(SKPoint left, SKPoint tip, SKPoint right, bool closed)
+    {
+        var path = new SKPath();
+        path.MoveTo(left);
+        path.LineTo(tip);
+        path.LineTo(right);
+        if (closed) path.Close();
+        return path;
     }
 
     public override SKRect GetBounds()
@@ -299,15 +315,31 @@ public sealed class RulerShape : Shape
             Typeface = SKTypeface.FromFamilyName("Segoe UI"),
             TextAlign = SKTextAlign.Center
         };
-        canvas.DrawText(label, mx, my - 6, textPaint);
+        var labelJitter = RoughStroke.GetJitter(Sloppiness, 1.5f, 229, 1);
+        canvas.DrawText(label, mx + labelJitter.X, my - 6 + labelJitter.Y, textPaint);
 
         float endLen = 6;
         using var endPaint = MakeStrokePaint();
         float perpX = -dy / length * endLen, perpY = dx / length * endLen;
         if (length > 1)
         {
-            canvas.DrawLine(X1 + perpX, Y1 + perpY, X1 - perpX, Y1 - perpY, endPaint);
-            canvas.DrawLine(X2 + perpX, Y2 + perpY, X2 - perpX, Y2 - perpY, endPaint);
+            DrawSegment(canvas, endPaint,
+                new SKPoint(X1 + perpX, Y1 + perpY), new SKPoint(X1 - perpX, Y1 - perpY), 223);
+            DrawSegment(canvas, endPaint,
+                new SKPoint(X2 + perpX, Y2 + perpY), new SKPoint(X2 - perpX, Y2 - perpY), 227);
+        }
+    }
+
+    private void DrawSegment(SKCanvas canvas, SKPaint paint, SKPoint start, SKPoint end, int seed)
+    {
+        if (Sloppiness > 0)
+        {
+            using var rough = RoughStroke.CreateLine(start, end, Sloppiness, StrokeThickness, seed);
+            canvas.DrawPath(rough, paint);
+        }
+        else
+        {
+            canvas.DrawLine(start, end, paint);
         }
     }
 
@@ -362,7 +394,15 @@ public sealed class SpotlightShape : Shape
         var outer = new SKRect(0, 0, doc.Width, doc.Height);
         using var path = new SKPath();
         path.AddRect(outer);
-        path.AddRect(inner);
+        if (Sloppiness > 0)
+        {
+            using var roughInner = RoughStroke.CreateRoundedRectangle(inner, 8, Sloppiness, StrokeThickness, 263);
+            path.AddPath(roughInner);
+        }
+        else
+        {
+            path.AddRect(inner);
+        }
         path.FillType = SKPathFillType.EvenOdd;
         using var paint = new SKPaint
         {
@@ -542,10 +582,9 @@ public sealed class ArrowShape : Shape
                 IsAntialias = true
             };
             ApplyShadowIfNeeded(head);
-            using var chevron = new SKPath();
-            chevron.MoveTo(wing1);
-            chevron.LineTo(tip);
-            chevron.LineTo(wing2);
+            using var chevron = Sloppiness > 0
+                ? RoughStroke.CreatePolyline(new[] { wing1, tip, wing2 }, Sloppiness, StrokeThickness, 521)
+                : CreateOpenPolyline(wing1, tip, wing2);
             canvas.DrawPath(chevron, head);
             return;
         }
@@ -555,12 +594,25 @@ public sealed class ArrowShape : Shape
         var classicWing2 = new SKPoint(basePoint.X - normal.X * wingWidth, basePoint.Y - normal.Y * wingWidth);
         using var fill = new SKPaint { Style = SKPaintStyle.Fill, Color = stroke.Color, IsAntialias = true };
         ApplyShadowIfNeeded(fill);
-        using var path = new SKPath();
-        path.MoveTo(tip);
-        path.LineTo(classicWing1);
-        path.LineTo(classicWing2);
-        path.Close();
+        using var path = Sloppiness > 0
+            ? RoughStroke.CreatePolyline(new[] { tip, classicWing1, classicWing2 }, Sloppiness, StrokeThickness, 523, closed: true)
+            : CreateClosedPolyline(tip, classicWing1, classicWing2);
         canvas.DrawPath(path, fill);
+    }
+
+    private static SKPath CreateOpenPolyline(params SKPoint[] points)
+    {
+        var path = new SKPath();
+        path.MoveTo(points[0]);
+        for (int i = 1; i < points.Length; i++) path.LineTo(points[i]);
+        return path;
+    }
+
+    private static SKPath CreateClosedPolyline(params SKPoint[] points)
+    {
+        var path = CreateOpenPolyline(points);
+        path.Close();
+        return path;
     }
 
     public override SKRect GetBounds() => ArrowGeometry.GetBounds(
@@ -666,18 +718,23 @@ public sealed class TextShape : Shape
             TextAlign = SKTextAlign.Left,
             SubpixelText = true
         };
+        var jitter = RoughStroke.GetJitter(Sloppiness, Math.Max(1f, FontSize * 0.08f), 719, Text.Length);
         if (Orientation == TextOrientation.Vertical)
         {
             float lineHeight = FontSize * 1.4f;
             canvas.Save();
-            canvas.Translate(X + lineHeight, Y);
-            canvas.RotateDegrees(90);
+            canvas.Translate(X + lineHeight + jitter.X, Y + jitter.Y);
+            canvas.RotateDegrees(90 + jitter.X * 0.25f);
             canvas.DrawText(Text, 0, FontSize, paint);
             canvas.Restore();
         }
         else
         {
+            canvas.Save();
+            canvas.Translate(jitter.X, jitter.Y);
+            canvas.RotateDegrees(jitter.X * 0.25f, X, Y + FontSize);
             canvas.DrawText(Text, X, Y + FontSize, paint);
+            canvas.Restore();
         }
     }
 
@@ -716,7 +773,15 @@ public sealed class HighlightShape : Shape
             IsAntialias = true,
             BlendMode = SKBlendMode.Multiply
         };
-        canvas.DrawRect(rect, paint);
+        if (Sloppiness > 0)
+        {
+            using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 701);
+            canvas.DrawPath(rough, paint);
+        }
+        else
+        {
+            canvas.DrawRect(rect, paint);
+        }
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
@@ -775,6 +840,14 @@ public sealed class BlurShape : Shape
                 new SKRect(rectI.Left, rectI.Top, rectI.Right, rectI.Bottom),
                 paint);
         }
+
+        if (Sloppiness > 0)
+        {
+            using var outline = MakeStrokePaint();
+            outline.Color = new SKColor(outline.Color.Red, outline.Color.Green, outline.Color.Blue, 150);
+            using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 743);
+            canvas.DrawPath(rough, outline);
+        }
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
@@ -802,6 +875,24 @@ public sealed class RedactShape : Shape
         var rect = new SKRect(X, Y, X + Width, Y + Height);
         using var paint = new SKPaint { Style = SKPaintStyle.Fill, Color = ToColor(StrokeColorArgb), IsAntialias = false };
         canvas.DrawRect(rect, paint);
+
+        // Keep the redaction coverage exact; only add an interior sketch edge so
+        // sloppiness can style the shape without exposing any source pixels.
+        if (Sloppiness > 0 && rect.Width > 4 && rect.Height > 4)
+        {
+            var inner = new SKRect(rect.Left + 1, rect.Top + 1, rect.Right - 1, rect.Bottom - 1);
+            using var edge = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = new SKColor(255, 255, 255, (byte)(35 + (Math.Clamp(Sloppiness, 0, 1) * 55))),
+                StrokeWidth = Math.Max(1, StrokeThickness * 0.6f),
+                StrokeCap = SKStrokeCap.Round,
+                StrokeJoin = SKStrokeJoin.Round,
+                IsAntialias = true
+            };
+            using var rough = RoughStroke.CreateRectangle(inner, Sloppiness, StrokeThickness, 811);
+            canvas.DrawPath(rough, edge);
+        }
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
@@ -825,8 +916,19 @@ public sealed class StepShape : Shape
     {
         using var fill = new SKPaint { Style = SKPaintStyle.Fill, Color = ToColor(StrokeColorArgb), IsAntialias = true };
         using var border = new SKPaint { Style = SKPaintStyle.Stroke, Color = SKColors.White, StrokeWidth = 2.5f, IsAntialias = true };
-        canvas.DrawCircle(X, Y, Radius, fill);
-        canvas.DrawCircle(X, Y, Radius, border);
+        var bounds = new SKRect(X - Radius, Y - Radius, X + Radius, Y + Radius);
+        if (Sloppiness > 0)
+        {
+            using var roughFill = RoughStroke.CreateEllipse(bounds, Sloppiness, StrokeThickness, 827);
+            using var roughBorder = RoughStroke.CreateEllipse(bounds, Sloppiness, StrokeThickness, 829);
+            canvas.DrawPath(roughFill, fill);
+            canvas.DrawPath(roughBorder, border);
+        }
+        else
+        {
+            canvas.DrawCircle(X, Y, Radius, fill);
+            canvas.DrawCircle(X, Y, Radius, border);
+        }
         using var typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
         using var text = new SKPaint
         {

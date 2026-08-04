@@ -22,6 +22,33 @@ internal static class RoughStroke
                 new SKPoint(rect.Left, rect.Bottom)
             }, sloppiness, strokeThickness, seed, closed: true);
 
+    public static SKPath CreateRoundedRectangle(SKRect rect, float radius, float sloppiness,
+        float strokeThickness, int seed)
+    {
+        float left = Math.Min(rect.Left, rect.Right);
+        float top = Math.Min(rect.Top, rect.Bottom);
+        float right = Math.Max(rect.Left, rect.Right);
+        float bottom = Math.Max(rect.Top, rect.Bottom);
+        float clampedRadius = Math.Clamp(radius, 0, Math.Min(right - left, bottom - top) / 2f);
+        if (clampedRadius <= 0)
+            return CreateRectangle(new SKRect(left, top, right, bottom), sloppiness, strokeThickness, seed);
+
+        const int arcSamples = 6;
+        var points = new List<SKPoint>((arcSamples * 4) + 4)
+        {
+            new(left + clampedRadius, top),
+            new(right - clampedRadius, top)
+        };
+        AddArc(points, new SKPoint(right - clampedRadius, top + clampedRadius), clampedRadius, -90, 0, arcSamples);
+        points.Add(new(right, bottom - clampedRadius));
+        AddArc(points, new SKPoint(right - clampedRadius, bottom - clampedRadius), clampedRadius, 0, 90, arcSamples);
+        points.Add(new(left + clampedRadius, bottom));
+        AddArc(points, new SKPoint(left + clampedRadius, bottom - clampedRadius), clampedRadius, 90, 180, arcSamples);
+        points.Add(new(left, top + clampedRadius));
+        AddArc(points, new SKPoint(left + clampedRadius, top + clampedRadius), clampedRadius, 180, 270, arcSamples);
+        return CreatePolyline(points, sloppiness, strokeThickness, seed, closed: true);
+    }
+
     public static SKPath CreateEllipse(SKRect rect, float sloppiness, float strokeThickness, int seed)
     {
         const int samples = 48;
@@ -98,6 +125,25 @@ internal static class RoughStroke
         }
 
         return result;
+    }
+
+    internal static SKPoint GetJitter(float sloppiness, float magnitude, int seed, int index)
+    {
+        float amount = Math.Clamp(sloppiness, 0f, 1f) * Math.Max(0, magnitude);
+        return new SKPoint(Noise(seed, index) * amount, Noise(seed + 41, index + 17) * amount);
+    }
+
+    private static void AddArc(List<SKPoint> points, SKPoint center, float radius,
+        float startDegrees, float endDegrees, int samples)
+    {
+        for (int i = 1; i <= samples; i++)
+        {
+            float degrees = startDegrees + ((endDegrees - startDegrees) * i / samples);
+            float radians = degrees * MathF.PI / 180f;
+            points.Add(new SKPoint(
+                center.X + MathF.Cos(radians) * radius,
+                center.Y + MathF.Sin(radians) * radius));
+        }
     }
 
     private static float Noise(int seed, int index)

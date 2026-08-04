@@ -73,6 +73,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The editor Crop tool now shows a snap-aware selection overlay, crops the background and intersecting annotations as one undoable operation, drops annotations fully outside the crop, and refreshes the canvas dimensions after apply. Escape cancels an in-progress selection.
 
+### Added — Full hand-drawn styling
+
+- The deterministic sloppiness slider now styles rounded rectangles, speech balloons, spotlight cutouts, arrowheads, highlights, blur edges, redaction edges, step markers, ruler details, and text placement in addition to the existing line and freehand geometry. Redaction coverage remains a complete solid fill.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.
