@@ -137,7 +137,7 @@
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
                                 <TextBlock Text="OCR fallback" Style="{StaticResource SectionTitleText}" />
-                                <TextBlock Text="Windows AI and Windows OCR remain preferred. RapidOCR is a local PP-OCRv5 fallback with bundled Latin models. An optional OneOCR sidecar can use the Windows Snipping Tool model without sending images to the cloud."
+                                <TextBlock Text="Windows AI and Windows OCR remain preferred for regular OCR. Auto-redact uses RapidOCR's shared DBNet text-region path first, with bundled Latin models. An optional OneOCR sidecar can use the Windows Snipping Tool model without sending images to the cloud."
                                            Style="{StaticResource HelpText}"
                                            TextWrapping="Wrap" />
                                 <CheckBox x:Name="RapidOcrDirectMlCheck"

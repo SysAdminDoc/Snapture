@@ -158,6 +158,18 @@ public static class OcrService
     }
 
     /// <summary>
+    /// Use the shared RapidOCR pipeline for Auto-redact before trying the general OCR chain.
+    /// RapidOCR's DBNet detector and recognizer return one normalized result, so redaction uses
+    /// the exact word polygons from that pass instead of loading or running a second detector.
+    /// </summary>
+    internal static async Task<OcrRecognitionResult?> RecognizeForRedactionAsync(SKBitmap source)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        var rapidResult = await TryRecognizeWithRapidOcrAsync(source).ConfigureAwait(false);
+        return rapidResult ?? await RecognizeAsync(source).ConfigureAwait(false);
+    }
+
+    /// <summary>
     /// Run the optional OneOCR sidecar directly. This keeps the process contract independently
     /// testable without depending on which Windows OCR engine is installed on the host.
     /// </summary>

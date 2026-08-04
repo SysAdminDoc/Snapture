@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Changed — Shared RapidOCR redaction path
+
+- Auto-redact now tries the bundled RapidOCR DBNet text-region pipeline first and turns that normalized word geometry directly into findings, so OCR and redaction share one local ONNX pass before the general OCR fallback chain.
+
 ### Added — Local AI capture analysis
 
 - The editor can flatten the current capture to a base64 PNG, let the user choose a discovered `provider/model`, and send it to a local OpenAI-compatible runtime. Results remain in a local response window; cloud endpoints are excluded.

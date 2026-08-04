@@ -17,9 +17,16 @@ public static class AutoRedactor
 {
     public static async Task<IReadOnlyList<RedactionFinding>> ScanAsync(SKBitmap bitmap, ISet<string>? disabledRuleIds = null)
     {
-        var result = await OcrService.RecognizeAsync(bitmap);
-        if (result is null) return Array.Empty<RedactionFinding>();
+        var result = await OcrService.RecognizeForRedactionAsync(bitmap);
+        return FindFindings(result, disabledRuleIds);
+    }
 
+    /// <summary>Turn one normalized OCR pass into secret findings without re-running OCR.</summary>
+    internal static IReadOnlyList<RedactionFinding> FindFindings(
+        OcrRecognitionResult? result,
+        ISet<string>? disabledRuleIds = null)
+    {
+        if (result is null) return Array.Empty<RedactionFinding>();
         var findings = new List<RedactionFinding>();
         foreach (var line in result.Lines)
         {
