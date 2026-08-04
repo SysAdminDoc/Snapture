@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Optional OneOCR sidecar
+
+- OCR now discovers or accepts a user-supplied `sponeocr.exe` sidecar that follows the community OneOCR pattern (`stdin stdout`). Images remain local, the process is launched without a shell, and bounded timeout/output guards fail back cleanly to RapidOCR.
+- The Windows Snipping Tool DLLs and `.onemodel` are intentionally not redistributed. Settings exposes the optional executable path and reports whether the sidecar is available.
+
 ## [unreleased] — recording wave
 
 ### Added — Recording quality presets and output resolution

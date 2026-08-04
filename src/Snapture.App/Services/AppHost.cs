@@ -25,6 +25,7 @@ public sealed class AppHost : IDisposable
         AppIdentity.SetAumid();
         Settings.Load();
         OcrService.ConfigureRapidOcr(Settings.Current.RapidOcrUseDirectMl);
+        OcrService.ConfigureOneOcr(Settings.Current.OneOcrExecutablePath);
         ThemeManager.Initialize(Settings.Current.ThemeMode);
         var (engine, name) = CaptureEngineFactory.Create(Settings.Current.CaptureEngine);
         Engine = engine;

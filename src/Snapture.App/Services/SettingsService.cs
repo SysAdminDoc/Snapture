@@ -84,6 +84,9 @@ public sealed class SnaptureSettings
     /// <summary>Request the optional DirectML execution provider for the RapidOCR fallback.</summary>
     public bool RapidOcrUseDirectMl { get; set; } = false;
 
+    /// <summary>Optional user-supplied sp-oneocr executable. Empty enables automatic discovery.</summary>
+    public string OneOcrExecutablePath { get; set; } = string.Empty;
+
     /// <summary>Play a shutter sound on capture.</summary>
     public bool PlayShutterSound { get; set; } = false;
 

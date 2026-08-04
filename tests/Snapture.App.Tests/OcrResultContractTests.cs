@@ -71,4 +71,23 @@ public sealed class OcrResultContractTests
         Assert.AreEqual(0.94f, result.Lines.Single().Words.Single().Confidence, 0.001f);
         Assert.HasCount(4, result.Lines.Single().Words.Single().Polygon);
     }
+
+    [TestMethod]
+    public void OneOcrPlainTextIsNormalizedWithoutInventingGeometry()
+    {
+        var result = OcrService.NormalizeOneOcrText("\uFEFF first line\r\nsecond line\r\n");
+
+        Assert.IsNotNull(result);
+        Assert.AreEqual(OcrEngineKind.OneOcr, result.Engine);
+        Assert.AreEqual($"first line{Environment.NewLine}second line", result.Text);
+        Assert.HasCount(2, result.Lines);
+        Assert.IsEmpty(result.Lines[0].Words);
+        Assert.IsTrue(result.Lines[0].BoundingBox.IsEmpty);
+    }
+
+    [TestMethod]
+    public void OneOcrEmptyOutputReturnsNoResult()
+    {
+        Assert.IsNull(OcrService.NormalizeOneOcrText("\r\n \t"));
+    }
 }

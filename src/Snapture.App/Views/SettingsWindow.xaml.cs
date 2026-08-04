@@ -45,6 +45,8 @@ public partial class SettingsWindow : Window
         HdrWriteJxrCheck.IsChecked = _draft.HdrWriteJxr;
         RapidOcrDirectMlCheck.IsChecked = _draft.RapidOcrUseDirectMl;
         RapidOcrStatusText.Text = $"Provider: {OcrService.RapidOcrProviderStatus}";
+        OneOcrPathBox.Text = _draft.OneOcrExecutablePath;
+        OneOcrStatusText.Text = $"OneOCR: {OcrService.OneOcrStatus}";
         BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
 
@@ -403,6 +405,21 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OnBrowseOneOcrClicked(object sender, RoutedEventArgs e)
+    {
+        var dlg = new OpenFileDialog
+        {
+            Filter = "OneOCR sidecar (sponeocr.exe)|sponeocr.exe;sp-oneocr.exe|Executable files (*.exe)|*.exe",
+            CheckFileExists = true,
+            Title = "Select the optional sp-oneocr executable"
+        };
+        if (dlg.ShowDialog(this) == true)
+        {
+            OneOcrPathBox.Text = dlg.FileName;
+            OneOcrStatusText.Text = "OneOCR: selected; click Save to enable this sidecar.";
+        }
+    }
+
     private void OnOkClicked(object sender, RoutedEventArgs e)
     {
         // Pull edited fields from controls
@@ -417,6 +434,7 @@ public partial class SettingsWindow : Window
         _draft.HdrColorCorrection    = HdrColorCorrectionCheck.IsChecked == true;
         _draft.HdrWriteJxr            = HdrWriteJxrCheck.IsChecked == true;
         _draft.RapidOcrUseDirectMl    = RapidOcrDirectMlCheck.IsChecked == true;
+        _draft.OneOcrExecutablePath   = OneOcrPathBox.Text.Trim();
         var newTheme                  = ((ComboBoxItem)ThemeCombo.SelectedItem).Tag as string ?? ThemeManager.SystemMode;
         var newEngine                 = ((ComboBoxItem)EngineCombo.SelectedItem).Tag as string ?? "auto";
 
@@ -434,6 +452,7 @@ public partial class SettingsWindow : Window
         if (themeChanged) ThemeManager.Apply(_settings.Current.ThemeMode);
         if (engineChanged) App.Host?.SwitchEngine(newEngine);
         OcrService.ConfigureRapidOcr(_settings.Current.RapidOcrUseDirectMl);
+        OcrService.ConfigureOneOcr(_settings.Current.OneOcrExecutablePath);
 
         // LAN share lifecycle reacts to the toggle.
         if (App.Host is not null)
@@ -480,6 +499,7 @@ public partial class SettingsWindow : Window
         dst.HdrColorCorrection = src.HdrColorCorrection;
         dst.HdrWriteJxr = src.HdrWriteJxr;
         dst.RapidOcrUseDirectMl = src.RapidOcrUseDirectMl;
+        dst.OneOcrExecutablePath = src.OneOcrExecutablePath;
         dst.BorderlessConsentGiven = src.BorderlessConsentGiven;
         dst.PrintScreenHijackToastShown = src.PrintScreenHijackToastShown;
         dst.LastRegion = src.LastRegion;

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Runtime.Versioning;
+using System.Text;
 using System.Windows.Media.Imaging;
 using Microsoft.Graphics.Imaging;
 using Microsoft.ML.OnnxRuntime;
@@ -23,7 +24,8 @@ public enum OcrEngineKind
 {
     WindowsAiTextRecognizer,
     WindowsMediaOcr,
-    RapidOcr
+    RapidOcr,
+    OneOcr
 }
 
 /// <summary>A normalized OCR word with rectangular and polygonal geometry.</summary>
@@ -47,21 +49,40 @@ public sealed record OcrRecognitionResult(
 
 /// <summary>
 /// Uses the Windows AI Foundry TextRecognizer when its model/runtime is ready, then falls back
-/// to Windows.Media.Ocr and RapidOCR. Every path returns the same word confidence and geometry contract.
+/// to Windows.Media.Ocr, RapidOCR, and an optional community OneOCR sidecar. Every path returns
+/// the same normalized result contract; the text-only sidecar has no word geometry.
 /// </summary>
 [SupportedOSPlatform("windows10.0.17763.0")]
 public static class OcrService
 {
     private static readonly SemaphoreSlim RapidGate = new(1, 1);
+    private static readonly SemaphoreSlim OneOcrGate = new(1, 1);
+    private static readonly object OneOcrConfigGate = new();
     private static RapidOcr? _rapidOcr;
     private static bool _rapidUseDirectMl;
     private static string _rapidProviderStatus = "CPU (default)";
+    private static string? _oneOcrExecutablePath;
+
+    private const int OneOcrTimeoutMs = 15_000;
+    private const int OneOcrOutputLimit = 1_000_000;
+    private const int OneOcrErrorLimit = 64_000;
 
     /// <summary>Whether the experimental DirectML provider is requested for RapidOCR.</summary>
     public static bool RapidOcrUseDirectMl => _rapidUseDirectMl;
 
     /// <summary>Current RapidOCR provider state for Settings and diagnostics.</summary>
     public static string RapidOcrProviderStatus => _rapidProviderStatus;
+
+    /// <summary>Resolved optional sp-oneocr executable, or null when the sidecar is not installed.</summary>
+    public static string? OneOcrExecutablePath => ResolveOneOcrExecutable();
+
+    /// <summary>Status text suitable for Settings and diagnostics.</summary>
+    public static string OneOcrStatus =>
+        GetConfiguredOneOcrPath() is { Length: > 0 } configured && !File.Exists(configured)
+            ? "Configured path not found"
+            : ResolveOneOcrExecutable() is not null
+                ? "Available (optional sidecar)"
+                : "Not installed (optional sponeocr.exe)";
 
     /// <summary>
     /// Apply the RapidOCR provider preference and discard an already initialized model when it changes.
@@ -88,6 +109,16 @@ public static class OcrService
         {
             RapidGate.Release();
         }
+    }
+
+    /// <summary>
+    /// Configure an optional user-supplied sp-oneocr executable. An empty value restores automatic
+    /// discovery beside the app and under the Snapture OCR data folder.
+    /// </summary>
+    public static void ConfigureOneOcr(string? executablePath)
+    {
+        lock (OneOcrConfigGate)
+            _oneOcrExecutablePath = string.IsNullOrWhiteSpace(executablePath) ? null : executablePath.Trim();
     }
 
     /// <summary>OCR a WPF <see cref="BitmapSource"/> with the preferred local engine.</summary>
@@ -126,13 +157,25 @@ public static class OcrService
         return TryRecognizeWithRapidOcrAsync(source);
     }
 
+    /// <summary>
+    /// Run the optional OneOCR sidecar directly. This keeps the process contract independently
+    /// testable without depending on which Windows OCR engine is installed on the host.
+    /// </summary>
+    internal static Task<OcrRecognitionResult?> RecognizeWithOneOcrAsync(
+        byte[] encodedImage,
+        string? executablePath = null)
+    {
+        ArgumentNullException.ThrowIfNull(encodedImage);
+        return TryRecognizeWithOneOcrPathAsync(encodedImage, executablePath ?? ResolveOneOcrExecutable());
+    }
+
     private static async Task<OcrRecognitionResult?> RecognizeEncodedImageAsync(
         byte[] encodedImage,
         string? languageTag)
     {
         using var softwareBitmap = await DecodeSoftwareBitmapAsync(encodedImage);
         using var skBitmap = SKBitmap.Decode(encodedImage);
-        return await RecognizeSoftwareBitmapAsync(softwareBitmap, languageTag, skBitmap);
+        return await RecognizeSoftwareBitmapAsync(softwareBitmap, languageTag, skBitmap, encodedImage);
     }
 
     /// <summary>List languages installed on this system for the legacy fallback engine.</summary>
@@ -165,7 +208,8 @@ public static class OcrService
     private static async Task<OcrRecognitionResult?> RecognizeSoftwareBitmapAsync(
         SoftwareBitmap bitmap,
         string? languageTag,
-        SKBitmap? skBitmap)
+        SKBitmap? skBitmap,
+        byte[] encodedImage)
     {
         var aiResult = await TryRecognizeWithWindowsAiAsync(bitmap);
         if (aiResult is not null) return aiResult;
@@ -185,7 +229,13 @@ public static class OcrService
             Debug.WriteLine($"Windows.Media.Ocr unavailable; using RapidOCR: {ex.Message}");
         }
 
-        return skBitmap is null ? null : await TryRecognizeWithRapidOcrAsync(skBitmap);
+        if (skBitmap is not null)
+        {
+            var rapidResult = await TryRecognizeWithRapidOcrAsync(skBitmap);
+            if (rapidResult is not null) return rapidResult;
+        }
+
+        return await TryRecognizeWithOneOcrAsync(encodedImage);
     }
 
     private static async Task<OcrRecognitionResult?> TryRecognizeWithRapidOcrAsync(SKBitmap bitmap)
@@ -200,7 +250,8 @@ public static class OcrService
                 {
                     ReturnWordBox = true
                 });
-                return NormalizeRapidResult(result);
+                var normalized = NormalizeRapidResult(result);
+                return string.IsNullOrWhiteSpace(normalized.Text) ? null : normalized;
             }).ConfigureAwait(false);
         }
         catch (Exception ex)
@@ -297,6 +348,198 @@ public static class OcrService
             Bounds(polygon),
             Math.Clamp(word.Score, 0, 1),
             polygon);
+    }
+
+    private static async Task<OcrRecognitionResult?> TryRecognizeWithOneOcrAsync(byte[] encodedImage)
+    {
+        return await TryRecognizeWithOneOcrPathAsync(encodedImage, ResolveOneOcrExecutable()).ConfigureAwait(false);
+    }
+
+    private static async Task<OcrRecognitionResult?> TryRecognizeWithOneOcrPathAsync(
+        byte[] encodedImage,
+        string? executablePath)
+    {
+        if (executablePath is null) return null;
+
+        await OneOcrGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await RunOneOcrSidecarAsync(executablePath, encodedImage).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"OneOCR sidecar unavailable: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            OneOcrGate.Release();
+        }
+    }
+
+    private static async Task<OcrRecognitionResult?> RunOneOcrSidecarAsync(
+        string executablePath,
+        byte[] encodedImage)
+    {
+        var startInfo = new ProcessStartInfo
+        {
+            FileName = executablePath,
+            WorkingDirectory = Path.GetDirectoryName(executablePath) ?? AppContext.BaseDirectory,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true
+        };
+        startInfo.ArgumentList.Add("stdin");
+        startInfo.ArgumentList.Add("stdout");
+
+        using var process = new Process { StartInfo = startInfo };
+        if (!process.Start()) return null;
+
+        var stdoutTask = ReadCappedTextAsync(process.StandardOutput, OneOcrOutputLimit);
+        var stderrTask = ReadCappedTextAsync(process.StandardError, OneOcrErrorLimit);
+        try
+        {
+            await process.StandardInput.BaseStream.WriteAsync(encodedImage).ConfigureAwait(false);
+            process.StandardInput.Close();
+
+            var exitTask = process.WaitForExitAsync();
+            var completed = await Task.WhenAny(exitTask, Task.Delay(OneOcrTimeoutMs)).ConfigureAwait(false);
+            if (completed != exitTask)
+            {
+                TryKill(process);
+                await AwaitProcessOutputAsync(stdoutTask, stderrTask).ConfigureAwait(false);
+                Debug.WriteLine("OneOCR sidecar timed out.");
+                return null;
+            }
+
+            await exitTask.ConfigureAwait(false);
+            var stdout = await stdoutTask.ConfigureAwait(false);
+            var stderr = await stderrTask.ConfigureAwait(false);
+            if (process.ExitCode != 0)
+            {
+                Debug.WriteLine($"OneOCR sidecar exited with code {process.ExitCode}: {stderr}");
+                return null;
+            }
+
+            return NormalizeOneOcrText(stdout);
+        }
+        finally
+        {
+            if (!process.HasExited) TryKill(process);
+            await AwaitProcessOutputAsync(stdoutTask, stderrTask).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<string> ReadCappedTextAsync(StreamReader reader, int maxChars)
+    {
+        var builder = new StringBuilder();
+        var buffer = new char[4096];
+        var exceeded = false;
+        int read;
+        while ((read = await reader.ReadAsync(buffer.AsMemory()).ConfigureAwait(false)) > 0)
+        {
+            if (exceeded) continue;
+            if (builder.Length + read > maxChars)
+            {
+                exceeded = true;
+                continue;
+            }
+            builder.Append(buffer, 0, read);
+        }
+        return exceeded ? string.Empty : builder.ToString();
+    }
+
+    private static async Task AwaitProcessOutputAsync(Task<string> stdoutTask, Task<string> stderrTask)
+    {
+        try
+        {
+            await Task.WhenAll(stdoutTask, stderrTask).WaitAsync(TimeSpan.FromSeconds(1)).ConfigureAwait(false);
+        }
+        catch
+        {
+            // The sidecar was already terminated or exceeded the bounded output window.
+        }
+    }
+
+    private static void TryKill(Process process)
+    {
+        try
+        {
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+        }
+        catch { }
+    }
+
+    /// <summary>Normalize the plain-text stdout contract used by Coxxs/sp-oneocr.</summary>
+    internal static OcrRecognitionResult? NormalizeOneOcrText(string? text)
+    {
+        var normalized = text?.Trim('\uFEFF', '\0', ' ', '\t', '\r', '\n');
+        if (string.IsNullOrWhiteSpace(normalized)) return null;
+
+        var lines = normalized
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(line => line.Length > 0)
+            .Select(line => new OcrLineResult(line, Array.Empty<OcrWordResult>(), SKRect.Empty))
+            .ToArray();
+        if (lines.Length == 0) return null;
+
+        return new OcrRecognitionResult(
+            string.Join(Environment.NewLine, lines.Select(line => line.Text)),
+            lines,
+            OcrEngineKind.OneOcr);
+    }
+
+    private static string? GetConfiguredOneOcrPath()
+    {
+        lock (OneOcrConfigGate)
+            return _oneOcrExecutablePath;
+    }
+
+    private static string? ResolveOneOcrExecutable()
+    {
+        var candidates = new List<string>();
+        AddCandidate(candidates, GetConfiguredOneOcrPath());
+        AddCandidate(candidates, Environment.GetEnvironmentVariable("SNAPTURE_ONEOCR_PATH"));
+
+        var appRoot = AppContext.BaseDirectory;
+        AddCandidate(candidates, Path.Combine(appRoot, "sponeocr.exe"));
+        AddCandidate(candidates, Path.Combine(appRoot, "sp-oneocr.exe"));
+        AddCandidate(candidates, Path.Combine(appRoot, "ocr", "sponeocr.exe"));
+        AddCandidate(candidates, Path.Combine(appRoot, "ocr", "sp-oneocr.exe"));
+
+        foreach (var dataRoot in new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
+        })
+        {
+            if (string.IsNullOrWhiteSpace(dataRoot)) continue;
+            AddCandidate(candidates, Path.Combine(dataRoot, "Snapture", "ocr", "sponeocr.exe"));
+            AddCandidate(candidates, Path.Combine(dataRoot, "Snapture", "ocr", "sp-oneocr.exe"));
+        }
+
+        foreach (var candidate in candidates)
+        {
+            try
+            {
+                var fullPath = Path.GetFullPath(candidate);
+                if (string.Equals(Path.GetExtension(fullPath), ".exe", StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(fullPath))
+                    return fullPath;
+            }
+            catch { }
+        }
+        return null;
+    }
+
+    private static void AddCandidate(List<string> candidates, string? candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate)) return;
+        if (!candidates.Contains(candidate, StringComparer.OrdinalIgnoreCase)) candidates.Add(candidate);
     }
 
     private static async Task<OcrRecognitionResult?> TryRecognizeWithWindowsAiAsync(SoftwareBitmap bitmap)
