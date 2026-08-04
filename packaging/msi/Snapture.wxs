@@ -1,0 +1,45 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+  <Package
+    Name="Snapture"
+    Manufacturer="SysAdminDoc"
+    Version="$(var.PackageVersion)"
+    UpgradeCode="{D7B8A92D-9F4B-4D0C-BB38-2E831F2C5B1A}"
+    ProductCode="$(var.ProductCode)"
+    Scope="perMachine">
+    <SummaryInformation Description="Snapture screenshot capture utility" />
+    <MajorUpgrade DowngradeErrorMessage="A newer version of Snapture is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Snapture" />
+    </StandardDirectory>
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="CommonDataMicrosoftFolder" Name="Microsoft">
+        <Directory Id="CommonDataWindowsFolder" Name="Windows">
+          <Directory Id="CommonDataStartMenuFolder" Name="Start Menu">
+            <Directory Id="CommonProgramsFolder" Name="Programs">
+              <Directory Id="ApplicationProgramsFolder" Name="Snapture" />
+            </Directory>
+          </Directory>
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <Feature Id="MainFeature" Title="Snapture" Level="1">
+      <Files Include="$(var.PayloadDir)\**" Directory="INSTALLFOLDER">
+        <Exclude Files="$(var.PayloadDir)\Snapture.App.exe" />
+      </Files>
+      <Component Id="ApplicationShortcut" Directory="INSTALLFOLDER">
+        <File Id="SnaptureExecutable" Source="$(var.PayloadDir)\Snapture.App.exe">
+          <Shortcut
+            Id="SnaptureStartMenuShortcut"
+            Directory="ApplicationProgramsFolder"
+            Name="$(var.StartMenuName)"
+            WorkingDirectory="INSTALLFOLDER"
+            Advertise="no" />
+        </File>
+        <RemoveFolder Id="RemoveApplicationProgramsFolder" Directory="ApplicationProgramsFolder" On="uninstall" />
+      </Component>
+    </Feature>
+  </Package>
+</Wix>

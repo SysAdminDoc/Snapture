@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Enterprise MSI packaging
+
+- `build/build.ps1 -Msi` now emits unsigned per-machine x64 and ARM64 MSIs with Add/Remove Programs registration, a machine-wide Start Menu shortcut, major-upgrade handling, and silent `msiexec` deployment support.
+- Each MSI build also emits a WiX-generated enterprise MST transform that changes the shortcut name to `Snapture Enterprise`; the build validates both MSI databases and the transform table mutation.
+
 ### Added — Scoop manifest
 
 - Added an extras-bucket-ready `packaging/scoop/snapture.json` manifest for the x64 and ARM64 portable archives, including pinned SHA-256 hashes, Scoop shims, a Start Menu shortcut, GitHub version checking, and architecture-aware autoupdate URLs.

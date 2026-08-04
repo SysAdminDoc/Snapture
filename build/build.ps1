@@ -6,6 +6,7 @@ param(
     [switch]$Publish,
     [switch]$Zip,
     [switch]$Msix,
+    [switch]$Msi,
     [switch]$Velopack,
     [switch]$Chocolatey,
     [ValidateSet('canary', 'pilot', 'stable')]
@@ -135,6 +136,100 @@ function New-MsixPackage {
     Write-Host "==> Wrote unsigned MSIX $packagePath" -ForegroundColor Green
     Write-Host "    App Installer feed: $(Join-Path $feedDirectory 'Snapture.appinstaller')" -ForegroundColor Green
     Write-Host "    Rollout ring: $RolloutRing (pinned package version $packageVersion)" -ForegroundColor Green
+    Write-Host '    Signing intentionally omitted; release signing remains an operator-controlled step.' -ForegroundColor Yellow
+}
+
+function Invoke-Wix {
+    param([string[]]$Arguments)
+
+    & dotnet tool run wix -- @Arguments
+    if ($LASTEXITCODE -ne 0) { throw "WiX command failed: wix $($Arguments -join ' ')" }
+}
+
+function Get-MsiProductCode([string]$Version) {
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    try {
+        $bytes = [System.Text.Encoding]::UTF8.GetBytes("SysAdminDoc.Snapture.MSI.$Version")
+        $hash = $md5.ComputeHash($bytes)
+        return ([Guid]::new($hash)).ToString('B').ToUpperInvariant()
+    }
+    finally { $md5.Dispose() }
+}
+
+function New-MsiPackage {
+    $version = Get-ProjectVersion
+    if ($Runtime -notin @('win-x64', 'win-arm64')) { throw "MSI supports win-x64 or win-arm64, not '$Runtime'." }
+    $architecture = if ($Runtime -eq 'win-arm64') { 'arm64' } else { 'x64' }
+    $msiRoot = Join-Path $root "publish\msi\$Runtime"
+    $payload = Join-Path $msiRoot 'payload'
+    $verification = Join-Path $msiRoot 'verification'
+    $baseMsi = Join-Path $msiRoot "Snapture-v$version-$Runtime.msi"
+    $enterpriseMsi = Join-Path $msiRoot "Snapture-v$version-$Runtime-enterprise-source.msi"
+    $transform = Join-Path $msiRoot "Snapture-v$version-$Runtime-enterprise.mst"
+    $source = Join-Path $root 'packaging\msi\Snapture.wxs'
+
+    if (Test-Path -LiteralPath $msiRoot) { [System.IO.Directory]::Delete($msiRoot, $true) }
+    New-Item -ItemType Directory -Path $payload, $verification -Force | Out-Null
+
+    Write-Host "==> dotnet publish -c $Configuration -r $Runtime for MSI" -ForegroundColor Cyan
+    dotnet publish "$root\src\Snapture.App\Snapture.App.csproj" `
+        -c $Configuration `
+        -r $Runtime `
+        --self-contained false `
+        -p:PublishSingleFile=false `
+        -p:PublishTrimmed=false `
+        -o $payload `
+        --nologo
+    if ($LASTEXITCODE -ne 0) { throw "MSI publish failed." }
+    Copy-Item -LiteralPath "$root\build\uninstall.ps1" -Destination (Join-Path $payload 'Uninstall-Snapture.ps1') -Force
+    if (-not (Test-Path -LiteralPath (Join-Path $payload 'Snapture.App.exe'))) {
+        throw 'MSI payload is missing Snapture.App.exe.'
+    }
+
+    Write-Host '==> dotnet tool restore (WiX 5.0.2)' -ForegroundColor Cyan
+    dotnet tool restore
+    if ($LASTEXITCODE -ne 0) { throw 'WiX tool restore failed.' }
+    $productCode = Get-MsiProductCode $version
+    $commonArgs = @(
+        'build',
+        '-arch', $architecture,
+        '-d', "PackageVersion=$version",
+        '-d', "ProductCode=$productCode",
+        '-d', "PayloadDir=$payload"
+    )
+
+    Invoke-Wix ($commonArgs + @('-d', 'StartMenuName=Snapture', '-pdbtype', 'none', $source, '-out', $baseMsi))
+    Invoke-Wix ($commonArgs + @('-d', 'StartMenuName=Snapture Enterprise', '-pdbtype', 'none', $source, '-out', $enterpriseMsi))
+    Invoke-Wix @('msi', 'validate', $baseMsi)
+    Invoke-Wix @('msi', 'transform', $baseMsi, $enterpriseMsi, '-p', '-out', $transform)
+
+    foreach ($artifact in @($baseMsi, $transform)) {
+        if (-not (Test-Path -LiteralPath $artifact)) { throw "MSI build is missing '$artifact'." }
+        if ((Get-Item -LiteralPath $artifact).Length -le 0) { throw "MSI build produced an empty '$artifact'." }
+    }
+
+    $decompiledBase = Join-Path $verification 'base.wxs'
+    $decompiledEnterprise = Join-Path $verification 'enterprise.wxs'
+    $transformOutput = Join-Path $verification 'enterprise-transform.wixout'
+    $transformSource = Join-Path $verification 'enterprise-transform'
+    Invoke-Wix @('msi', 'decompile', '-o', $decompiledBase, $baseMsi)
+    Invoke-Wix @('msi', 'decompile', '-o', $decompiledEnterprise, $enterpriseMsi)
+    $baseSource = Get-Content -LiteralPath $decompiledBase -Raw
+    $enterpriseSource = Get-Content -LiteralPath $decompiledEnterprise -Raw
+    if ($baseSource -notmatch 'Name="Snapture"') { throw 'Base MSI shortcut name was not found during verification.' }
+    if ($enterpriseSource -notmatch 'Name="Snapture Enterprise"') { throw 'Enterprise MSI shortcut variant was not found during verification.' }
+    if ($baseSource -match 'Name="Snapture Enterprise"') { throw 'Base MSI unexpectedly contains the enterprise shortcut name.' }
+
+    Invoke-Wix @('msi', 'transform', $baseMsi, $enterpriseMsi, '-p', '-xo', '-out', $transformOutput)
+    Expand-Archive -LiteralPath $transformOutput -DestinationPath $transformSource -Force
+    $transformSourceXml = Get-Content -LiteralPath (Join-Path $transformSource 'wix-wid.xml') -Raw
+    if ($transformSourceXml -notmatch '<table name="Shortcut"') { throw 'The enterprise MST contains no Shortcut table changes.' }
+    if ($transformSourceXml -notmatch 'Snapture Enterprise') { throw 'The enterprise MST does not contain the expected shortcut name change.' }
+
+    [System.IO.File]::Delete($enterpriseMsi)
+    Write-Host "==> Wrote unsigned MSI $baseMsi" -ForegroundColor Green
+    Write-Host "    Wrote enterprise transform $transform" -ForegroundColor Green
+    Write-Host '    Silent install: msiexec /i Snapture.msi TRANSFORMS=Snapture-enterprise.mst /qn /norestart' -ForegroundColor Green
     Write-Host '    Signing intentionally omitted; release signing remains an operator-controlled step.' -ForegroundColor Yellow
 }
 
@@ -411,6 +506,7 @@ if ($Publish) {
 }
 
 if ($Msix) { New-MsixPackage }
+if ($Msi) { New-MsiPackage }
 if ($Velopack -and -not $Chocolatey) { New-VelopackPackage }
 if ($Chocolatey) { New-ChocolateyPackages }
 
