@@ -58,6 +58,7 @@ public partial class SettingsWindow : Window
         EngineCapsText.Text = WinRtCaptureEngine.IsSupported
             ? "WinRT capture is available on this system."
             : "WinRT is unavailable on this system; the auto setting will fall back to GDI.";
+        HideDesktopIconsCheck.IsChecked = _draft.HideDesktopIcons;
 
         OutputFolderBox.Text = _draft.OutputFolder;
         FilenameTemplateBox.Text = _draft.FilenamePattern;
@@ -623,6 +624,7 @@ public partial class SettingsWindow : Window
         _draft.LaunchAtStartup        = LaunchAtStartupCheck.IsChecked == true;
         _draft.OpenEditorAfterCapture = OpenEditorCheck.IsChecked == true;
         _draft.CopyToClipboard        = CopyClipboardCheck.IsChecked == true;
+        _draft.HideDesktopIcons       = HideDesktopIconsCheck.IsChecked == true;
         _draft.ClipboardCopyMode     = ((ComboBoxItem)ClipboardModeCombo.SelectedItem).Tag as string
             ?? ClipboardIntegrationService.ImageMode;
         _draft.ShowToastOnSave        = ShowToastCheck.IsChecked == true;
@@ -701,6 +703,7 @@ public partial class SettingsWindow : Window
         dst.QuickMode = src.QuickMode;
         dst.IncludeSecondaryWindows = src.IncludeSecondaryWindows;
         dst.IncludeCursor = src.IncludeCursor;
+        dst.HideDesktopIcons = src.HideDesktopIcons;
         dst.PlayShutterSound = src.PlayShutterSound;
         dst.AutoBorderOnCapture = src.AutoBorderOnCapture;
         dst.AutoBorderColor = src.AutoBorderColor;

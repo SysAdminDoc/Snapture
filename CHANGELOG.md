@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Capture-safe desktop icon hiding
+
+- Settings → Capture engine can temporarily hide the Windows desktop icon list before capture and restores the prior visibility state on success, cancellation, or failure.
+
 ### Added — LAN-share QR overlay
 
 - Editor → Share to LAN now opens a scan-ready QR window for the existing single-fetch URL while keeping the URL in the clipboard. QR images are generated locally with the same TTL and network-boundary rules as the share URL.

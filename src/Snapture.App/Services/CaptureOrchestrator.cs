@@ -26,6 +26,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureRegionAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var virtualBounds = MonitorEnumerator.GetVirtualScreen();
         var virtualCapture = await _engine.CaptureRegionAsync(virtualBounds).ConfigureAwait(true);
         try
@@ -51,6 +52,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureLastRegionAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var rect = _settings.Current.LastRegion;
         if (rect is null)
         {
@@ -65,12 +67,14 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureFullscreenAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var result = await _engine.CaptureVirtualScreenAsync().ConfigureAwait(true);
         await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
 
     public async Task CaptureForegroundWindowAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
         if (hwnd == 0) return;
         var result = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
@@ -79,6 +83,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureWindowPickerAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         // Show the hover-highlight overlay; user picks the window with click.
         var picker = new WindowPickerWindow();
         var hwnd = picker.PickWindowSync();
@@ -89,6 +94,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureMonitorAsync(MonitorInfo m)
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var result = await _engine.CaptureMonitorAsync(m).ConfigureAwait(true);
         await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
@@ -111,6 +117,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureMonitorUnderCursorAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         GetCursorPos(out var pt);
         var mon = MonitorEnumerator.FromPoint(new System.Drawing.Point(pt.X, pt.Y));
         if (mon is null) return;
@@ -125,6 +132,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureTextAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var virtualBounds = MonitorEnumerator.GetVirtualScreen();
         var virtualCapture = await _engine.CaptureRegionAsync(virtualBounds).ConfigureAwait(true);
         try
@@ -160,6 +168,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureSmartElementAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var picker = new SmartCaptureWindow();
         picker.PickSync();
         var bounds = picker.SelectedBounds;
@@ -172,6 +181,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureScrollingForegroundAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
         if (hwnd == 0) return;
         var svc = new ScrollingCaptureService(_engine);
@@ -205,6 +215,7 @@ public sealed class CaptureOrchestrator
 
     public async Task OcrRegionAsync()
     {
+        using var desktopIcons = BeginDesktopIconScope();
         var virtualBounds = MonitorEnumerator.GetVirtualScreen();
         var virtualCapture = await _engine.CaptureRegionAsync(virtualBounds).ConfigureAwait(true);
         try
@@ -246,6 +257,11 @@ public sealed class CaptureOrchestrator
         g.DrawImage(virtualBmp, new Rectangle(0, 0, w, h), src, GraphicsUnit.Pixel);
         return crop;
     }
+
+    private IDisposable? BeginDesktopIconScope() =>
+        _settings.Current.HideDesktopIcons
+            ? DesktopIconVisibilityService.TryHide()
+            : null;
 
     private async Task DeliverCaptureAsync(CaptureResult result)
     {

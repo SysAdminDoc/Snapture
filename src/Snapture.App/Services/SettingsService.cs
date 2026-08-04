@@ -84,6 +84,9 @@ public sealed class SnaptureSettings
     /// <summary>Include cursor in screenshot captures.</summary>
     public bool IncludeCursor { get; set; } = true;
 
+    /// <summary>Temporarily hide shell desktop icons while a capture is being taken.</summary>
+    public bool HideDesktopIcons { get; set; } = false;
+
     /// <summary>HDR FP16-to-SDR operator: "reinhard" (default), "aces", or "hable".</summary>
     public string HdrToneMapOperator { get; set; } = HdrToneMapOperators.DefaultKey;
 
