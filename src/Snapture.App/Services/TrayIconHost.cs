@@ -258,6 +258,40 @@ public sealed class TrayIconHost : IDisposable
         shellIntegration.Items.Add(removeShell);
         tools.Items.Add(shellIntegration);
 
+        var urlIntegration = new MenuItem { Header = "URL scheme integration" };
+        var installUrl = new MenuItem { Header = "Install snapture:// for this user" };
+        installUrl.Click += (_, _) =>
+        {
+            try
+            {
+                UrlSchemeIntegrationService.Install();
+                ShowToast("URL scheme installed", "snapture:// capture links are now handled by Snapture.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not install the URL scheme:\n{ex.Message}",
+                    "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        urlIntegration.Items.Add(installUrl);
+
+        var removeUrl = new MenuItem { Header = "Remove snapture:// for this user" };
+        removeUrl.Click += (_, _) =>
+        {
+            try
+            {
+                UrlSchemeIntegrationService.Uninstall();
+                ShowToast("URL scheme removed", "Snapture no longer handles snapture:// links.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not remove the URL scheme:\n{ex.Message}",
+                    "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        urlIntegration.Items.Add(removeUrl);
+        tools.Items.Add(urlIntegration);
+
         var ocrFromFile = new MenuItem { Header = "OCR from file…" };
         ocrFromFile.Click += async (_, _) =>
         {

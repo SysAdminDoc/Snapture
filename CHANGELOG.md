@@ -11,6 +11,11 @@ All notable changes to Snapture will be documented in this file.
 
 - Tray → Tools can install or remove a current-user-only image context menu with “Open in Snapture editor”, PNG/JPEG conversion, and 50/75/125/200% resize presets. Registration is stored below `HKCU\Software\Classes\SystemFileAssociations\image` and never requires elevation.
 
+### Added — Secure URL capture handler
+
+- Tray → Tools can opt in to a current-user `snapture://` protocol registration. Region, window, fullscreen, scrolling, and last-region commands dispatch through the existing capture pipeline with clipboard/editor destination overrides.
+- The parser rejects UNC, SMB, external `file://`, traversal, outside-profile paths, credentials, ports, fragments, duplicates, and unknown parameters before any capture work, with explicit reject-test coverage for the CVE-2026-33829 failure class.
+
 ### Added — Multi-pin selection and group controls
 
 - Pin overlays support Ctrl+click selection, Ctrl+A select-all, group dragging, group opacity changes through the wheel or context menu, and Delete/context-menu bulk close. Selected pins use an accent border and the menu reports the active group.

@@ -99,6 +99,22 @@ public sealed class CliCommandLineTests
     }
 
     [TestMethod]
+    public void ParsesUriCaptureCommand()
+    {
+        var ok = CliCommandLine.TryParse(
+            new[] { "--uri", "snapture://capture?mode=region&autoscroll=true&dest=clipboard" },
+            out var command,
+            out var error);
+
+        Assert.IsTrue(ok, error);
+        Assert.AreEqual(CliCommandKind.Uri, command.Kind);
+        Assert.IsNotNull(command.Uri);
+        Assert.AreEqual(UriCaptureMode.Scrolling, command.Uri!.Request.Mode);
+        Assert.IsTrue(command.Uri.Request.CopyToClipboardOverride);
+        Assert.IsFalse(command.Uri.Request.OpenEditorOverride);
+    }
+
+    [TestMethod]
     public void RejectsMissingOrInvalidCaptureSource()
     {
         Assert.IsFalse(CliCommandLine.TryParse(Array.Empty<string>(), out _, out var emptyError));

@@ -10,6 +10,7 @@ public enum CliCommandKind
     Capture,
     Open,
     Convert,
+    Uri,
     Help,
     Version
 }
@@ -33,11 +34,14 @@ public sealed record CliConvertOptions(
     int ResizePercent,
     string? OutputPath);
 
+public sealed record CliUriOptions(CaptureUriRequest Request);
+
 public sealed record CliCommand(
     CliCommandKind Kind,
     CliCaptureOptions? Capture = null,
     CliOpenOptions? Open = null,
-    CliConvertOptions? Convert = null);
+    CliConvertOptions? Convert = null,
+    CliUriOptions? Uri = null);
 
 /// <summary>Strict parser for the non-interactive command-line capture surface.</summary>
 public static class CliCommandLine
@@ -46,7 +50,8 @@ public static class CliCommandLine
         "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name]\n" +
         "snapture --fullscreen [--out file.png] [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share]\n" +
         "snapture --open image.png\n" +
-        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file]";
+        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file]\n" +
+        "snapture --uri \"snapture://capture?mode=region&dest=clipboard\"";
 
     public static void AttachParentConsole()
     {
@@ -78,6 +83,7 @@ public static class CliCommandLine
             || arg.Equals("--lan-share", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--open", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--convert", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--uri", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--region", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--out", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--engine", StringComparison.OrdinalIgnoreCase)
@@ -124,10 +130,22 @@ public static class CliCommandLine
         string? format = null;
         int resizePercent = 0;
         bool resizeSpecified = false;
+        string? rawUri = null;
 
         for (int i = 0; i < args.Count; i++)
         {
             string arg = args[i];
+            if (TryReadOptionValue(args, ref i, arg, "--uri", out var uriValue))
+            {
+                if (rawUri is not null || string.IsNullOrWhiteSpace(uriValue))
+                {
+                    error = "--uri requires one non-empty snapture:// URI and may only be specified once.";
+                    return false;
+                }
+                rawUri = uriValue;
+                continue;
+            }
+
             if (TryReadOptionValue(args, ref i, arg, "--open", out var openValue))
             {
                 if (openPath is not null || string.IsNullOrWhiteSpace(openValue))
@@ -268,6 +286,26 @@ public static class CliCommandLine
 
             error = $"Unknown CLI option: {arg}\n\n{Usage}";
             return false;
+        }
+
+        if (rawUri is not null)
+        {
+            if (openPath is not null || convertPath is not null || format is not null || resizeSpecified
+                || region is not null || fullscreen || outputPath is not null || copy || hold || blockSeconds != 0
+                || lanShare || profile is not null || engine is not null)
+            {
+                error = "--uri cannot be combined with capture, conversion, or delivery options.";
+                return false;
+            }
+
+            if (!UrlSchemeIntegrationService.TryParse(rawUri, out var request, out var uriError) || request is null)
+            {
+                error = $"Invalid --uri: {uriError}";
+                return false;
+            }
+
+            command = new CliCommand(CliCommandKind.Uri, Uri: new CliUriOptions(request));
+            return true;
         }
 
         if (openPath is not null || convertPath is not null || format is not null || resizeSpecified)

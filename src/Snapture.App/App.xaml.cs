@@ -96,6 +96,24 @@ public partial class App : Application
                 return;
             }
 
+            if (command.Kind == CliCommandKind.Uri)
+            {
+                try
+                {
+                    Host = new AppHost();
+                    Host.Start();
+                    await Host.RunUriAsync(command.Uri?.Request
+                        ?? throw new InvalidOperationException("URI options are missing.")).ConfigureAwait(true);
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "Uri.CaptureFailed");
+                    Environment.ExitCode = 1;
+                    Shutdown();
+                }
+                return;
+            }
+
             try
             {
                 Host = new AppHost();

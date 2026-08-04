@@ -26,7 +26,11 @@ public sealed class CaptureOrchestrator
 
     public void ReplaceEngine(ICaptureEngine engine) => _engine = engine;
 
-    public async Task CaptureRegionAsync()
+    public Task CaptureRegionAsync() => CaptureRegionAsync(null, null);
+
+    internal async Task CaptureRegionAsync(
+        bool? copyToClipboardOverride,
+        bool? openEditorOverride)
     {
         using var desktopIcons = BeginDesktopIconScope();
         var virtualBounds = MonitorEnumerator.GetVirtualScreen();
@@ -44,7 +48,10 @@ public sealed class CaptureOrchestrator
             _settings.Current.LastRegion = new CaptureRect(sel.Value.X, sel.Value.Y, sel.Value.Width, sel.Value.Height);
             _settings.Save();
 
-            await DeliverCaptureAsync(new CaptureResult(crop, sel.Value, DateTime.UtcNow, "Region")).ConfigureAwait(true);
+            await DeliverCaptureAsync(
+                new CaptureResult(crop, sel.Value, DateTime.UtcNow, "Region"),
+                copyToClipboardOverride: copyToClipboardOverride,
+                openEditorOverride: openEditorOverride).ConfigureAwait(true);
         }
         finally
         {
@@ -52,35 +59,56 @@ public sealed class CaptureOrchestrator
         }
     }
 
-    public async Task CaptureLastRegionAsync()
+    public Task CaptureLastRegionAsync() => CaptureLastRegionAsync(null, null);
+
+    internal async Task CaptureLastRegionAsync(
+        bool? copyToClipboardOverride,
+        bool? openEditorOverride)
     {
         using var desktopIcons = BeginDesktopIconScope();
         var rect = _settings.Current.LastRegion;
         if (rect is null)
         {
             // Fall back to the standard region picker if there's no remembered region yet.
-            await CaptureRegionAsync();
+            await CaptureRegionAsync(copyToClipboardOverride, openEditorOverride);
             return;
         }
         var bounds = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height);
         var result = await _engine.CaptureRegionAsync(bounds).ConfigureAwait(true);
-        await DeliverCaptureAsync(result).ConfigureAwait(true);
+        await DeliverCaptureAsync(
+            result,
+            copyToClipboardOverride: copyToClipboardOverride,
+            openEditorOverride: openEditorOverride).ConfigureAwait(true);
     }
 
-    public async Task CaptureFullscreenAsync()
+    public Task CaptureFullscreenAsync() => CaptureFullscreenAsync(null, null);
+
+    internal async Task CaptureFullscreenAsync(
+        bool? copyToClipboardOverride,
+        bool? openEditorOverride)
     {
         using var desktopIcons = BeginDesktopIconScope();
         var result = await _engine.CaptureVirtualScreenAsync().ConfigureAwait(true);
-        await DeliverCaptureAsync(result).ConfigureAwait(true);
+        await DeliverCaptureAsync(
+            result,
+            copyToClipboardOverride: copyToClipboardOverride,
+            openEditorOverride: openEditorOverride).ConfigureAwait(true);
     }
 
-    public async Task CaptureForegroundWindowAsync()
+    public Task CaptureForegroundWindowAsync() => CaptureForegroundWindowAsync(null, null);
+
+    internal async Task CaptureForegroundWindowAsync(
+        bool? copyToClipboardOverride,
+        bool? openEditorOverride)
     {
         using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
         if (hwnd == 0) return;
         var result = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
-        await DeliverCaptureAsync(result).ConfigureAwait(true);
+        await DeliverCaptureAsync(
+            result,
+            copyToClipboardOverride: copyToClipboardOverride,
+            openEditorOverride: openEditorOverride).ConfigureAwait(true);
     }
 
     public async Task CaptureWindowPickerAsync()
@@ -181,7 +209,11 @@ public sealed class CaptureOrchestrator
             $"Smart:{picker.SelectedDescription ?? "element"}", IsHdr: result.IsHdr)).ConfigureAwait(true);
     }
 
-    public async Task CaptureScrollingForegroundAsync()
+    public Task CaptureScrollingForegroundAsync() => CaptureScrollingForegroundAsync(null, null);
+
+    internal async Task CaptureScrollingForegroundAsync(
+        bool? copyToClipboardOverride,
+        bool? openEditorOverride)
     {
         using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
@@ -205,13 +237,41 @@ public sealed class CaptureOrchestrator
                 return;
             }
             preview.UpdateStatus("Stitching complete");
-            await DeliverCaptureAsync(new CaptureResult(
-                bmp, new Rectangle(0, 0, bmp.Width, bmp.Height),
-                DateTime.UtcNow, "Scrolling", hwnd)).ConfigureAwait(true);
+            await DeliverCaptureAsync(
+                new CaptureResult(
+                    bmp, new Rectangle(0, 0, bmp.Width, bmp.Height),
+                    DateTime.UtcNow, "Scrolling", hwnd),
+                copyToClipboardOverride: copyToClipboardOverride,
+                openEditorOverride: openEditorOverride).ConfigureAwait(true);
         }
         finally
         {
             preview.Close();
+        }
+    }
+
+    public async Task CaptureUriAsync(CaptureUriRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        switch (request.Mode)
+        {
+            case UriCaptureMode.Region:
+                await CaptureRegionAsync(request.CopyToClipboardOverride, request.OpenEditorOverride);
+                break;
+            case UriCaptureMode.Window:
+                await CaptureForegroundWindowAsync(request.CopyToClipboardOverride, request.OpenEditorOverride);
+                break;
+            case UriCaptureMode.Fullscreen:
+                await CaptureFullscreenAsync(request.CopyToClipboardOverride, request.OpenEditorOverride);
+                break;
+            case UriCaptureMode.Scrolling:
+                await CaptureScrollingForegroundAsync(request.CopyToClipboardOverride, request.OpenEditorOverride);
+                break;
+            case UriCaptureMode.LastRegion:
+                await CaptureLastRegionAsync(request.CopyToClipboardOverride, request.OpenEditorOverride);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(request.Mode));
         }
     }
 

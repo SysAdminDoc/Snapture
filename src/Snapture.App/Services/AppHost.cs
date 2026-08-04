@@ -231,6 +231,12 @@ public sealed class AppHost : IDisposable
         EditorTabHostWindow.Open(new EditorWindow(path));
     }
 
+    public Task RunUriAsync(CaptureUriRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        return Orchestrator.CaptureUriAsync(request);
+    }
+
     private void CheckForAutosaveRecovery()
     {
         try
