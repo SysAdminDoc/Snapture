@@ -25,6 +25,8 @@ public abstract class Shape
     public uint StrokeColorArgb { get; set; } = 0xFFE74C3C; // red default
     public uint FillColorArgb { get; set; } = 0x00000000;
     public float StrokeThickness { get; set; } = 3f;
+    /// <summary>0 is clean geometry; 1 is the loosest hand-drawn stroke.</summary>
+    public float Sloppiness { get; set; }
     public bool DropShadow { get; set; }
 
     public abstract void Render(SKCanvas canvas, AnnotationDocument doc);
@@ -106,13 +108,23 @@ public sealed class RectangleShape : Shape
         {
             using var fill = MakeFillPaint();
             if (Filled) fill.Color = ToColor(StrokeColorArgb);
-            if (CornerRadius > 0) canvas.DrawRoundRect(rect, CornerRadius, CornerRadius, fill);
+            if (Sloppiness > 0 && CornerRadius <= 0)
+            {
+                using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 97);
+                canvas.DrawPath(rough, fill);
+            }
+            else if (CornerRadius > 0) canvas.DrawRoundRect(rect, CornerRadius, CornerRadius, fill);
             else canvas.DrawRect(rect, fill);
         }
         if (!Filled)
         {
             using var stroke = MakeStrokePaint();
-            if (CornerRadius > 0) canvas.DrawRoundRect(rect, CornerRadius, CornerRadius, stroke);
+            if (Sloppiness > 0 && CornerRadius <= 0)
+            {
+                using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 101);
+                canvas.DrawPath(rough, stroke);
+            }
+            else if (CornerRadius > 0) canvas.DrawRoundRect(rect, CornerRadius, CornerRadius, stroke);
             else canvas.DrawRect(rect, stroke);
         }
     }
@@ -121,7 +133,7 @@ public sealed class RectangleShape : Shape
     public override Shape Clone() => new RectangleShape
     {
         X = X, Y = Y, Width = Width, Height = Height, CornerRadius = CornerRadius, Filled = Filled,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
@@ -140,7 +152,12 @@ public sealed class RulerShape : Shape
     public override void Render(SKCanvas canvas, AnnotationDocument doc)
     {
         using var paint = MakeStrokePaint();
-        canvas.DrawLine(X1, Y1, X2, Y2, paint);
+        if (Sloppiness > 0)
+        {
+            using var rough = RoughStroke.CreateLine(new SKPoint(X1, Y1), new SKPoint(X2, Y2), Sloppiness, StrokeThickness, 211);
+            canvas.DrawPath(rough, paint);
+        }
+        else canvas.DrawLine(X1, Y1, X2, Y2, paint);
 
         float dx = X2 - X1, dy = Y2 - Y1;
         float length = MathF.Sqrt(dx * dx + dy * dy);
@@ -189,7 +206,7 @@ public sealed class RulerShape : Shape
     public override Shape Clone() => new RulerShape
     {
         X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
 
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
@@ -234,7 +251,7 @@ public sealed class SpotlightShape : Shape
     public override Shape Clone() => new SpotlightShape
     {
         X = X, Y = Y, Width = Width, Height = Height,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
@@ -255,12 +272,22 @@ public sealed class EllipseShape : Shape
         {
             using var fill = MakeFillPaint();
             fill.Color = ToColor(StrokeColorArgb);
-            canvas.DrawOval(rect, fill);
+            if (Sloppiness > 0)
+            {
+                using var rough = RoughStroke.CreateEllipse(rect, Sloppiness, StrokeThickness, 293);
+                canvas.DrawPath(rough, fill);
+            }
+            else canvas.DrawOval(rect, fill);
         }
         else
         {
             using var stroke = MakeStrokePaint();
-            canvas.DrawOval(rect, stroke);
+            if (Sloppiness > 0)
+            {
+                using var rough = RoughStroke.CreateEllipse(rect, Sloppiness, StrokeThickness, 307);
+                canvas.DrawPath(rough, stroke);
+            }
+            else canvas.DrawOval(rect, stroke);
         }
     }
     public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
@@ -268,7 +295,7 @@ public sealed class EllipseShape : Shape
     public override Shape Clone() => new EllipseShape
     {
         X = X, Y = Y, Width = Width, Height = Height, Filled = Filled,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
@@ -286,7 +313,12 @@ public sealed class LineShape : Shape
     {
         using var stroke = MakeStrokePaint();
         if (Dashed) stroke.PathEffect = SKPathEffect.CreateDash(new[] { 8f, 8f }, 0);
-        canvas.DrawLine(X1, Y1, X2, Y2, stroke);
+        if (Sloppiness > 0)
+        {
+            using var rough = RoughStroke.CreateLine(new SKPoint(X1, Y1), new SKPoint(X2, Y2), Sloppiness, StrokeThickness, 401);
+            canvas.DrawPath(rough, stroke);
+        }
+        else canvas.DrawLine(X1, Y1, X2, Y2, stroke);
     }
     public override SKRect GetBounds() => SKRect.Create(
         Math.Min(X1, X2), Math.Min(Y1, Y2), Math.Abs(X2 - X1), Math.Abs(Y2 - Y1));
@@ -299,7 +331,7 @@ public sealed class LineShape : Shape
     public override Shape Clone() => new LineShape
     {
         X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Dashed = Dashed,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
     public override void ResizeTo(SKRect r)
@@ -326,7 +358,12 @@ public sealed class ArrowShape : Shape
     {
         using var stroke = MakeStrokePaint();
         if (Dashed) stroke.PathEffect = SKPathEffect.CreateDash(new[] { 8f, 8f }, 0);
-        canvas.DrawLine(X1, Y1, X2, Y2, stroke);
+        if (Sloppiness > 0)
+        {
+            using var rough = RoughStroke.CreateLine(new SKPoint(X1, Y1), new SKPoint(X2, Y2), Sloppiness, StrokeThickness, 503);
+            canvas.DrawPath(rough, stroke);
+        }
+        else canvas.DrawLine(X1, Y1, X2, Y2, stroke);
         if (Reversed)
             DrawArrowhead(canvas, stroke, X2, Y2, X1, Y1);
         else
@@ -360,7 +397,7 @@ public sealed class ArrowShape : Shape
     public override Shape Clone() => new ArrowShape
     {
         X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Reversed = Reversed, Dashed = Dashed,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }
     public override void ResizeTo(SKRect r)
@@ -381,9 +418,7 @@ public sealed class FreehandShape : Shape
     {
         if (Points.Count < 2) return;
         using var stroke = MakeStrokePaint();
-        using var path = new SKPath();
-        path.MoveTo(Points[0]);
-        for (int i = 1; i < Points.Count; i++) path.LineTo(Points[i]);
+        using var path = RoughStroke.CreatePolyline(Points, Sloppiness, StrokeThickness, 607);
         canvas.DrawPath(path, stroke);
     }
 
@@ -406,7 +441,7 @@ public sealed class FreehandShape : Shape
     public override Shape Clone() => new FreehandShape
     {
         Points = new List<SKPoint>(Points),
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy)
     {
@@ -463,7 +498,7 @@ public sealed class TextShape : Shape
     public override Shape Clone() => new TextShape
     {
         X = X, Y = Y, Text = Text, FontSize = FontSize, FontFamily = FontFamily, Bold = Bold, Italic = Italic,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }
@@ -493,7 +528,7 @@ public sealed class HighlightShape : Shape
     public override Shape Clone() => new HighlightShape
     {
         X = X, Y = Y, Width = Width, Height = Height,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
@@ -551,7 +586,7 @@ public sealed class BlurShape : Shape
     public override Shape Clone() => new BlurShape
     {
         X = X, Y = Y, Width = Width, Height = Height, BlurRadius = BlurRadius, Pixelate = Pixelate,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
@@ -578,7 +613,7 @@ public sealed class RedactShape : Shape
     public override Shape Clone() => new RedactShape
     {
         X = X, Y = Y, Width = Width, Height = Height,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
@@ -617,7 +652,7 @@ public sealed class StepShape : Shape
     public override Shape Clone() => new StepShape
     {
         X = X, Y = Y, Radius = Radius, Label = Label,
-        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, DropShadow = DropShadow
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
 }

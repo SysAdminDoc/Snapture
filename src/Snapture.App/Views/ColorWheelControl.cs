@@ -150,6 +150,14 @@ internal sealed class ColorWheelControl : FrameworkElement
     private static void DrawSector(DrawingContext drawingContext, Point center, double innerRadius,
         double outerRadius, double startDegrees, double endDegrees, Color color)
     {
+        // Slight overlap prevents WPF's antialiased geometry edges from exposing the
+        // dark popup background as a distracting grid between adjacent colour cells.
+        const double overlapAngle = 0.45;
+        const double overlapRadius = 0.7;
+        innerRadius = Math.Max(0, innerRadius - overlapRadius);
+        outerRadius += overlapRadius;
+        startDegrees -= overlapAngle;
+        endDegrees += overlapAngle;
         var geometry = new StreamGeometry();
         using (var context = geometry.Open())
         {

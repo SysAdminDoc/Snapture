@@ -98,6 +98,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Right-clicking the editor canvas opens a vector-rendered colour wheel; choosing a colour updates the active drawing colour and recolours the shape under the pointer (or the selected group) as one undoable action.
 
+### Added — Hand-drawn stroke styling
+
+- The editor now exposes a 0–100% sloppiness slider for new annotations, storing a deterministic roughness amount in each shape and applying crisp, repeatable wobble to stroke, rectangle, ellipse, and freehand geometry.
+
 ### Fixed
 
 - Video recording now crops odd-width or odd-height WGC textures into even encoder dimensions without attempting an invalid `CopyResource` between differently sized D3D11 textures.

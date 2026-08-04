@@ -55,6 +55,7 @@ public partial class EditorWindow : Window
     private EditorTool _activeTool = EditorTool.Select;
     private uint _activeColor = 0xFFE74C3C;
     private float _strokeThickness = 3f;
+    private float _sloppiness;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
 
@@ -943,7 +944,11 @@ public partial class EditorWindow : Window
             EditorTool.Crop      => null,
             _ => null,
         };
-        if (shape is not null) shape.DropShadow = shadow;
+        if (shape is not null)
+        {
+            shape.DropShadow = shadow;
+            shape.Sloppiness = _sloppiness;
+        }
         return shape;
     }
 
@@ -1012,6 +1017,15 @@ public partial class EditorWindow : Window
     private void OnUndoClicked(object sender, RoutedEventArgs e) { _commands.Undo(_doc); Canvas.InvalidateVisual(); }
     private void OnRedoClicked(object sender, RoutedEventArgs e) { _commands.Redo(_doc); Canvas.InvalidateVisual(); }
     private void OnStrokeChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => _strokeThickness = (float)e.NewValue;
+    private void OnSloppinessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _sloppiness = (float)Math.Clamp(e.NewValue / 100.0, 0, 1);
+        if (SloppinessValue is not null)
+            SloppinessValue.Text = $"{e.NewValue:0}%";
+        if (_draftShape is not null)
+            _draftShape.Sloppiness = _sloppiness;
+        Canvas.InvalidateVisual();
+    }
     private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
         byte alpha = (byte)Math.Clamp((int)e.NewValue, 0, 255);
