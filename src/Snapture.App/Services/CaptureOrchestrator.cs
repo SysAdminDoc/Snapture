@@ -9,6 +9,8 @@ using Snapture.Capture;
 
 namespace Snapture.App.Services;
 
+public sealed record CaptureDeliveryResult(string? SavedPath, string? LanUrl);
+
 public sealed class CaptureOrchestrator
 {
     private readonly SettingsService _settings;
@@ -263,7 +265,26 @@ public sealed class CaptureOrchestrator
             ? DesktopIconVisibilityService.TryHide()
             : null;
 
-    private async Task DeliverCaptureAsync(CaptureResult result)
+    public Task<CaptureDeliveryResult> DeliverCaptureForCliAsync(
+        CaptureResult result,
+        string? outputPath,
+        bool? copyToClipboard,
+        LanShareServer? lanShare = null) =>
+        DeliverCaptureAsync(
+            result,
+            outputPath,
+            copyToClipboardOverride: copyToClipboard,
+            openEditorOverride: false,
+            lanShare: lanShare,
+            showUi: false);
+
+    private async Task<CaptureDeliveryResult> DeliverCaptureAsync(
+        CaptureResult result,
+        string? outputPathOverride = null,
+        bool? copyToClipboardOverride = null,
+        bool? openEditorOverride = null,
+        LanShareServer? lanShare = null,
+        bool showUi = true)
     {
         // Run plugin capture-processors first so any resize/redact lands in the saved file
         // and the history index. Failures are non-fatal.
@@ -295,9 +316,12 @@ public sealed class CaptureOrchestrator
         }
         catch { }
 
-        try { new Views.CaptureFlashWindow().Flash(); } catch { }
+        if (showUi)
+        {
+            try { new Views.CaptureFlashWindow().Flash(); } catch { }
+        }
 
-        if (_settings.Current.PlayShutterSound)
+        if (showUi && _settings.Current.PlayShutterSound)
         {
             try { System.Media.SystemSounds.Exclamation.Play(); } catch { }
         }
@@ -320,10 +344,15 @@ public sealed class CaptureOrchestrator
         string? savedPath = null;
         try
         {
-            Directory.CreateDirectory(_settings.Current.OutputFolder);
-            string configuredPath = BuildOutputPath(_settings.Current, result);
+            string configuredPath = outputPathOverride is null
+                ? BuildOutputPath(_settings.Current, result)
+                : ResolveExplicitOutputPath(outputPathOverride, _settings.Current);
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(configuredPath) ?? _settings.Current.OutputFolder);
+            string extension = Path.GetExtension(configuredPath);
             bool writesPng = result.IsHdr
-                || !_settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase);
+                || !(extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+                    || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase));
             string? colorProfilePath = null;
             byte[]? iccProfile = writesPng
                 ? TryGetIccProfile(result.SourceBounds, out colorProfilePath)
@@ -344,8 +373,7 @@ public sealed class CaptureOrchestrator
             else
             {
                 savedPath = configuredPath;
-                var fmt = _settings.Current.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
-                    ? ImageFormat.Jpeg : ImageFormat.Png;
+                var fmt = writesPng ? ImageFormat.Png : ImageFormat.Jpeg;
                 if (fmt == ImageFormat.Png)
                 {
                     File.WriteAllBytes(savedPath, PngIccProfileEmbedder.Encode(result.Bitmap, iccProfile));
@@ -363,8 +391,11 @@ public sealed class CaptureOrchestrator
         catch (Exception ex)
         {
             Log.Error(ex, "Capture.Save.Failed");
-            MessageBox.Show($"Could not save capture:\n{ex.Message}", "Snapture",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            if (showUi)
+            {
+                MessageBox.Show($"Could not save capture:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
         }
 
         // Index in history (best-effort — never block the user)
@@ -381,7 +412,24 @@ public sealed class CaptureOrchestrator
         }
         catch { /* history failures must never block delivery */ }
 
-        if (_settings.Current.CopyToClipboard || _settings.Current.QuickMode)
+        string? lanUrl = null;
+        if (lanShare is not null && savedPath is not null)
+        {
+            try
+            {
+                lanUrl = lanShare.Register(
+                    savedPath,
+                    TimeSpan.FromMinutes(_settings.Current.LanShareTtlMinutes));
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "Capture.LanShareRegistrationFailed");
+            }
+        }
+
+        bool shouldCopy = copyToClipboardOverride
+            ?? (_settings.Current.CopyToClipboard || _settings.Current.QuickMode);
+        if (shouldCopy)
         {
             bool copiedAsMarkdown = false;
             if (_settings.Current.ClipboardCopyMode.Equals(
@@ -410,7 +458,8 @@ public sealed class CaptureOrchestrator
             }
         }
 
-        if (_settings.Current.OpenEditorAfterCapture && !_settings.Current.QuickMode)
+        bool openEditor = openEditorOverride ?? _settings.Current.OpenEditorAfterCapture;
+        if (openEditor && !_settings.Current.QuickMode)
         {
             var bs = ToBitmapSource(result.Bitmap);
             var editor = new EditorWindow(bs, savedPath, result);
@@ -418,6 +467,19 @@ public sealed class CaptureOrchestrator
         }
 
         await Task.CompletedTask;
+        return new CaptureDeliveryResult(savedPath, lanUrl);
+    }
+
+    private static string ResolveExplicitOutputPath(string requested, SnaptureSettings settings)
+    {
+        string path = Path.GetFullPath(requested);
+        if (string.IsNullOrEmpty(Path.GetExtension(path)))
+        {
+            path += settings.OutputFormat.Equals("JPG", StringComparison.OrdinalIgnoreCase)
+                ? ".jpg"
+                : ".png";
+        }
+        return path;
     }
 
     private static byte[]? TryGetIccProfile(Rectangle bounds, out string? profilePath)

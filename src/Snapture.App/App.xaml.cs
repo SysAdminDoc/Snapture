@@ -12,7 +12,7 @@ public partial class App : Application
 {
     public static AppHost? Host { get; private set; }
 
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         if (MagnificationHelperHost.IsHelperRequest(e.Args))
         {
@@ -20,6 +20,50 @@ public partial class App : Application
             base.OnStartup(e);
             Environment.ExitCode = MagnificationHelperHost.Run(e.Args);
             Shutdown();
+            return;
+        }
+
+        if (CliCommandLine.IsCliRequest(e.Args))
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            CliCommandLine.AttachParentConsole();
+            base.OnStartup(e);
+            if (!CliCommandLine.TryParse(e.Args, out var command, out var error))
+            {
+                Console.Error.WriteLine(error);
+                Environment.ExitCode = 2;
+                Shutdown();
+                return;
+            }
+
+            if (command.Kind is CliCommandKind.Help or CliCommandKind.Version)
+            {
+                Environment.ExitCode = command.Kind == CliCommandKind.Help
+                    ? 0
+                    : 0;
+                if (command.Kind == CliCommandKind.Help)
+                    Console.WriteLine(CliCommandLine.Usage);
+                else
+                    Console.WriteLine(typeof(App).Assembly.GetName().Version?.ToString(3) ?? "unknown");
+                Shutdown();
+                return;
+            }
+
+            ConfigureLogging(e.Args);
+            try
+            {
+                Host = new AppHost();
+                Environment.ExitCode = await Host.RunCliAsync(command).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"CLI failed: {ex.Message}");
+                Environment.ExitCode = 1;
+            }
+            finally
+            {
+                Shutdown();
+            }
             return;
         }
 

@@ -118,6 +118,109 @@ public sealed class AppHost : IDisposable
         }
     }
 
+    public async Task<int> RunCliAsync(CliCommand command)
+    {
+        if (command.Kind == CliCommandKind.Help)
+        {
+            Console.WriteLine(CliCommandLine.Usage);
+            return 0;
+        }
+
+        if (command.Kind == CliCommandKind.Version)
+        {
+            Console.WriteLine(typeof(AppHost).Assembly.GetName().Version?.ToString(3) ?? "unknown");
+            return 0;
+        }
+
+        var options = command.Capture;
+        if (options is null)
+        {
+            Console.Error.WriteLine("No capture options were supplied.");
+            return 2;
+        }
+
+        if (options.Profile is not null
+            && !CapturePresetService.Apply(options.Profile, Settings.Current))
+        {
+            Console.Error.WriteLine($"Unknown capture profile: {options.Profile}");
+            return 2;
+        }
+        ApplyEngineSettings();
+
+        CaptureResult result;
+        ICaptureEngine? cliEngine = null;
+        try
+        {
+            var captureEngine = Engine;
+            if (options.Engine is not null)
+            {
+                var selected = CaptureEngineFactory.Create(options.Engine);
+                cliEngine = selected.Engine;
+                captureEngine = cliEngine;
+                ApplyEngineSettings(captureEngine);
+            }
+
+            using (Settings.Current.HideDesktopIcons
+                ? DesktopIconVisibilityService.TryHide()
+                : null)
+            {
+                result = options.Fullscreen
+                    ? await captureEngine.CaptureVirtualScreenAsync().ConfigureAwait(true)
+                    : await captureEngine.CaptureRegionAsync(options.Region!.Value).ConfigureAwait(true);
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex, "Cli.CaptureFailed");
+            Console.Error.WriteLine($"Capture failed: {ex.Message}");
+            return 1;
+        }
+        finally
+        {
+            if (cliEngine is IDisposable disposable)
+                disposable.Dispose();
+        }
+
+        try
+        {
+            if (options.LanShare && !TryStartLanShare())
+            {
+                Console.Error.WriteLine("LAN share could not start on a usable local adapter.");
+                return 1;
+            }
+
+            var delivery = await Orchestrator.DeliverCaptureForCliAsync(
+                result,
+                options.OutputPath,
+                options.CopyToClipboard ? true : null,
+                options.LanShare ? LanShare : null).ConfigureAwait(true);
+
+            if (delivery.SavedPath is not null)
+                Console.WriteLine($"Saved: {delivery.SavedPath}");
+            if (delivery.LanUrl is not null)
+                Console.WriteLine($"LAN URL: {delivery.LanUrl}");
+
+            if (options.Hold)
+            {
+                if (options.BlockSeconds > 0)
+                {
+                    Console.WriteLine($"Holding for {options.BlockSeconds} second(s).");
+                    await Task.Delay(TimeSpan.FromSeconds(options.BlockSeconds)).ConfigureAwait(true);
+                }
+                else
+                {
+                    Console.WriteLine("Holding until the CLI process is terminated.");
+                    await Task.Delay(Timeout.InfiniteTimeSpan).ConfigureAwait(true);
+                }
+            }
+            return delivery.SavedPath is null ? 1 : 0;
+        }
+        finally
+        {
+            result.Bitmap.Dispose();
+        }
+    }
+
     private void CheckForAutosaveRecovery()
     {
         try

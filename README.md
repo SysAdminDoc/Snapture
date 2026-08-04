@@ -157,6 +157,8 @@ All four hotkeys are rebindable from **Settings → Hotkeys**.
 
 **Markdown clipboard integration:** Settings → Output → Clipboard integration can switch automatic clipboard copies from an image to a relative Markdown link. Snapture writes a PNG into the configured vault/export folder and copies a relative image link under the attachment folder. Obsidian vaults are discovered from the active window when possible; Joplin uses the explicitly selected Markdown export or attachment folder because its live resources are managed internally. Ctrl+Alt+V always pins the most recent capture through this flow.
 
+**Headless CLI capture:** `Snapture.App.exe --region x,y,width,height --out file.png` captures a fixed rectangle without starting the tray or editor. Add `--fullscreen`, `--engine auto|winrt|gdi`, `--copy`/`--clipboard`, `--profile <name>`, `--lan-share`, `--hold`, or `--block <seconds>` as needed. `--lan-share` keeps its local single-fetch server alive; use `--block` for a bounded hold.
+
 Captures are saved to `%USERPROFILE%\Pictures\Snapture\` by default and copied to the clipboard. The editor window opens after every capture (configurable in `settings.json`).
 
 ## Configuration

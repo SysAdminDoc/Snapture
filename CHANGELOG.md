@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Headless CLI capture
+
+- `Snapture.App.exe` now accepts fixed-region or fullscreen capture commands with explicit output paths, local capture profiles, optional clipboard copy, bounded holds, and LAN-share registration without starting the tray or editor.
+
 ### Added — Multi-pin selection and group controls
 
 - Pin overlays support Ctrl+click selection, Ctrl+A select-all, group dragging, group opacity changes through the wheel or context menu, and Delete/context-menu bulk close. Selected pins use an accent border and the menu reports the active group.
