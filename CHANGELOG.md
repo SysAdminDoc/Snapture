@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Before/after comparison GIFs
+
+- Tray → Tools → Before/after GIF creates a local ping-pong cross-fade animation from two still images, with bounded transition frames and frame delay.
+
 ### Added — Image combiner
 
 - Tray → Tools → Combine images combines two to 100 local stills vertically, horizontally, or in a configurable grid with bounded gaps, canvas size, and PNG/JPG/BMP/WebP export.

@@ -616,6 +616,10 @@ public sealed class TrayIconHost : IDisposable
         imageCombiner.Click += (_, _) => new Views.ImageCombinerWindow().ShowDialog();
         tools.Items.Add(imageCombiner);
 
+        var beforeAfterGif = new MenuItem { Header = "Before/after GIF…" };
+        beforeAfterGif.Click += (_, _) => new Views.BeforeAfterGifWindow().ShowDialog();
+        tools.Items.Add(beforeAfterGif);
+
         var stepCapture = new MenuItem { Header = "Step capture…" };
         stepCapture.Click += (_, _) =>
         {
