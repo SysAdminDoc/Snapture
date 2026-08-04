@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Local AI capture analysis
+
+- The editor can flatten the current capture to a base64 PNG, let the user choose a discovered `provider/model`, and send it to a local OpenAI-compatible runtime. Results remain in a local response window; cloud endpoints are excluded.
+
 ### Added — Local AI provider discovery
 
 - Settings now probes Foundry Local, Ollama, and LM Studio on loopback-only endpoints and shows their locally available models with `provider/model` references. Cloud providers are intentionally absent.

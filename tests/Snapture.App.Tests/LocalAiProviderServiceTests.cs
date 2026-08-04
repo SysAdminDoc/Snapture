@@ -95,4 +95,27 @@ public sealed class LocalAiProviderServiceTests
             "ollama/llava:latest",
             LocalAiProviderService.FormatModelReference(provider, provider.Models[0]));
     }
+
+    [TestMethod]
+    public void PreferredModelsMatchTheRoadmapDefaults()
+    {
+        var ollama = new LocalAiProviderInfo(
+            LocalAiProviderKind.Ollama,
+            LocalAiProviderService.OllamaKey,
+            "Ollama",
+            new Uri("http://127.0.0.1:11434/v1/"),
+            true,
+            new[] { new LocalAiModel("qwen2.5vl:7b"), new LocalAiModel("llava:latest") },
+            "Detected · 2 models");
+        var foundry = ollama with
+        {
+            Kind = LocalAiProviderKind.FoundryLocal,
+            Key = LocalAiProviderService.FoundryKey,
+            DisplayName = "Foundry Local",
+            Models = new[] { new LocalAiModel("phi-4-mini"), new LocalAiModel("phi-3.5-vision-instruct-generic-cpu") }
+        };
+
+        Assert.AreEqual("llava:latest", LocalAiProviderService.FindPreferredModel(ollama)?.Id);
+        Assert.AreEqual("phi-3.5-vision-instruct-generic-cpu", LocalAiProviderService.FindPreferredModel(foundry)?.Id);
+    }
 }

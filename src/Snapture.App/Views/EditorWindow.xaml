@@ -87,6 +87,11 @@
                             AutomationProperties.Name="OCR text overlay"
                             Click="OnOcrOverlayClicked"
                             ToolTip="Run positioned OCR and add editable text annotations anchored to the image regions." />
+                    <Button x:Name="LocalAiButton"
+                            Content="Local AI"
+                            AutomationProperties.Name="Send to local AI"
+                            Click="OnLocalAiClicked"
+                            ToolTip="Send a flattened PNG to a selected local-only model." />
                     <Button x:Name="ShareLanButton"
                             Content="LAN share"
                             Click="OnShareLanClicked"

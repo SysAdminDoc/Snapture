@@ -27,6 +27,15 @@ public sealed record LocalAiProviderInfo(
     IReadOnlyList<LocalAiModel> Models,
     string Status);
 
+public sealed record LocalAiModelChoice(LocalAiProviderInfo Provider, LocalAiModel Model)
+{
+    public string Reference => LocalAiProviderService.FormatModelReference(Provider, Model);
+
+    public string DisplayLabel => string.Equals(Model.Label, Model.Id, StringComparison.Ordinal)
+        ? Reference
+        : $"{Reference} — {Model.Label}";
+}
+
 /// <summary>
 /// Discovers opt-in local model runtimes without accepting arbitrary endpoints.
 /// Every HTTP request is to a loopback address and cloud providers are deliberately
@@ -69,6 +78,24 @@ public static class LocalAiProviderService
 
     public static string FormatModelReference(LocalAiProviderInfo provider, LocalAiModel model) =>
         $"{provider.Key}/{model.Id}";
+
+    public static IReadOnlyList<LocalAiModelChoice> GetModelChoices(
+        IEnumerable<LocalAiProviderInfo> providers) =>
+        providers
+            .Where(provider => provider.IsAvailable && provider.OpenAiBaseUri is not null)
+            .SelectMany(provider => provider.Models.Select(model => new LocalAiModelChoice(provider, model)))
+            .ToArray();
+
+    public static LocalAiModel? FindPreferredModel(LocalAiProviderInfo provider)
+    {
+        var preferred = provider.Kind switch
+        {
+            LocalAiProviderKind.Ollama => provider.Models.FirstOrDefault(IsLlavaModel),
+            LocalAiProviderKind.FoundryLocal => provider.Models.FirstOrDefault(IsPhiVisionModel),
+            _ => null
+        };
+        return preferred ?? provider.Models.FirstOrDefault();
+    }
 
     internal static IReadOnlyList<LocalAiModel> ParseOllamaModels(string json) =>
         ParseModels(json, "models", "name", "model");
@@ -139,6 +166,14 @@ public static class LocalAiProviderService
     internal static bool IsLoopbackHttpUri(Uri? uri) =>
         uri is { IsAbsoluteUri: true, IsLoopback: true } &&
         (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    private static bool IsLlavaModel(LocalAiModel model) =>
+        model.Id.Contains("llava", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsPhiVisionModel(LocalAiModel model) =>
+        model.Id.Contains("phi-3.5-vision", StringComparison.OrdinalIgnoreCase) ||
+        model.Id.Contains("phi3.5-vision", StringComparison.OrdinalIgnoreCase) ||
+        model.Id.Contains("phi_3.5_vision", StringComparison.OrdinalIgnoreCase);
 
     private static async Task<LocalAiProviderInfo> DiscoverOllamaAsync(CancellationToken cancellationToken)
     {

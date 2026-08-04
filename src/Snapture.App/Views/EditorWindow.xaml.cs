@@ -1758,6 +1758,50 @@ public partial class EditorWindow : Window
         }
     }
 
+    private async void OnLocalAiClicked(object sender, RoutedEventArgs e)
+    {
+        LocalAiButton.IsEnabled = false;
+        StatusText.Text = "Discovering local models…";
+        try
+        {
+            var providers = await LocalAiProviderService.DiscoverAsync();
+            var choices = LocalAiProviderService.GetModelChoices(providers);
+            if (choices.Count == 0)
+            {
+                StatusText.Text = "No local models detected. Start a local runtime, then try again.";
+                return;
+            }
+
+            var picker = new LocalAiModelPickerWindow(providers) { Owner = DialogOwner };
+            if (picker.ShowDialog() != true || picker.SelectedChoice is not { } choice)
+            {
+                StatusText.Text = "Local AI send canceled.";
+                return;
+            }
+
+            using var flat = RenderForExport();
+            using var image = SKImage.FromBitmap(flat);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            var prompt = picker.Prompt;
+            StatusText.Text = $"Sending flattened PNG to {choice.Reference}…";
+            var response = await new LocalAiInferenceService().SendImageAsync(
+                choice,
+                data.ToArray(),
+                prompt);
+
+            new LocalAiResultWindow(choice.Reference, response) { Owner = DialogOwner }.ShowDialog();
+            StatusText.Text = $"Local AI response received from {choice.Reference}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Local AI failed: {ex.Message}";
+        }
+        finally
+        {
+            LocalAiButton.IsEnabled = true;
+        }
+    }
+
     private async void OnBarcodeClicked(object sender, RoutedEventArgs e)
     {
         BarcodeButton.IsEnabled = false;
