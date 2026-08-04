@@ -96,6 +96,11 @@
                             Content="LAN share"
                             Click="OnShareLanClicked"
                             ToolTip="Save the current document and copy a single-fetch LAN URL to the clipboard." />
+                    <Button x:Name="ExternalCommandButton"
+                            Content="External command"
+                            Click="OnExternalCommandClicked"
+                            AutomationProperties.Name="Send to external command"
+                            ToolTip="Send the flattened PNG to a configured local command-line tool." />
                     </StackPanel>
                 </ScrollViewer>
 

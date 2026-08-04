@@ -71,6 +71,9 @@ public sealed class SnaptureSettings
     /// <summary>Capability-manifest approvals keyed to plugin name, version, and capability set.</summary>
     public List<string> ApprovedPluginManifests { get; set; } = new();
 
+    /// <summary>Explicit local CLI destinations available from the editor.</summary>
+    public List<ExternalCommandProfile> ExternalCommands { get; set; } = new();
+
     /// <summary>
     /// Auto-redact: rule IDs that are disabled. Empty list = all rules enabled (the default).
     /// We persist disabled rather than enabled so a future rule pack expansion ships enabled
@@ -166,6 +169,7 @@ public sealed class SettingsService
             Current = JsonSerializer.Deserialize<SnaptureSettings>(json, JsonOpts) ?? new SnaptureSettings();
             Current.PerAppCaptureProfiles ??= new();
             Current.ApprovedPluginManifests ??= new();
+            Current.ExternalCommands ??= new();
         }
         catch { Current = new SnaptureSettings(); }
     }

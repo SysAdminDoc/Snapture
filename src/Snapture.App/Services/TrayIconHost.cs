@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -635,6 +636,32 @@ public sealed class TrayIconHost : IDisposable
         };
         tools.Items.Add(pluginsItem);
 
+        var externalCommands = new MenuItem { Header = "External commands" };
+        var configureExternal = new MenuItem { Header = "Configure…" };
+        configureExternal.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var dialog = new Views.ExternalCommandConfigurationWindow(App.Host.Settings.Current.ExternalCommands);
+                if (dialog.ShowDialog() == true)
+                {
+                    App.Host.Settings.Current.ExternalCommands = dialog.Profiles.ToList();
+                    App.Host.Settings.Save();
+                    ShowToast("External commands saved", $"{dialog.Profiles.Count} profile(s) available in the editor.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not configure external commands:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        externalCommands.Items.Add(configureExternal);
+        var runLatest = new MenuItem { Header = "Run on latest capture" };
+        runLatest.Click += async (_, _) => await RunLatestExternalCommandAsync();
+        externalCommands.Items.Add(runLatest);
+        tools.Items.Add(externalCommands);
+
         var history = new MenuItem { Header = "Capture history…" };
         history.Click += (_, _) =>
         {
@@ -849,6 +876,50 @@ public sealed class TrayIconHost : IDisposable
     {
         try { _tray.ShowBalloonTip(title, message, BalloonIcon.Info); }
         catch { /* non-fatal */ }
+    }
+
+    private async Task RunLatestExternalCommandAsync()
+    {
+        if (App.Host is null) return;
+        var profiles = App.Host.Settings.Current.ExternalCommands ?? new List<ExternalCommandProfile>();
+        if (profiles.Count == 0)
+        {
+            ShowToast("No external commands", "Configure a profile in Tools → External commands → Configure.");
+            return;
+        }
+        var latest = App.Host.History.Recent(1).FirstOrDefault();
+        if (latest is null || !File.Exists(latest.FilePath))
+        {
+            ShowToast("No capture available", "Take or save a capture before running an external command.");
+            return;
+        }
+
+        ExternalCommandProfile? profile = profiles.Count == 1
+            ? profiles[0].Clone()
+            : ChooseExternalCommand(profiles);
+        if (profile is null) return;
+        try
+        {
+            ShowToast("External command", $"Running {profile.Name}…");
+            var result = await ExternalCommandService.RunAsync(
+                profile,
+                ExternalCommandRequest.FromFile(latest.FilePath, latest.Source, latest.Width, latest.Height, latest.CapturedAtUtc));
+            ShowToast(
+                result.ExitCode == 0 ? "External command complete" : "External command failed",
+                result.ExitCode == 0
+                    ? $"{profile.Name} finished in {result.Duration.TotalSeconds:F1}s."
+                    : $"{profile.Name} exited with code {result.ExitCode}.");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("External command failed", ex.Message);
+        }
+    }
+
+    private static ExternalCommandProfile? ChooseExternalCommand(IReadOnlyList<ExternalCommandProfile> profiles)
+    {
+        var picker = new Views.ExternalCommandPickerWindow(profiles);
+        return picker.ShowDialog() == true ? picker.SelectedProfile : null;
     }
 
     private static async Task SafeRun(Func<Task> action)

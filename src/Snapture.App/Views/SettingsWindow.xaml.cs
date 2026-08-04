@@ -66,6 +66,7 @@ public partial class SettingsWindow : Window
         FilenameTemplateBox.Text = _draft.FilenamePattern;
         MarkdownVaultFolderBox.Text = _draft.MarkdownVaultFolder;
         MarkdownAttachmentFolderBox.Text = _draft.MarkdownAttachmentFolder;
+        BindExternalCommandsStatus();
 
         RegionHotkeyBox.Text       = HotkeyToString(_draft.RegionHotkey);
         WindowHotkeyBox.Text       = HotkeyToString(_draft.WindowHotkey);
@@ -721,6 +722,27 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private void OnConfigureExternalCommandsClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ExternalCommandConfigurationWindow(_draft.ExternalCommands)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            _draft.ExternalCommands = dialog.Profiles.ToList();
+            BindExternalCommandsStatus();
+        }
+    }
+
+    private void BindExternalCommandsStatus()
+    {
+        int count = _draft.ExternalCommands?.Count ?? 0;
+        ExternalCommandsStatusText.Text = count == 0
+            ? "No command profiles configured."
+            : $"{count} profile{(count == 1 ? string.Empty : "s")} configured.";
+    }
+
     private void OnOkClicked(object sender, RoutedEventArgs e)
     {
         // Pull edited fields from controls
@@ -846,6 +868,7 @@ public partial class SettingsWindow : Window
         dst.McpEnabled = src.McpEnabled;
         dst.McpPort = src.McpPort;
         dst.ApprovedPluginManifests = new List<string>(src.ApprovedPluginManifests);
+        dst.ExternalCommands = (src.ExternalCommands ?? new()).Select(profile => profile.Clone()).ToList();
         dst.DisabledRedactRules = new List<string>(src.DisabledRedactRules);
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;

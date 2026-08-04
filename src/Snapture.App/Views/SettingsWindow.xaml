@@ -394,6 +394,28 @@
 
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
+                                <TextBlock Text="External commands" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8">
+                                    Send the flattened editor image to an explicitly configured local CLI tool. Commands run directly without a shell; use
+                                    <Run Foreground="{DynamicResource AppAccent}" Text="{}{file}" />
+                                    for a temporary PNG path or choose stdin to pipe the PNG bytes.
+                                </TextBlock>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Content="Configure commands…"
+                                            AutomationProperties.Name="Configure external commands"
+                                            Click="OnConfigureExternalCommandsClicked" />
+                                    <TextBlock x:Name="ExternalCommandsStatusText"
+                                               Style="{StaticResource MonoCaptionText}"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
                                 <TextBlock Text="Filename template" Style="{StaticResource SectionTitleText}" />
                                 <TextBox x:Name="FilenameTemplateBox" />
                                 <TextBlock Style="{StaticResource MonoCaptionText}"

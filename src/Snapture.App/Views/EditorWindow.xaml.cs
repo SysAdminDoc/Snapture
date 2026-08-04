@@ -1609,6 +1609,65 @@ public partial class EditorWindow : Window
         }
     }
 
+    private async void OnExternalCommandClicked(object sender, RoutedEventArgs e)
+    {
+        var host = App.Host;
+        if (host is null) return;
+        var profiles = host.Settings.Current.ExternalCommands ?? new List<ExternalCommandProfile>();
+        if (profiles.Count == 0)
+        {
+            StatusText.Text = "No external commands configured — open Settings → Output.";
+            try
+            {
+                var settings = new SettingsWindow(host.Settings) { Owner = DialogOwner };
+                settings.ShowDialog();
+            }
+            catch { }
+            return;
+        }
+
+        ExternalCommandProfile? profile = profiles.Count == 1
+            ? profiles[0].Clone()
+            : ChooseExternalCommand(profiles);
+        if (profile is null) return;
+
+        try
+        {
+            using var flattened = RenderForExport();
+            using var image = SKImage.FromBitmap(flattened);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            StatusText.Text = $"Running {profile.Name}…";
+            var result = await ExternalCommandService.RunAsync(
+                profile,
+                new ExternalCommandRequest(
+                    data.ToArray(),
+                    null,
+                    _captureResult?.Source ?? "Editor",
+                    _doc.Width,
+                    _doc.Height,
+                    DateTime.UtcNow));
+            StatusText.Text = result.ExitCode == 0
+                ? $"{profile.Name} completed in {result.Duration.TotalSeconds:F1}s."
+                : $"{profile.Name} exited with code {result.ExitCode}: {TrimCommandOutput(result.StandardError)}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"External command failed: {ex.Message}";
+        }
+    }
+
+    private ExternalCommandProfile? ChooseExternalCommand(IReadOnlyList<ExternalCommandProfile> profiles)
+    {
+        var picker = new ExternalCommandPickerWindow(profiles) { Owner = DialogOwner };
+        return picker.ShowDialog() == true ? picker.SelectedProfile : null;
+    }
+
+    private static string TrimCommandOutput(string output)
+    {
+        string value = output.Trim().Replace('\r', ' ').Replace('\n', ' ');
+        return value.Length <= 180 ? value : value[..180] + "…";
+    }
+
     private async void OnRetakeClicked(object sender, RoutedEventArgs e)
     {
         if (_captureResult is null || App.Host is null) return;

@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — External command destination
+
+- Settings → Output can store explicit local CLI profiles that receive a flattened editor PNG through stdin or a temporary `{file}` path argument, with metadata placeholders, timeout bounds, captured output, and direct no-shell process execution.
+- The editor and tray Tools menu can run a selected profile on the current or latest capture. No command runs automatically and no executable is bundled.
+
 ### Added — Plugin capture source contract
 
 - Added `ICaptureSource` for camera, scanner, file-watch, virtual-device, and other local plugin sources, plus a shared invocation boundary that returns metadata by default and copies pixels only when requested.
