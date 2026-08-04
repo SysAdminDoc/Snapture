@@ -9,6 +9,7 @@ namespace Snapture.App.Editor;
 /// </summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(RectangleShape),  typeDiscriminator: "rect")]
+[JsonDerivedType(typeof(SpeechBalloonShape), typeDiscriminator: "speech-balloon")]
 [JsonDerivedType(typeof(EllipseShape),    typeDiscriminator: "ellipse")]
 [JsonDerivedType(typeof(LineShape),       typeDiscriminator: "line")]
 [JsonDerivedType(typeof(ArrowShape),      typeDiscriminator: "arrow")]
@@ -141,6 +142,75 @@ public sealed class RectangleShape : Shape
         X = X, Y = Y, Width = Width, Height = Height, CornerRadius = CornerRadius, Filled = Filled,
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
+}
+
+/// <summary>A rounded callout bubble with a short bottom tail.</summary>
+public sealed class SpeechBalloonShape : Shape
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public float CornerRadius { get; set; } = 16f;
+    public float TailLength { get; set; } = 20f;
+
+    public SpeechBalloonShape() => FillColorArgb = 0x33FFFFFF;
+
+    public override void Render(SKCanvas canvas, AnnotationDocument doc)
+    {
+        var rect = new SKRect(X, Y, X + Width, Y + Height);
+        float radius = Math.Clamp(CornerRadius, 0, Math.Min(Math.Abs(rect.Width), Math.Abs(rect.Height)) / 2f);
+        float tailLength = Math.Clamp(TailLength, 8f, 32f);
+        float tailCenter = rect.Left + rect.Width * 0.35f;
+        float tailHalfWidth = Math.Clamp(Math.Abs(rect.Width) * 0.09f, 8f, 18f);
+        var tailLeft = new SKPoint(tailCenter - tailHalfWidth, rect.Bottom);
+        var tailTip = new SKPoint(tailCenter, rect.Bottom + tailLength);
+        var tailRight = new SKPoint(tailCenter + tailHalfWidth, rect.Bottom);
+
+        using var fill = MakeFillPaint();
+        using (var tail = new SKPath())
+        {
+            tail.MoveTo(tailLeft);
+            tail.LineTo(tailTip);
+            tail.LineTo(tailRight);
+            tail.Close();
+            canvas.DrawPath(tail, fill);
+        }
+        using (var body = new SKPath())
+        {
+            body.AddRoundRect(new SKRoundRect(rect, radius));
+            canvas.DrawPath(body, fill);
+        }
+
+        using var stroke = MakeStrokePaint();
+        canvas.DrawRoundRect(rect, radius, radius, stroke);
+        using var tailStroke = new SKPath();
+        tailStroke.MoveTo(tailLeft);
+        tailStroke.LineTo(tailTip);
+        tailStroke.LineTo(tailRight);
+        canvas.DrawPath(tailStroke, stroke);
+    }
+
+    public override SKRect GetBounds()
+    {
+        float left = Math.Min(X, X + Width);
+        float right = Math.Max(X, X + Width);
+        float top = Math.Min(Y, Y + Height);
+        float bottom = Math.Max(Y, Y + Height);
+        return new SKRect(left, top, right, bottom + Math.Clamp(TailLength, 8f, 32f));
+    }
+
+    public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+
+    public override Shape Clone() => new SpeechBalloonShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height, CornerRadius = CornerRadius, TailLength = TailLength,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness,
+        Sloppiness = Sloppiness, DropShadow = DropShadow
+    };
+
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
 }

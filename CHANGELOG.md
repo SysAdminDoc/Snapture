@@ -61,6 +61,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Text annotations now support horizontal or vertical top-to-bottom orientation. The Text tool exposes the direction selector, and orientation survives cloning and `.snapture` project round-trips.
 
+### Added — Speech balloons
+
+- The editor now includes a Speech balloon tool with a tail, adjustable 0–64px corner radius, drag/resize/hit-test behavior, and `.snapture` persistence.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

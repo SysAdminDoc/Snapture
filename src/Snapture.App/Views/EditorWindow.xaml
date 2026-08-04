@@ -214,6 +214,22 @@
                                 </ComboBox>
                             </StackPanel>
 
+                            <StackPanel x:Name="BalloonOptionsPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                <DockPanel Margin="0,0,0,4">
+                                    <TextBlock Text="Corner radius" Style="{StaticResource HelpText}" />
+                                    <TextBlock x:Name="BalloonCornerRadiusValue"
+                                               Text="16px"
+                                               Style="{StaticResource HelpText}"
+                                               HorizontalAlignment="Right" />
+                                </DockPanel>
+                                <Slider x:Name="BalloonCornerRadiusSlider"
+                                        Minimum="0"
+                                        Maximum="64"
+                                        Value="16"
+                                        ValueChanged="OnBalloonCornerRadiusChanged"
+                                        ToolTip="Round the speech balloon body corners; the tail stays crisp." />
+                            </StackPanel>
+
                             <CheckBox x:Name="DashedCheck" Content="Dashed line or arrow" Margin="0,10,0,0" />
                             <CheckBox x:Name="BidirCheck" Content="Arrowheads at both ends" />
                             <CheckBox x:Name="ReversedCheck" Content="Reverse arrow direction" />

@@ -20,7 +20,7 @@ public partial class EditorWindow : Window
 {
     public enum EditorTool
     {
-        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, Highlight, Blur, Redact, Step, Crop, Eyedropper, Spotlight, Ruler
+        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, SpeechBalloon, Highlight, Blur, Redact, Step, Crop, Eyedropper, Spotlight, Ruler
     }
 
     private static readonly (EditorTool tool, string label, Key hotkey, string glyph)[] ToolButtons =
@@ -32,6 +32,7 @@ public partial class EditorWindow : Window
         (EditorTool.Arrow,     "Arrow",               Key.A, "➜"),
         (EditorTool.Freehand,  "Freehand pen",        Key.F, "✎"),
         (EditorTool.Text,      "Text",                Key.T, "T"),
+        (EditorTool.SpeechBalloon, "Speech balloon", Key.Q, "☁"),
         (EditorTool.Highlight, "Highlight",           Key.H, "▣"),
         (EditorTool.Blur,      "Blur / pixelate",     Key.B, "▦"),
         (EditorTool.Redact,    "Redact secrets",      Key.X, "■"),
@@ -59,6 +60,7 @@ public partial class EditorWindow : Window
     private ArrowStyle _arrowStyle = ArrowStyle.Classic;
     private float _arrowCurve;
     private TextOrientation _textOrientation = TextOrientation.Horizontal;
+    private float _balloonCornerRadius = 16f;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
 
@@ -278,6 +280,7 @@ public partial class EditorWindow : Window
         Canvas.Cursor = tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
         ArrowOptionsPanel.Visibility = tool == EditorTool.Arrow ? Visibility.Visible : Visibility.Collapsed;
         TextOptionsPanel.Visibility = tool == EditorTool.Text ? Visibility.Visible : Visibility.Collapsed;
+        BalloonOptionsPanel.Visibility = tool == EditorTool.SpeechBalloon ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = $"Tool: {tool}";
     }
 
@@ -985,6 +988,7 @@ public partial class EditorWindow : Window
             EditorTool.Arrow     => new ArrowShape       { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed, Bidirectional = bidir, Reversed = ReversedCheck.IsChecked == true, Style = _arrowStyle, Curve = _arrowCurve },
             EditorTool.Freehand  => new FreehandShape    { Points = new() { p }, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness },
             EditorTool.Text      => new TextShape        { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, Text = PromptForText() ?? "", Orientation = _textOrientation },
+            EditorTool.SpeechBalloon => new SpeechBalloonShape { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, FillColorArgb = (_activeColor & 0x00FFFFFF) | 0x33000000, CornerRadius = _balloonCornerRadius },
             EditorTool.Highlight => new HighlightShape   { X = p.X, Y = p.Y, StrokeColorArgb = 0xFFFFD43B },
             EditorTool.Blur      => new BlurShape        { X = p.X, Y = p.Y, BlurRadius = Math.Max(8, _strokeThickness * 4), Pixelate = pixelate },
             EditorTool.Redact    => new RedactShape      { X = p.X, Y = p.Y },
@@ -1020,6 +1024,10 @@ public partial class EditorWindow : Window
             case FreehandShape f:
                 if (f.Points.Count == 0 || (f.Points[^1] - b).Length > 0.5f) f.Points.Add(b);
                 break;
+            case SpeechBalloonShape sb:
+                sb.X = Math.Min(a.X, b.X); sb.Y = Math.Min(a.Y, b.Y);
+                sb.Width = Math.Abs(b.X - a.X); sb.Height = Math.Abs(b.Y - a.Y);
+                break;
             case HighlightShape h:
                 h.X = Math.Min(a.X, b.X); h.Y = Math.Min(a.Y, b.Y);
                 h.Width = Math.Abs(b.X - a.X); h.Height = Math.Abs(b.Y - a.Y);
@@ -1047,6 +1055,7 @@ public partial class EditorWindow : Window
         ArrowShape a       => Math.Abs(a.X2 - a.X1) + Math.Abs(a.Y2 - a.Y1) >= 4,
         FreehandShape f    => f.Points.Count >= 2,
         TextShape t        => !string.IsNullOrWhiteSpace(t.Text),
+        SpeechBalloonShape sb => sb.Width >= 4 && sb.Height >= 4,
         HighlightShape h   => h.Width >= 4 && h.Height >= 4,
         BlurShape b        => b.Width >= 4 && b.Height >= 4,
         RedactShape r      => r.Width >= 4 && r.Height >= 4,
@@ -1093,6 +1102,12 @@ public partial class EditorWindow : Window
         if (TextOrientationCombo.SelectedItem is ComboBoxItem { Tag: string tag } &&
             Enum.TryParse<TextOrientation>(tag, out var orientation))
             _textOrientation = orientation;
+    }
+    private void OnBalloonCornerRadiusChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _balloonCornerRadius = (float)Math.Clamp(e.NewValue, 0, 64);
+        if (BalloonCornerRadiusValue is not null)
+            BalloonCornerRadiusValue.Text = $"{e.NewValue:0}px";
     }
     private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
