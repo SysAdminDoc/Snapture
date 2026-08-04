@@ -50,6 +50,11 @@
                     <StackPanel Orientation="Horizontal">
                     <Button x:Name="OpenButton" Content="Open" Click="OnOpenClicked" AutomationProperties.Name="Open file" />
                     <Button x:Name="SaveProjectButton" Content="Save project" Click="OnSaveProjectClicked" AutomationProperties.Name="Save project" />
+                    <Button x:Name="PasteDiagramButton"
+                            Content="Paste diagram"
+                            Click="OnPasteDiagramClicked"
+                            AutomationProperties.Name="Paste diagram"
+                            ToolTip="Import Mermaid or PlantUML text from the clipboard (Ctrl+Shift+V)." />
                     <Separator Margin="6,0" Background="{DynamicResource AppBorder}" />
                     <Button x:Name="ExportButton"
                             Content="Export PNG"

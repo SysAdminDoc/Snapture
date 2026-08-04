@@ -85,6 +85,11 @@ All notable changes to Snapture will be documented in this file.
 
 - The editor now has a Code line marker tool with Added, Removed, Focus, Blur, and Fade states. Markers persist in `.snapture` projects, render over captured code lines, and carry through Carbon code-window and beautifier exports.
 
+### Added — Mermaid and PlantUML diagrams
+
+- The editor now accepts Mermaid `flowchart`/`graph` and PlantUML `@startuml` snippets from the clipboard or a multiline paste dialog via the toolbar or Ctrl+Shift+V.
+- Imported diagrams become one editable vector shape with selectable nodes, connectors, labels, hand-drawn sloppiness, undo/redo, `.snapture` persistence, and PNG/SVG/beautifier export support.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

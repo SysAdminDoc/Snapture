@@ -16,6 +16,7 @@ namespace Snapture.App.Editor;
 [JsonDerivedType(typeof(FreehandShape),   typeDiscriminator: "freehand")]
 [JsonDerivedType(typeof(TextShape),       typeDiscriminator: "text")]
 [JsonDerivedType(typeof(HighlightShape),  typeDiscriminator: "highlight")]
+[JsonDerivedType(typeof(DiagramShape),    typeDiscriminator: "diagram")]
 [JsonDerivedType(typeof(LineStateMarkerShape), typeDiscriminator: "line-state")]
 [JsonDerivedType(typeof(BlurShape),       typeDiscriminator: "blur")]
 [JsonDerivedType(typeof(RedactShape),     typeDiscriminator: "redact")]

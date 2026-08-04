@@ -406,6 +406,8 @@ public partial class EditorWindow : Window
             if (e.Key == Key.O) { OnOpenClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.C) { OnCopyClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.D) { DuplicateSelectedShapes(); e.Handled = true; return; }
+            if (e.Key == Key.V && Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            { OnPasteDiagramClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
         }
         if (e.Key == Key.Space && Keyboard.Modifiers == ModifierKeys.None && CanToggleOptionsPanel())
         {
@@ -1280,6 +1282,57 @@ public partial class EditorWindow : Window
         }
     }
 
+    private void OnPasteDiagramClicked(object sender, RoutedEventArgs e)
+    {
+        string clipboardText = "";
+        try
+        {
+            if (Clipboard.ContainsText())
+                clipboardText = Clipboard.GetText(TextDataFormat.Text);
+        }
+        catch
+        {
+            // Clipboard access can be denied by another process; the input dialog remains available.
+        }
+
+        if (TryInsertDiagram(clipboardText)) return;
+
+        var dialog = new DiagramMarkupDialog(clipboardText) { Owner = DialogOwner };
+        if (dialog.ShowDialog() == true)
+            TryInsertDiagram(dialog.Markup);
+    }
+
+    private bool TryInsertDiagram(string markup)
+    {
+        if (!DiagramMarkupParser.TryParse(markup, out var definition, out var error) || definition is null)
+        {
+            if (!string.IsNullOrWhiteSpace(markup))
+                StatusText.Text = $"Diagram not imported: {error}";
+            return false;
+        }
+
+        float maxWidth = Math.Max(120, _doc.Width - 40);
+        float maxHeight = Math.Max(100, _doc.Height - 40);
+        float scale = Math.Min(1, Math.Min(maxWidth / definition.Width, maxHeight / definition.Height));
+        float width = definition.Width * scale;
+        float height = definition.Height * scale;
+        float x = Math.Max(0, (_doc.Width - width) / 2);
+        float y = Math.Max(0, (_doc.Height - height) / 2);
+        var diagram = DiagramShape.FromDefinition(definition, markup, x, y);
+        if (scale < 1)
+            diagram.ResizeTo(new SKRect(x, y, x + width, y + height));
+        diagram.StrokeThickness = _strokeThickness;
+        diagram.Sloppiness = _sloppiness;
+        diagram.DropShadow = DropShadowCheck.IsChecked == true;
+        diagram.Category = _annotationCategory;
+        _commands.Do(_doc, new AddShapeCommand(diagram));
+        _selectedShapes.Clear();
+        _selectedShapes.Add(diagram);
+        StatusText.Text = $"Pasted {definition.Kind} diagram · {definition.Nodes.Count} nodes, {definition.Edges.Count} connections";
+        Canvas.InvalidateVisual();
+        return true;
+    }
+
     private void OnSaveProjectClicked(object sender, RoutedEventArgs e)
     {
         if (_projectPath is null)
@@ -1693,6 +1746,73 @@ public sealed class TextInputDialog : Window
         Grid.SetRow(buttons, 2);
         grid.Children.Add(copy);
         grid.Children.Add(_box);
+        grid.Children.Add(buttons);
+        Content = grid;
+        Loaded += (_, _) => _box.Focus();
+    }
+}
+
+/// <summary>Multiline local input for Mermaid or PlantUML markup.</summary>
+public sealed class DiagramMarkupDialog : Window
+{
+    public string Markup { get; private set; }
+    private readonly TextBox _box;
+
+    public DiagramMarkupDialog(string initialMarkup)
+    {
+        Markup = initialMarkup;
+        Title = "Paste diagram markup";
+        Width = 620;
+        Height = 430;
+        WindowStartupLocation = WindowStartupLocation.CenterOwner;
+        FontFamily = (FontFamily)Application.Current.Resources["UiFont"];
+        SetResourceReference(BackgroundProperty, "AppBackground");
+        SetResourceReference(ForegroundProperty, "AppForeground");
+
+        var grid = new Grid { Margin = new Thickness(18) };
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+        grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+
+        var title = new TextBlock { Text = "Mermaid or PlantUML", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 4) };
+        title.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+        Grid.SetRow(title, 0);
+        grid.Children.Add(title);
+
+        var helper = new TextBlock
+        {
+            Text = "Paste a flowchart/graph block or an @startuml block. The diagram is added as an editable vector group.",
+            TextWrapping = TextWrapping.Wrap,
+            Margin = new Thickness(0, 0, 0, 8)
+        };
+        helper.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
+        Grid.SetRow(helper, 1);
+        grid.Children.Add(helper);
+
+        _box = new TextBox
+        {
+            Text = initialMarkup,
+            AcceptsReturn = true,
+            AcceptsTab = true,
+            TextWrapping = TextWrapping.NoWrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
+            FontFamily = new FontFamily("Cascadia Code, Consolas, Segoe UI"),
+            MinHeight = 220
+        };
+        Grid.SetRow(_box, 2);
+        grid.Children.Add(_box);
+
+        var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
+        var import = new Button { Content = "Add diagram", Width = 104, IsDefault = true };
+        import.SetResourceReference(StyleProperty, "AccentButton");
+        var cancel = new Button { Content = "Cancel", Width = 80, Margin = new Thickness(8, 0, 0, 0), IsCancel = true };
+        import.Click += (_, _) => { Markup = _box.Text; DialogResult = true; };
+        cancel.Click += (_, _) => DialogResult = false;
+        buttons.Children.Add(import);
+        buttons.Children.Add(cancel);
+        Grid.SetRow(buttons, 3);
         grid.Children.Add(buttons);
         Content = grid;
         Loaded += (_, _) => _box.Focus();
