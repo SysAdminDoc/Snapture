@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — MSIX packaging path
+
+- `build/build.ps1 -Msix` publishes and validates an unsigned MSIX with `runFullTrust`, the Windows startup-task extension, no broad file-system capability, generated tile assets, and a pinned App Installer feed for canary/pilot/stable rollout rings.
+- `build/uninstall.ps1` removes current-user registrations and local Snapture state, with a Keep-settings checkbox plus quiet, keep-settings, and dry-run switches.
+
 ### Added — Per-app capture profiles
 
 - Settings → Output can map case-insensitive Win32 foreground window class names to the existing Bug-report, Code-block, Documentation, or Quick-share-LAN presets. Matching profiles apply automatically before capture and persist with settings import/export.

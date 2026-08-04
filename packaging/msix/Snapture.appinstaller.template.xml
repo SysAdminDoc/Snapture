@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AppInstaller
+  xmlns="http://schemas.microsoft.com/appx/appinstaller/2017/2"
+  Uri="__APPINSTALLER_URI__"
+  Version="__PACKAGE_VERSION__">
+  <MainPackage
+    Name="SysAdminDoc.Snapture"
+    Publisher="CN=SysAdminDoc"
+    Version="__PACKAGE_VERSION__"
+    Uri="__PACKAGE_URI__"
+    ProcessorArchitecture="__ARCHITECTURE__" />
+  <UpdateSettings>
+    <AutomaticBackgroundTask />
+    <HoursBetweenUpdateChecks>24</HoursBetweenUpdateChecks>
+    <ForceUpdateFromAnyVersion>true</ForceUpdateFromAnyVersion>
+  </UpdateSettings>
+</AppInstaller>

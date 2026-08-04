@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "packageIdentifier": "SysAdminDoc.Snapture",
+  "feedBaseUri": "https://sysadmindoc.github.io/Snapture",
+  "pinVersion": true,
+  "rings": [
+    { "name": "canary", "percentage": 5, "feedPath": "rings/canary/Snapture.appinstaller" },
+    { "name": "pilot", "percentage": 25, "feedPath": "rings/pilot/Snapture.appinstaller" },
+    { "name": "stable", "percentage": 100, "feedPath": "Snapture.appinstaller" }
+  ],
+  "selection": "Publish each feed only after the prior ring passes its acceptance window; the ring percentage is an operator-controlled cohort gate."
+}

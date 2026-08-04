@@ -121,7 +121,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, and auto-update via Velopack
+- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, Chocolatey + Scoop, and auto-update via Velopack. The unsigned MSIX packaging path is available for operator-controlled release signing.
 
 ## Install
 
@@ -139,6 +139,8 @@ Requirements: Windows 10 1903+ or Windows 11, .NET 10 SDK.
 ### Release builds
 
 Download from [Releases](https://github.com/SysAdminDoc/Snapture/releases) once the first tag is cut.
+
+To produce an unsigned MSIX and a staged App Installer feed locally, run `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Msix -RolloutRing canary`. The package is written under `publish/`; the build intentionally does not sign software. The generated package declares `runFullTrust` and the startup-task extension without requesting `broadFileSystemAccess`. For clean local removal, run `pwsh -File build/uninstall.ps1`; the cleanup window includes a **Keep my settings, history, and plugins** checkbox. Automation can use `-KeepSettings`, `-Quiet`, or the non-destructive `-WhatIf` switches.
 
 ## Usage
 
