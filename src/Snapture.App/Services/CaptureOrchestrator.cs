@@ -378,8 +378,7 @@ public sealed class CaptureOrchestrator
         {
             var bs = ToBitmapSource(result.Bitmap);
             var editor = new EditorWindow(bs, savedPath, result);
-            editor.Show();
-            editor.Activate();
+            EditorTabHostWindow.Open(editor);
         }
 
         await Task.CompletedTask;

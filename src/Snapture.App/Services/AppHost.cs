@@ -139,7 +139,7 @@ public sealed class AppHost : IDisposable
                     if (doc is not null)
                     {
                         var editor = new EditorWindow(doc, path);
-                        editor.Show();
+                        EditorTabHostWindow.Open(editor);
                         Log.Information("Autosave.Recovered {Path}", path);
                     }
                     else

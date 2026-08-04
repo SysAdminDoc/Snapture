@@ -82,6 +82,18 @@ public partial class EditorWindow : Window
     // Retake: remembers the capture source so the user can redo it
     private CaptureResult? _captureResult;
 
+    // The editor remains a stateful document window even when its visual content
+    // is hosted inside the shared tab shell.
+    private EditorTabHostWindow? _tabHost;
+    private UIElement? _documentRoot;
+
+    internal event EventHandler? DocumentTitleChanged;
+
+    internal string DocumentTitle =>
+        _projectPath is { Length: > 0 } projectPath ? Path.GetFileName(projectPath) :
+        _exportPath is { Length: > 0 } exportPath ? Path.GetFileName(exportPath) :
+        "Untitled capture";
+
     public EditorWindow(BitmapSource image, string? savedPath, CaptureResult capture)
     {
         InitializeComponent();
@@ -97,8 +109,7 @@ public partial class EditorWindow : Window
         Canvas.Height = _doc.Height;
         StatusText.Text = capture.Source is { } src ? $"Captured: {src}" : "Ready";
         PathText.Text = savedPath ?? "(unsaved)";
-        KeyDown += OnKeyDown;
-        Closed += OnEditorClosed;
+        RegisterWindowHandlers();
         _autosave = new AutosaveService(_doc);
         RetakeButton.Visibility = Visibility.Visible;
         RetakeSep.Visibility = Visibility.Visible;
@@ -126,8 +137,7 @@ public partial class EditorWindow : Window
         Canvas.Height = _doc.Height;
         StatusText.Text = "Recovered from autosave";
         PathText.Text = "(recovered — unsaved)";
-        KeyDown += OnKeyDown;
-        Closed += OnEditorClosed;
+        RegisterWindowHandlers();
         // Delete the original autosave; a new autosave service will create
         // a fresh file on its own timer.
         AutosaveService.Discard(autosavePath);
@@ -150,14 +160,50 @@ public partial class EditorWindow : Window
         Canvas.Height = _doc.Height;
         StatusText.Text = $"Loaded {Path.GetFileName(path)}";
         PathText.Text = path;
-        KeyDown += OnKeyDown;
-        Closed += OnEditorClosed;
+        RegisterWindowHandlers();
         _autosave = new AutosaveService(_doc);
         Canvas.InvalidateVisual();
     }
 
+    private void RegisterWindowHandlers()
+    {
+        KeyDown += OnKeyDown;
+        Closed += OnEditorClosed;
+        if (Content is UIElement root)
+        {
+            _documentRoot = root;
+            root.KeyDown += OnKeyDown;
+        }
+    }
+
+    internal UIElement DetachContentForTabHost()
+    {
+        if (Content is not UIElement root)
+            throw new InvalidOperationException("The editor visual tree is already detached.");
+
+        Content = null;
+        return root;
+    }
+
+    internal void AttachToTabHost(EditorTabHostWindow host) => _tabHost = host;
+
+    internal void DisposeForTabHost()
+    {
+        OnEditorClosed(this, EventArgs.Empty);
+        _tabHost = null;
+    }
+
+    private Window DialogOwner => _tabHost is { } host ? host : this;
+
+    private void NotifyDocumentTitleChanged() => DocumentTitleChanged?.Invoke(this, EventArgs.Empty);
+
     private void OnEditorClosed(object? sender, EventArgs e)
     {
+        if (_documentRoot is not null)
+        {
+            _documentRoot.KeyDown -= OnKeyDown;
+            _documentRoot = null;
+        }
         _colorWheelPopup?.IsOpen = false;
         _colorWheelPopup = null;
         // Clean close: delete the autosave file so no recovery prompt appears next launch.
@@ -476,8 +522,7 @@ public partial class EditorWindow : Window
                 continue;
             try
             {
-                var w = new EditorWindow(file);
-                w.Show();
+                EditorTabHostWindow.Open(new EditorWindow(file));
             }
             catch (Exception ex)
             {
@@ -1008,7 +1053,7 @@ public partial class EditorWindow : Window
 
     private string? PromptForText()
     {
-        var dlg = new TextInputDialog { Owner = this };
+        var dlg = new TextInputDialog { Owner = DialogOwner };
         return dlg.ShowDialog() == true ? dlg.InputText : null;
     }
 
@@ -1041,11 +1086,10 @@ public partial class EditorWindow : Window
         {
             Filter = "Snapture project (*.snapture)|*.snapture|Image (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp"
         };
-        if (dlg.ShowDialog(this) != true) return;
+        if (dlg.ShowDialog(DialogOwner) != true) return;
         try
         {
-            var w = new EditorWindow(dlg.FileName);
-            w.Show();
+            EditorTabHostWindow.Open(new EditorWindow(dlg.FileName));
         }
         catch (Exception ex)
         {
@@ -1062,7 +1106,7 @@ public partial class EditorWindow : Window
                 Filter = "Snapture project (*.snapture)|*.snapture",
                 FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.snapture"
             };
-            if (dlg.ShowDialog(this) != true) return;
+            if (dlg.ShowDialog(DialogOwner) != true) return;
             _projectPath = dlg.FileName;
         }
         try
@@ -1070,6 +1114,7 @@ public partial class EditorWindow : Window
             SnapFileFormat.Save(_projectPath, _doc);
             StatusText.Text = $"Project saved: {Path.GetFileName(_projectPath)}";
             PathText.Text = _projectPath;
+            NotifyDocumentTitleChanged();
         }
         catch (Exception ex)
         {
@@ -1094,9 +1139,10 @@ public partial class EditorWindow : Window
             Filter = "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|BMP (*.bmp)|*.bmp|WebP (*.webp)|*.webp|SVG (*.svg)|*.svg",
             FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png"
         };
-        if (dlg.ShowDialog(this) != true) return;
+        if (dlg.ShowDialog(DialogOwner) != true) return;
         ExportTo(dlg.FileName);
         _exportPath = dlg.FileName;
+        NotifyDocumentTitleChanged();
     }
 
     private void ExportTo(string path)
@@ -1287,7 +1333,10 @@ public partial class EditorWindow : Window
             return;
         }
 
-        Close();
+        if (_tabHost is { } host)
+            host.CloseDocument(this);
+        else
+            Close();
         try
         {
             var orch = App.Host.Orchestrator;

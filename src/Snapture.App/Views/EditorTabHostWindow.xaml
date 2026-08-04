@@ -1,0 +1,24 @@
+<Window x:Class="Snapture.App.Views.EditorTabHostWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Snapture — Editor"
+        Width="1280"
+        Height="820"
+        MinWidth="900"
+        MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        AllowDrop="True"
+        DragEnter="OnDragEnter"
+        Drop="OnDrop"
+        Background="{DynamicResource AppBackground}"
+        Foreground="{DynamicResource AppForeground}"
+        FontFamily="{StaticResource UiFont}"
+        FontSize="13">
+    <Grid Background="{DynamicResource AppBackground}">
+        <TabControl x:Name="EditorTabs"
+                    Background="{DynamicResource AppBackground}"
+                    BorderBrush="{DynamicResource AppBorder}"
+                    HorizontalContentAlignment="Stretch"
+                    VerticalContentAlignment="Stretch" />
+    </Grid>
+</Window>

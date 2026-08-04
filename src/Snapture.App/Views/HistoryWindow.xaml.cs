@@ -118,13 +118,13 @@ public partial class HistoryWindow : Window
     private void OnRowDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (Selected is { } row && File.Exists(row.FilePath))
-            new EditorWindow(row.FilePath).Show();
+            EditorTabHostWindow.Open(new EditorWindow(row.FilePath));
     }
 
     private void OnOpenInEditor(object sender, RoutedEventArgs e)
     {
         if (Selected is { } row && File.Exists(row.FilePath))
-            new EditorWindow(row.FilePath).Show();
+            EditorTabHostWindow.Open(new EditorWindow(row.FilePath));
     }
 
     private void OnPinSelected(object sender, RoutedEventArgs e)
