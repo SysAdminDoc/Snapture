@@ -39,6 +39,7 @@ public sealed class AnnotationDocument
         foreach (var shape in Shapes)
         {
             shape.Render(canvas, this);
+            shape.RenderCategoryTag(canvas, Width, Height);
         }
     }
 

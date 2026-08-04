@@ -152,6 +152,17 @@
                             </DockPanel>
                             <UniformGrid x:Name="SavedSwatches" Columns="6" />
 
+                            <TextBlock Text="Category tag" Style="{StaticResource HelpText}" Margin="0,14,0,4" />
+                            <ComboBox x:Name="CategoryCombo"
+                                      SelectedIndex="0"
+                                      SelectionChanged="OnAnnotationCategoryChanged"
+                                      ToolTip="Tag new or selected annotations as a blocker, question, or nit.">
+                                <ComboBoxItem Content="None" Tag="None" />
+                                <ComboBoxItem Content="Blocker · red" Tag="Blocker" />
+                                <ComboBoxItem Content="Question · yellow" Tag="Question" />
+                                <ComboBoxItem Content="Nit · blue" Tag="Nit" />
+                            </ComboBox>
+
                             <TextBlock Text="Opacity" Style="{StaticResource HelpText}" Margin="0,14,0,4" />
                             <Slider x:Name="OpacitySlider"
                                     Minimum="0" Maximum="255"

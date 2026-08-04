@@ -61,6 +61,7 @@ public partial class EditorWindow : Window
     private float _arrowCurve;
     private TextOrientation _textOrientation = TextOrientation.Horizontal;
     private float _balloonCornerRadius = 16f;
+    private AnnotationCategory _annotationCategory = AnnotationCategory.None;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
 
@@ -1002,6 +1003,7 @@ public partial class EditorWindow : Window
         {
             shape.DropShadow = shadow;
             shape.Sloppiness = _sloppiness;
+            shape.Category = _annotationCategory;
         }
         return shape;
     }
@@ -1108,6 +1110,24 @@ public partial class EditorWindow : Window
         _balloonCornerRadius = (float)Math.Clamp(e.NewValue, 0, 64);
         if (BalloonCornerRadiusValue is not null)
             BalloonCornerRadiusValue.Text = $"{e.NewValue:0}px";
+    }
+    private void OnAnnotationCategoryChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CategoryCombo.SelectedItem is not ComboBoxItem { Tag: string tag } ||
+            !Enum.TryParse<AnnotationCategory>(tag, out var category))
+            return;
+
+        _annotationCategory = category;
+        if (_selectedShapes.Count == 0)
+            return;
+
+        var targets = _doc.Shapes.Where(_selectedShapes.Contains).ToArray();
+        if (targets.Length == 0) return;
+        _commands.Do(_doc, new SetShapeCategoryCommand(targets, category));
+        StatusText.Text = category == AnnotationCategory.None
+            ? $"Removed category from {targets.Length} shape(s)"
+            : $"Tagged {targets.Length} shape(s) as {category}";
+        Canvas.InvalidateVisual();
     }
     private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

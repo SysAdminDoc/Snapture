@@ -65,6 +65,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The editor now includes a Speech balloon tool with a tail, adjustable 0–64px corner radius, drag/resize/hit-test behavior, and `.snapture` persistence.
 
+### Added — Annotation categories
+
+- Annotations can now be tagged None, Blocker, Question, or Nit. Category changes apply to selected shapes through undo/redo, persist in `.snapture` files and clones, and render as compact color-coded badges.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

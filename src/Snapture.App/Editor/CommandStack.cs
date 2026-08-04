@@ -64,6 +64,32 @@ public sealed class SetShapeColorCommand : AnnotationCommand
     }
 }
 
+public sealed class SetShapeCategoryCommand : AnnotationCommand
+{
+    private readonly Shape[] _shapes;
+    private readonly Dictionary<Shape, AnnotationCategory> _originalCategories;
+    private readonly AnnotationCategory _newCategory;
+
+    public SetShapeCategoryCommand(IEnumerable<Shape> shapes, AnnotationCategory newCategory)
+    {
+        _shapes = shapes.Distinct().ToArray();
+        _originalCategories = _shapes.ToDictionary(shape => shape, shape => shape.Category);
+        _newCategory = newCategory;
+    }
+
+    public override void Apply(AnnotationDocument doc)
+    {
+        foreach (var shape in _shapes)
+            shape.Category = _newCategory;
+    }
+
+    public override void Revert(AnnotationDocument doc)
+    {
+        foreach (var shape in _shapes)
+            shape.Category = _originalCategories[shape];
+    }
+}
+
 /// <summary>
 /// Groups multiple commands into a single undoable/redoable operation.
 /// </summary>
