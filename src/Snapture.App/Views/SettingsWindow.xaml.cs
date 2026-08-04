@@ -49,6 +49,8 @@ public partial class SettingsWindow : Window
         OneOcrStatusText.Text = $"OneOCR: {OcrService.OneOcrStatus}";
         BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
+        SelectComboByTag(CapturePresetCombo, _draft.ActiveCapturePreset);
+        UpdateCapturePresetDescription();
 
         EngineCapsText.Text = WinRtCaptureEngine.IsSupported
             ? "WinRT capture is available on this system."
@@ -118,6 +120,35 @@ public partial class SettingsWindow : Window
             }
         }
         if (combo.Items.Count > 0) combo.SelectedIndex = 0;
+    }
+
+    private void OnCapturePresetSelectionChanged(object sender, SelectionChangedEventArgs e) =>
+        UpdateCapturePresetDescription();
+
+    private void UpdateCapturePresetDescription()
+    {
+        var key = (CapturePresetCombo.SelectedItem as ComboBoxItem)?.Tag as string;
+        CapturePresetDescriptionText.Text = CapturePresetService.Find(key)?.Description
+            ?? "Choose a capture template, then apply it to the draft settings.";
+    }
+
+    private void OnApplyPresetClicked(object sender, RoutedEventArgs e)
+    {
+        var key = (CapturePresetCombo.SelectedItem as ComboBoxItem)?.Tag as string;
+        if (key is null || key == CapturePresetService.CustomKey)
+        {
+            StatusText.Text = "Choose a named preset before applying it.";
+            return;
+        }
+
+        if (!CapturePresetService.Apply(key, _draft))
+        {
+            StatusText.Text = "Could not apply that preset.";
+            return;
+        }
+
+        Bind();
+        StatusText.Text = $"Applied {CapturePresetService.Find(key)?.Label} preset. Review the fields, then save.";
     }
 
     private static string HotkeyToString(HotkeyBinding b)
@@ -451,6 +482,7 @@ public partial class SettingsWindow : Window
 
         if (themeChanged) ThemeManager.Apply(_settings.Current.ThemeMode);
         if (engineChanged) App.Host?.SwitchEngine(newEngine);
+        App.Host?.ApplyEngineSettings();
         OcrService.ConfigureRapidOcr(_settings.Current.RapidOcrUseDirectMl);
         OcrService.ConfigureOneOcr(_settings.Current.OneOcrExecutablePath);
 
@@ -487,11 +519,18 @@ public partial class SettingsWindow : Window
     {
         dst.OutputFolder = src.OutputFolder;
         dst.FilenamePattern = src.FilenamePattern;
+        dst.ActiveCapturePreset = src.ActiveCapturePreset;
         dst.OutputFormat = src.OutputFormat;
         dst.CopyToClipboard = src.CopyToClipboard;
         dst.OpenEditorAfterCapture = src.OpenEditorAfterCapture;
         dst.ShowToastOnSave = src.ShowToastOnSave;
         dst.LaunchAtStartup = src.LaunchAtStartup;
+        dst.QuickMode = src.QuickMode;
+        dst.IncludeSecondaryWindows = src.IncludeSecondaryWindows;
+        dst.IncludeCursor = src.IncludeCursor;
+        dst.PlayShutterSound = src.PlayShutterSound;
+        dst.AutoBorderOnCapture = src.AutoBorderOnCapture;
+        dst.AutoBorderColor = src.AutoBorderColor;
         dst.ThemeMode = ThemeManager.NormalizeMode(src.ThemeMode);
         dst.CaptureEngine = src.CaptureEngine;
         dst.HdrToneMapOperator = HdrToneMapOperators.ToKey(

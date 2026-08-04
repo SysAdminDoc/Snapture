@@ -119,6 +119,48 @@ public sealed class TrayIconHost : IDisposable
         }
         m.Items.Add(timer);
 
+        var presetMenu = new MenuItem { Header = "Capture _preset" };
+        foreach (var preset in CapturePresetService.Presets)
+        {
+            var item = new MenuItem
+            {
+                Header = preset.Label,
+                IsCheckable = true,
+                Tag = preset.Key,
+                ToolTip = preset.Description
+            };
+            item.IsChecked = string.Equals(
+                App.Host?.Settings.Current.ActiveCapturePreset,
+                preset.Key,
+                StringComparison.OrdinalIgnoreCase);
+            item.Click += (_, _) =>
+            {
+                if (App.Host is null || preset.Key == CapturePresetService.CustomKey)
+                    return;
+
+                if (!CapturePresetService.Apply(preset.Key, App.Host.Settings.Current))
+                    return;
+
+                App.Host.Settings.Save();
+                App.Host.ApplyEngineSettings();
+                if (App.Host.Settings.Current.LanShareEnabled && !App.Host.LanShare.IsRunning)
+                    App.Host.TryStartLanShare();
+                else if (!App.Host.Settings.Current.LanShareEnabled && App.Host.LanShare.IsRunning)
+                    App.Host.LanShare.Stop();
+
+                foreach (var menuItem in presetMenu.Items.OfType<MenuItem>())
+                {
+                    menuItem.IsChecked = string.Equals(
+                        (string?)menuItem.Tag,
+                        preset.Key,
+                        StringComparison.OrdinalIgnoreCase);
+                }
+                ShowToast("Capture preset applied", preset.Label);
+            };
+            presetMenu.Items.Add(item);
+        }
+        m.Items.Add(presetMenu);
+
         m.Items.Add(new Separator());
 
         var settings = new MenuItem { Header = "_Settings…" };

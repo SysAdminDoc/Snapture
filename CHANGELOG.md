@@ -31,6 +31,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Auto-redact results are marked `Verified-redacted` only after a successful image export, can be filtered in History, and are cleared if the saved file is later exported without those active redaction shapes. Restored libraries preserve the marker.
 
+### Added — Capture presets
+
+- Settings and the tray now expose Bug-report, Code-block, Documentation, and Quick-share-LAN templates. Each preset applies a deterministic local output folder, filename pattern, format, cursor/editor behavior, and LAN-share toggle while leaving the fields editable before saving.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.

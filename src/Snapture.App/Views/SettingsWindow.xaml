@@ -275,6 +275,37 @@
                     <StackPanel Margin="20">
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
+                                <TextBlock Text="Capture preset" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="Apply a local template for bug reports, code, documentation, or LAN sharing. You can fine-tune any field below before saving."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="240" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <ComboBox x:Name="CapturePresetCombo"
+                                              SelectionChanged="OnCapturePresetSelectionChanged">
+                                        <ComboBoxItem Tag="custom" Content="Custom" />
+                                        <ComboBoxItem Tag="bug-report" Content="Bug-report" />
+                                        <ComboBoxItem Tag="code-block" Content="Code-block" />
+                                        <ComboBoxItem Tag="documentation" Content="Documentation" />
+                                        <ComboBoxItem Tag="quick-share-lan" Content="Quick-share-LAN" />
+                                    </ComboBox>
+                                    <Button Grid.Column="1"
+                                            Content="Apply preset"
+                                            Click="OnApplyPresetClicked"
+                                            ToolTip="Apply the selected local capture template to the draft settings." />
+                                </Grid>
+                                <TextBlock x:Name="CapturePresetDescriptionText"
+                                           Style="{StaticResource MonoCaptionText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
                                 <TextBlock Text="Output folder" Style="{StaticResource SectionTitleText}" />
                                 <DockPanel LastChildFill="True">
                                     <Button x:Name="BrowseFolderButton"

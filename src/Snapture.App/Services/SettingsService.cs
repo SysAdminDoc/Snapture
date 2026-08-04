@@ -14,6 +14,9 @@ public sealed class SnaptureSettings
 
     public string FilenamePattern { get; set; } = "Snapture_{yyyy-MM-dd}_{HH-mm-ss}";
 
+    /// <summary>Last applied capture template, or "custom" for the user's own settings.</summary>
+    public string ActiveCapturePreset { get; set; } = CapturePresetService.CustomKey;
+
     public string OutputFormat { get; set; } = "PNG"; // PNG, JPG, BMP, WEBP
 
     public bool CopyToClipboard { get; set; } = true;
