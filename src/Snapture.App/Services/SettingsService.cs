@@ -17,6 +17,9 @@ public sealed class SnaptureSettings
     /// <summary>Last applied capture template, or "custom" for the user's own settings.</summary>
     public string ActiveCapturePreset { get; set; } = CapturePresetService.CustomKey;
 
+    /// <summary>Capture presets that should be applied when a matching foreground window class is captured.</summary>
+    public List<CaptureAppProfile> PerAppCaptureProfiles { get; set; } = new();
+
     public string OutputFormat { get; set; } = "PNG"; // PNG, JPG, BMP, WEBP
 
     public bool CopyToClipboard { get; set; } = true;
@@ -158,6 +161,7 @@ public sealed class SettingsService
             if (!File.Exists(FilePath)) { Save(); return; }
             var json = File.ReadAllText(FilePath);
             Current = JsonSerializer.Deserialize<SnaptureSettings>(json, JsonOpts) ?? new SnaptureSettings();
+            Current.PerAppCaptureProfiles ??= new();
         }
         catch { Current = new SnaptureSettings(); }
     }

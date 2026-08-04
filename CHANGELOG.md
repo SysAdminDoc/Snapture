@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Per-app capture profiles
+
+- Settings → Output can map case-insensitive Win32 foreground window class names to the existing Bug-report, Code-block, Documentation, or Quick-share-LAN presets. Matching profiles apply automatically before capture and persist with settings import/export.
+
 ### Added — Headless CLI capture
 
 - `Snapture.App.exe` now accepts fixed-region or fullscreen capture commands with explicit output paths, local capture profiles, optional clipboard copy, bounded holds, and LAN-share registration without starting the tray or editor.

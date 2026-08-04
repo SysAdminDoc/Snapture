@@ -53,7 +53,9 @@ public partial class SettingsWindow : Window
         BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
         SelectComboByTag(CapturePresetCombo, _draft.ActiveCapturePreset);
+        SelectComboByTag(AppProfilePresetCombo, "bug-report");
         UpdateCapturePresetDescription();
+        BindAppProfiles();
 
         EngineCapsText.Text = WinRtCaptureEngine.IsSupported
             ? "WinRT capture is available on this system."
@@ -293,6 +295,65 @@ public partial class SettingsWindow : Window
 
         Bind();
         StatusText.Text = $"Applied {CapturePresetService.Find(key)?.Label} preset. Review the fields, then save.";
+    }
+
+    private void BindAppProfiles()
+    {
+        _draft.PerAppCaptureProfiles ??= new();
+        AppProfileList.Items.Clear();
+        foreach (var profile in CaptureAppProfileService.Normalize(_draft.PerAppCaptureProfiles))
+        {
+            var preset = CapturePresetService.Find(profile.PresetKey);
+            AppProfileList.Items.Add(new ListBoxItem
+            {
+                Content = $"{profile.WindowClassName}  →  {preset?.Label ?? profile.PresetKey}",
+                Tag = profile
+            });
+        }
+    }
+
+    private void OnAddAppProfileClicked(object sender, RoutedEventArgs e)
+    {
+        var className = AppProfileClassBox.Text.Trim();
+        var presetKey = (AppProfilePresetCombo.SelectedItem as ComboBoxItem)?.Tag as string;
+        if (!CaptureAppProfileService.IsValidClassName(className))
+        {
+            AppProfileStatusText.Text = "Enter a valid window class name.";
+            return;
+        }
+        if (presetKey is null || CapturePresetService.Find(presetKey) is null)
+        {
+            AppProfileStatusText.Text = "Choose a preset.";
+            return;
+        }
+
+        _draft.PerAppCaptureProfiles ??= new();
+        int index = _draft.PerAppCaptureProfiles.FindIndex(profile =>
+            string.Equals(profile.WindowClassName, className, StringComparison.OrdinalIgnoreCase));
+        var profile = new CaptureAppProfile(className, presetKey);
+        if (index >= 0)
+            _draft.PerAppCaptureProfiles[index] = profile;
+        else
+            _draft.PerAppCaptureProfiles.Add(profile);
+
+        _draft.PerAppCaptureProfiles = CaptureAppProfileService.Normalize(_draft.PerAppCaptureProfiles).ToList();
+        BindAppProfiles();
+        AppProfileClassBox.Clear();
+        AppProfileStatusText.Text = index >= 0 ? "Profile replaced." : "Profile added.";
+    }
+
+    private void OnRemoveAppProfileClicked(object sender, RoutedEventArgs e)
+    {
+        if (AppProfileList.SelectedItem is not ListBoxItem { Tag: CaptureAppProfile profile })
+        {
+            AppProfileStatusText.Text = "Select a profile first.";
+            return;
+        }
+
+        _draft.PerAppCaptureProfiles.RemoveAll(item =>
+            string.Equals(item.WindowClassName, profile.WindowClassName, StringComparison.OrdinalIgnoreCase));
+        BindAppProfiles();
+        AppProfileStatusText.Text = "Profile removed.";
     }
 
     private static string HotkeyToString(HotkeyBinding b)
@@ -692,6 +753,7 @@ public partial class SettingsWindow : Window
         dst.OutputFolder = src.OutputFolder;
         dst.FilenamePattern = src.FilenamePattern;
         dst.ActiveCapturePreset = src.ActiveCapturePreset;
+        dst.PerAppCaptureProfiles = CaptureAppProfileService.Normalize(src.PerAppCaptureProfiles).ToList();
         dst.OutputFormat = src.OutputFormat;
         dst.CopyToClipboard = src.CopyToClipboard;
         dst.ClipboardCopyMode = src.ClipboardCopyMode;

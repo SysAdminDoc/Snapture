@@ -32,6 +32,7 @@ public sealed class CaptureOrchestrator
         bool? copyToClipboardOverride,
         bool? openEditorOverride)
     {
+        ApplyForegroundProfile();
         using var desktopIcons = BeginDesktopIconScope();
         var virtualBounds = MonitorEnumerator.GetVirtualScreen();
         var virtualCapture = await _engine.CaptureRegionAsync(virtualBounds).ConfigureAwait(true);
@@ -65,6 +66,7 @@ public sealed class CaptureOrchestrator
         bool? copyToClipboardOverride,
         bool? openEditorOverride)
     {
+        ApplyForegroundProfile();
         using var desktopIcons = BeginDesktopIconScope();
         var rect = _settings.Current.LastRegion;
         if (rect is null)
@@ -87,6 +89,7 @@ public sealed class CaptureOrchestrator
         bool? copyToClipboardOverride,
         bool? openEditorOverride)
     {
+        ApplyForegroundProfile();
         using var desktopIcons = BeginDesktopIconScope();
         var result = await _engine.CaptureVirtualScreenAsync().ConfigureAwait(true);
         await DeliverCaptureAsync(
@@ -104,6 +107,7 @@ public sealed class CaptureOrchestrator
         using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
         if (hwnd == 0) return;
+        ApplyForegroundProfile(hwnd);
         var result = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
         await DeliverCaptureAsync(
             result,
@@ -118,12 +122,14 @@ public sealed class CaptureOrchestrator
         var picker = new WindowPickerWindow();
         var hwnd = picker.PickWindowSync();
         if (hwnd == 0) return;
+        ApplyForegroundProfile(hwnd);
         var result = await _engine.CaptureWindowAsync(hwnd).ConfigureAwait(true);
         await DeliverCaptureAsync(result).ConfigureAwait(true);
     }
 
     public async Task CaptureMonitorAsync(MonitorInfo m)
     {
+        ApplyForegroundProfile();
         using var desktopIcons = BeginDesktopIconScope();
         var result = await _engine.CaptureMonitorAsync(m).ConfigureAwait(true);
         await DeliverCaptureAsync(result).ConfigureAwait(true);
@@ -147,6 +153,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureMonitorUnderCursorAsync()
     {
+        ApplyForegroundProfile();
         using var desktopIcons = BeginDesktopIconScope();
         GetCursorPos(out var pt);
         var mon = MonitorEnumerator.FromPoint(new System.Drawing.Point(pt.X, pt.Y));
@@ -198,6 +205,7 @@ public sealed class CaptureOrchestrator
 
     public async Task CaptureSmartElementAsync()
     {
+        ApplyForegroundProfile();
         using var desktopIcons = BeginDesktopIconScope();
         var picker = new SmartCaptureWindow();
         picker.PickSync();
@@ -218,6 +226,7 @@ public sealed class CaptureOrchestrator
         using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
         if (hwnd == 0) return;
+        ApplyForegroundProfile(hwnd);
         var svc = new ScrollingCaptureService(_engine);
         var preview = new ScrollingPreviewWindow();
         preview.Show();
@@ -324,6 +333,24 @@ public sealed class CaptureOrchestrator
         _settings.Current.HideDesktopIcons
             ? DesktopIconVisibilityService.TryHide()
             : null;
+
+    private void ApplyForegroundProfile() =>
+        ApplyForegroundProfile(Native2.GetForegroundWindow());
+
+    private void ApplyForegroundProfile(nint hwnd)
+    {
+        if (_settings.Current.PerAppCaptureProfiles.Count == 0)
+            return;
+
+        if (CaptureAppProfileService.ApplyForWindow(hwnd, _settings.Current))
+        {
+            _settings.Save();
+            Log.Information(
+                "Capture.ProfileApplied {WindowClass} {Preset}",
+                CaptureAppProfileService.GetWindowClassName(hwnd) ?? "unknown",
+                _settings.Current.ActiveCapturePreset);
+        }
+    }
 
     public Task<CaptureDeliveryResult> DeliverCaptureForCliAsync(
         CaptureResult result,
