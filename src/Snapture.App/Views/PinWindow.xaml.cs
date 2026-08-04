@@ -314,6 +314,16 @@ public partial class PinWindow : Window
         clear.Click += (_, _) => ClearSelection();
         selectionMenu.Items.Add(clear);
 
+        var comparisonBoard = new MenuItem { Header = "Open comparison board" };
+        comparisonBoard.Click += (_, _) =>
+        {
+            var images = Selection.TargetsFor(this)
+                .Select(pin => (BitmapSource)pin.PinnedImage.Source)
+                .ToArray();
+            new PinBoardWindow(images).Show();
+        };
+        selectionMenu.Items.Add(comparisonBoard);
+
         _closeSelectedMenu = new MenuItem { Header = "Close selected pins", InputGestureText = "Delete" };
         _closeSelectedMenu.Click += (_, _) => CloseSelectedPins();
         selectionMenu.Items.Add(_closeSelectedMenu);

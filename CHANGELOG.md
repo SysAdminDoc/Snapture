@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Pinned comparison boards
+
+- Selected pins can open a local comparison board with vertical, horizontal, or grid snap-arrangement, bounded spacing/columns, and named layout presets stored without copying image pixels.
+
 ### Added — Edge-detection ruler
 
 - Pixel ruler now supports Alt+click nearest-edge measurement against a frozen local screen sample, reporting the closest high-contrast edge and contrast score without changing the normal drag ruler.
