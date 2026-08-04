@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Image combiner
+
+- Tray → Tools → Combine images combines two to 100 local stills vertically, horizontally, or in a configurable grid with bounded gaps, canvas size, and PNG/JPG/BMP/WebP export.
+
 ### Added — Local batch image processing
 
 - Tray → Tools → Batch process images applies bounded resize, border, watermark, and format conversion effects to a selected local folder, with per-file results and no automatic uploads.

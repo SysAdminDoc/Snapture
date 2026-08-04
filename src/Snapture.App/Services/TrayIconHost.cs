@@ -612,6 +612,10 @@ public sealed class TrayIconHost : IDisposable
         batchProcess.Click += (_, _) => new Views.BatchProcessWindow().ShowDialog();
         tools.Items.Add(batchProcess);
 
+        var imageCombiner = new MenuItem { Header = "Combine images…" };
+        imageCombiner.Click += (_, _) => new Views.ImageCombinerWindow().ShowDialog();
+        tools.Items.Add(imageCombiner);
+
         var stepCapture = new MenuItem { Header = "Step capture…" };
         stepCapture.Click += (_, _) =>
         {
