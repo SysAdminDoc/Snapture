@@ -928,6 +928,8 @@ public sealed class TrayIconHost : IDisposable
 
     public void ShowToast(string title, string message)
     {
+        title = LocalizationService.Get(title);
+        message = LocalizationService.Get(message);
         try { _tray.ShowBalloonTip(title, message, BalloonIcon.Info); }
         catch { /* non-fatal */ }
     }

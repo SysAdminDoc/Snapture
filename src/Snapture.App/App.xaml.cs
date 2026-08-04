@@ -25,6 +25,7 @@ public partial class App : Application
 
         // Resolve portable storage before any settings, history, logging, or plugin service is created.
         PortableMode.Initialize(e.Args);
+        LocalizationService.Initialize();
 
         if (CliCommandLine.IsCliRequest(e.Args))
         {

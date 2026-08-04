@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Resource-backed localization foundation
+
+- Added an embedded English `.resx` catalog with deterministic SHA-256 resource keys, culture selection, safe fallback for plugin-supplied copy, and a WPF load hook that localizes window titles, controls, tooltips, headers, and accessibility names.
+- Tray notifications use the same catalog, and the explicit Phase-1 culture list is ready for reviewed satellite resources without changing view code.
+
 ### Added — On-demand plugin dependency cache
 
 - Added `IPluginDependencyStore` / `PluginDependency` to the SDK. Plugins can request pinned HTTPS tools such as ffmpeg or Tesseract only when a feature is used; the host downloads into a per-plugin cache, enforces a 500 MB cap, verifies SHA-256, and atomically exposes the path.

@@ -64,6 +64,10 @@ The existing landscape on Windows in 2026:
 - **Declarative uploader profiles** — Settings → Output imports user-owned ShareX `.sxcu` or compatible JSON files. Multipart, form-urlencoded, JSON, XML, binary, query, header, and response JSON-path fields are supported; imported endpoints stay inert until an explicit editor/tray upload action.
 - **Self-hosted destinations** — Settings → Output can opt into built-in Nextcloud WebDAV and Immich destinations. Both are disabled by default; Nextcloud app passwords and Immich API keys use the current-user DPAPI secret store and are never serialized into `settings.json`.
 
+## Localization foundation
+
+The WPF surface uses an embedded `.resx` catalog with deterministic keys, system-culture fallback, and load-time coverage for titles, controls, tooltips, headers, and accessibility names. Reviewed satellite resources can be added without rewriting views.
+
 ## What ships in v0.3.0
 
 **Capture parity pass — OCR, full-text searchable history, scrolling capture (alpha)**

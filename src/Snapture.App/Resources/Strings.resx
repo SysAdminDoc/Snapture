@@ -1,0 +1,397 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+  <resheader name="version"><value>2.0</value></resheader>
+  <resheader name="reader"><value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <resheader name="writer"><value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value></resheader>
+  <data name="s_7b2817bf9b80e66d07f28095" xml:space="preserve"><value>#000000</value></data>
+  <data name="s_5feceb66ffc86f38d952786c" xml:space="preserve"><value>0</value></data>
+  <data name="s_273981422d9f0d87ff224f83" xml:space="preserve"><value>0 frames · 00:00.00</value></data>
+  <data name="s_662a1d21587db84262eec103" xml:space="preserve"><value>0 frames · 00:00.00 · MP4</value></data>
+  <data name="s_3ac9e93b30803d39c0852f53" xml:space="preserve"><value>0, 0, 0</value></data>
+  <data name="s_d9a847a1a79ab44825bbf8e5" xml:space="preserve"><value>0%</value></data>
+  <data name="s_fcd4d85030b4cbc8288af2b4" xml:space="preserve"><value>0°, 0%, 0%</value></data>
+  <data name="s_67931646dc901dc0563fd0d1" xml:space="preserve"><value>16px</value></data>
+  <data name="s_a375b396d303855f10965fe4" xml:space="preserve"><value>Accessible Perceptual Contrast Algorithm — designer-grade legibility readout. Targets: ≥75 Lc body text, ≥45 Lc large text.</value></data>
+  <data name="s_705a9f92e1aa99c44ca74a2d" xml:space="preserve"><value>ACES</value></data>
+  <data name="s_0252b84901033771a99fae06" xml:space="preserve"><value>Adapter</value></data>
+  <data name="s_7ba1f8fc50b24e573b64e269" xml:space="preserve"><value>Add / replace</value></data>
+  <data name="s_769cc8c30b726860dbfd6857" xml:space="preserve"><value>Add deterministic hand-drawn wobble to new stroke shapes.</value></data>
+  <data name="s_cea3bab1cd691bc855e63a79" xml:space="preserve"><value>Added · green</value></data>
+  <data name="s_70b0d2ba360bfa5f26f64168" xml:space="preserve"><value>Adds margin, corners, and a gradient backdrop for polished screenshots.</value></data>
+  <data name="s_9c0f0618b39f201343f40afc" xml:space="preserve"><value>Adjust color opacity.</value></data>
+  <data name="s_9f088dbebd6c3c70a5ddbc2c" xml:space="preserve"><value>Advanced</value></data>
+  <data name="s_7e1ed52bc48bc2f526ff1829" xml:space="preserve"><value>AI tools</value></data>
+  <data name="s_ccf4c5266b71af8a79f542da" xml:space="preserve"><value>Also write JXR (Game Bar compatibility; SDR-clamped)</value></data>
+  <data name="s_bf3a810a7de57dc47028d969" xml:space="preserve"><value>Alt+PrintScreen</value></data>
+  <data name="s_adadcb4483d3bc796ff4e7d8" xml:space="preserve"><value>APCA</value></data>
+  <data name="s_6857454fb64ebafa542ea2fe" xml:space="preserve"><value>App only</value></data>
+  <data name="s_3907fa7f80722a6fc58cd8c1" xml:space="preserve"><value>Appearance</value></data>
+  <data name="s_39ea870a634d8d7639a8df6a" xml:space="preserve"><value>Apply a local template for bug reports, code, documentation, or LAN sharing. You can fine-tune any field below before saving.</value></data>
+  <data name="s_a6046794133ff94286cc6f06" xml:space="preserve"><value>Apply delay</value></data>
+  <data name="s_68de578ddcc350d15add7527" xml:space="preserve"><value>Apply dither</value></data>
+  <data name="s_2d6e56e94ae8a068157979c2" xml:space="preserve"><value>Apply preset</value></data>
+  <data name="s_153ae4ee59978685826467a2" xml:space="preserve"><value>Apply the selected local capture template to the draft settings.</value></data>
+  <data name="s_60aa95d78cd33707f8f042d0" xml:space="preserve"><value>Arrow style</value></data>
+  <data name="s_de25998012732053413b4cd8" xml:space="preserve"><value>Arrowheads at both ends</value></data>
+  <data name="s_06f501f4727b0b7d7fb5850a" xml:space="preserve"><value>Assign selected history cards to the chosen project.</value></data>
+  <data name="s_1bac4cdc72671fde437b08a2" xml:space="preserve"><value>Attachment subfolder</value></data>
+  <data name="s_b1bdf63d93c3720851559fc2" xml:space="preserve"><value>Auto (recommended)</value></data>
+  <data name="s_399dd3e3f64f360eaa296c37" xml:space="preserve"><value>Auto chooses the modern WinRT engine when available and falls back when needed.</value></data>
+  <data name="s_e2cffae65b3c0ba2f5fa0185" xml:space="preserve"><value>Auto zoom hints</value></data>
+  <data name="s_b01f4773a87ff7dea00bf7bb" xml:space="preserve"><value>Auto-redact</value></data>
+  <data name="s_28722a0aeff6405d96f86b2c" xml:space="preserve"><value>Automatically apply a built-in preset when the captured foreground window has a matching Win32 class name. Class names are case-insensitive, for example Chrome_WidgetWin_1 or Notepad.</value></data>
+  <data name="s_6446c33a4cd36facff935722" xml:space="preserve"><value>Background beautifier</value></data>
+  <data name="s_0a20b5cab6ae9b7d42d7bdd9" xml:space="preserve"><value>Backup library</value></data>
+  <data name="s_6288190a52935dab1e6d9556" xml:space="preserve"><value>Bend the arrow left or right along a smooth quadratic curve.</value></data>
+  <data name="s_164c690a353e7b5106d3de3d" xml:space="preserve"><value>Binding</value></data>
+  <data name="s_4a74a72d297a0f5d453c1964" xml:space="preserve"><value>Blocker · red</value></data>
+  <data name="s_8a4df0b5ddb110349fb8515b" xml:space="preserve"><value>Blur · gray</value></data>
+  <data name="s_124f138d8fa37ca50296a725" xml:space="preserve"><value>Borderless capture</value></data>
+  <data name="s_ec811d30a89ce96d1c7555ff" xml:space="preserve"><value>Brightness</value></data>
+  <data name="s_3227aa9666253f7a73650907" xml:space="preserve"><value>Browse</value></data>
+  <data name="s_93c6b664dce6c207b803d69d" xml:space="preserve"><value>Browse…</value></data>
+  <data name="s_03a97cf732dda25525b43eb4" xml:space="preserve"><value>Bug-report</value></data>
+  <data name="s_19766ed6ccb2f4a32778eed8" xml:space="preserve"><value>Cancel</value></data>
+  <data name="s_1900b478a5860384597f32d4" xml:space="preserve"><value>Capture</value></data>
+  <data name="s_49aab5c508cabb9e9e786925" xml:space="preserve"><value>Capture engine</value></data>
+  <data name="s_a65d5ca63e5f3ad366a85836" xml:space="preserve"><value>Capture History</value></data>
+  <data name="s_8e746b9bdf42efa75f99340e" xml:space="preserve"><value>Capture preset</value></data>
+  <data name="s_90ab33841787477fbf154985" xml:space="preserve"><value>Capture shortcuts</value></data>
+  <data name="s_887c5f2e3517a3c9e805ea9d" xml:space="preserve"><value>Category tag</value></data>
+  <data name="s_32c10bfc9878243621c45806" xml:space="preserve"><value>Choose a discovered local model to inspect the flattened capture.</value></data>
+  <data name="s_c22ffbfa97b381554f62e2d9" xml:space="preserve"><value>Choose a user-supplied sponeocr.exe from the community OneOCR pattern. Snapture does not redistribute the Snipping Tool DLLs or model.</value></data>
+  <data name="s_48636fa054639157aac1b34a" xml:space="preserve"><value>Choose capture</value></data>
+  <data name="s_16184d0f7d4fcf0097658913" xml:space="preserve"><value>Choose horizontal or vertical text for new annotations.</value></data>
+  <data name="s_ae25d6481fc1741ffee4a95c" xml:space="preserve"><value>Classic</value></data>
+  <data name="s_e7754460903d2d9fba02565e" xml:space="preserve"><value>Classic uses a filled triangle; Modern uses a rounded open chevron.</value></data>
+  <data name="s_9ef9a38bc082d92b1e322a61" xml:space="preserve"><value>Clear color and near-duplicate filters.</value></data>
+  <data name="s_0a06828650a55877edfa493b" xml:space="preserve"><value>Clear feature filters</value></data>
+  <data name="s_d7a30075e75c1ec1f27467bb" xml:space="preserve"><value>Click a field, then press the desired modifier combination and one final key.</value></data>
+  <data name="s_f6d75245dc2518381289a739" xml:space="preserve"><value>Click a window to capture it. PgUp/PgDn adjusts the target; Esc cancels.</value></data>
+  <data name="s_391593e59d06698e30b533d4" xml:space="preserve"><value>Click anywhere</value></data>
+  <data name="s_9d918a305ba706d73dda0257" xml:space="preserve"><value>Click Start recording, complete the workflow, then stop to review captured steps and add captions.</value></data>
+  <data name="s_9d2c03d2dae21a68c91a7e04" xml:space="preserve"><value>Clipboard integration</value></data>
+  <data name="s_7d9eb7acb13e24625c404401" xml:space="preserve"><value>Close</value></data>
+  <data name="s_77ce3617c97f9e4a785ba7d7" xml:space="preserve"><value>Code line state</value></data>
+  <data name="s_07cb17376b518b3e31f0e52d" xml:space="preserve"><value>Code window chrome</value></data>
+  <data name="s_7c2b18390cca3922b00b3d2b" xml:space="preserve"><value>Code-block</value></data>
+  <data name="s_e0d1d308a67932860eb8f90d" xml:space="preserve"><value>Codes</value></data>
+  <data name="s_6b73191a0a4b67420e61d51c" xml:space="preserve"><value>Color</value></data>
+  <data name="s_ba42602c056e504e2655550d" xml:space="preserve"><value>Color Picker</value></data>
+  <data name="s_93216b1f83870a2bf717e819" xml:space="preserve"><value>Color similarity</value></data>
+  <data name="s_d7c1518cef23ba24e23363ab" xml:space="preserve"><value>Configure commands…</value></data>
+  <data name="s_acf5097f80dd8aa8ee25948d" xml:space="preserve"><value>Configure external commands</value></data>
+  <data name="s_a1b66347de5c23d6ef67a437" xml:space="preserve"><value>Configure Nextcloud / Immich…</value></data>
+  <data name="s_aa7b7293b288e0ce674ee8d0" xml:space="preserve"><value>Configure self-hosted destinations</value></data>
+  <data name="s_08795ba031bcd121e4e1ce47" xml:space="preserve"><value>Contrast</value></data>
+  <data name="s_e21f935f11d7e966dbbae78d" xml:space="preserve"><value>Copy</value></data>
+  <data name="s_1eaf3837c1c6053aa9434bf8" xml:space="preserve"><value>Copy each capture to the clipboard</value></data>
+  <data name="s_7361b763c666a1af008f0e08" xml:space="preserve"><value>Copy HEX</value></data>
+  <data name="s_f0f755afea88944b61160bea" xml:space="preserve"><value>Copy response</value></data>
+  <data name="s_d9d4d28581a64783f84847af" xml:space="preserve"><value>Copy results</value></data>
+  <data name="s_b0ac9cea86878b84b24131cc" xml:space="preserve"><value>Copy text</value></data>
+  <data name="s_363e2bfc690490e026755230" xml:space="preserve"><value>Copy TSV</value></data>
+  <data name="s_b26d1037f1c2da31a0296d91" xml:space="preserve"><value>Copy URL</value></data>
+  <data name="s_76a6d9f3d7a7172c74e85b4b" xml:space="preserve"><value>Corner radius</value></data>
+  <data name="s_70f90e8b5ac3e3d5b26a1208" xml:space="preserve"><value>Create a local project for organizing selected captures.</value></data>
+  <data name="s_c15324027d16d071ef1f9a20" xml:space="preserve"><value>Ctrl+PrintScreen</value></data>
+  <data name="s_2a45c07314b2cd56907c7df9" xml:space="preserve"><value>Curve</value></data>
+  <data name="s_494ca78f7374e46fb2de9ad9" xml:space="preserve"><value>Custom</value></data>
+  <data name="s_60acc53f13a5d1bf115878c4" xml:space="preserve"><value>Dark</value></data>
+  <data name="s_74975f343805f476131b6fe2" xml:space="preserve"><value>Dashed line or arrow</value></data>
+  <data name="s_463c0ad5fbb2bb6f66cd084a" xml:space="preserve"><value>Declarative uploaders</value></data>
+  <data name="s_9bc47eebfe983e5286d15b39" xml:space="preserve"><value>Default format</value></data>
+  <data name="s_199702c3a0b38e341fca04d8" xml:space="preserve"><value>Delay (ms)</value></data>
+  <data name="s_e2d0a54968ead24efc0dffa6" xml:space="preserve"><value>Delete</value></data>
+  <data name="s_6182af7d000372333792e5e5" xml:space="preserve"><value>Delete from history</value></data>
+  <data name="s_2c6542b186bc73ca37f1f246" xml:space="preserve"><value>Delete, duplicate, retime, or dither individual frames before saving.</value></data>
+  <data name="s_78f644afc3f42ec4748f9f9a" xml:space="preserve"><value>Describe this capture concisely. Mention the important visible text, controls, and visual context.</value></data>
+  <data name="s_268f14bbfe119c1e92150583" xml:space="preserve"><value>Diagnostics</value></data>
+  <data name="s_6cb2279dbfe762e0855f7fe8" xml:space="preserve"><value>Disable all</value></data>
+  <data name="s_eb1a70e39274bb762b5d7c1a" xml:space="preserve"><value>Discard</value></data>
+  <data name="s_3fb611417bec7e6b6b8c3537" xml:space="preserve"><value>Document title used in the exported documents</value></data>
+  <data name="s_c205924de0fe636ccdde4ed6" xml:space="preserve"><value>Documentation</value></data>
+  <data name="s_1e9b571a3a9e7f8e9fe05f71" xml:space="preserve"><value>Dominant color sampled locally from this image.</value></data>
+  <data name="s_741b12c4d1e7d701e985c279" xml:space="preserve"><value>Drag a rectangle to crop. Press Escape to cancel.</value></data>
+  <data name="s_256ae2bdcafc3d04c2cb051e" xml:space="preserve"><value>Drag to choose an area. Enter captures; Esc cancels.</value></data>
+  <data name="s_173554e96f85fa2ca19986f7" xml:space="preserve"><value>Drag to measure distance and angle. Esc dismisses.</value></data>
+  <data name="s_7cb4e71e86bd1af773ab3de9" xml:space="preserve"><value>Draw one marker over each code line; markers export with the Carbon code-window frame.</value></data>
+  <data name="s_e8b0b8daf176b80411d7d803" xml:space="preserve"><value>Drop shadow</value></data>
+  <data name="s_02cdaabfca805d6ab75d8104" xml:space="preserve"><value>Duplicate</value></data>
+  <data name="s_06f08e7c2f8a8c00ba00b615" xml:space="preserve"><value>Enable all</value></data>
+  <data name="s_6d080bbea2545addab281d86" xml:space="preserve"><value>Enable DirectML for RapidOCR (experimental)</value></data>
+  <data name="s_94d41a3127ec67df1703d76f" xml:space="preserve"><value>Enable LAN share server on app launch</value></data>
+  <data name="s_fa6198a634fba2127d7af09b" xml:space="preserve"><value>Enable MCP server on app launch</value></data>
+  <data name="s_0e89a8c60ccd4b02e784e657" xml:space="preserve"><value>End (seconds)</value></data>
+  <data name="s_0de10c5d89f781af3cd522b1" xml:space="preserve"><value>Enter a dominant RGB color such as #CBA6F7. Results use a local color-distance match.</value></data>
+  <data name="s_03a82a962f10315dcd86c962" xml:space="preserve"><value>Enter comma-separated seconds, for example 12.5, 28</value></data>
+  <data name="s_3664895579f0a7e68c4aa09c" xml:space="preserve"><value>Export</value></data>
+  <data name="s_f122ce6da5560cc46e31df88" xml:space="preserve"><value>Export a title slide and editable step slides for PowerPoint.</value></data>
+  <data name="s_10263b7be3caab4e53106079" xml:space="preserve"><value>Export an editable Word document with each step image and caption.</value></data>
+  <data name="s_1e74a176a3dd1ddb6e4b50bc" xml:space="preserve"><value>Export as</value></data>
+  <data name="s_e023b23e57398275a9ebc836" xml:space="preserve"><value>Export DOCX</value></data>
+  <data name="s_f93cda430095d243912229bc" xml:space="preserve"><value>Export Markdown</value></data>
+  <data name="s_ef08555a6c05c7c1970b2957" xml:space="preserve"><value>Export PNG</value></data>
+  <data name="s_b6726e6a026fa2e151cf9338" xml:space="preserve"><value>Export PPTX</value></data>
+  <data name="s_86884bf3890c1dea61732a66" xml:space="preserve"><value>Export the history database, projects, and image files to one .snapture-library archive.</value></data>
+  <data name="s_a8654e87788534062c4b72bc" xml:space="preserve"><value>Export-ready wrappers for cleaner screenshots.</value></data>
+  <data name="s_758c49b63c38684cdf657542" xml:space="preserve"><value>External command</value></data>
+  <data name="s_491a7f5d82435210a0009fb5" xml:space="preserve"><value>External commands</value></data>
+  <data name="s_f16439b5e492a51e5db72500" xml:space="preserve"><value>Fade · purple</value></data>
+  <data name="s_b3b9efed9c4da3133e7b11cb" xml:space="preserve"><value>File unavailable</value></data>
+  <data name="s_e99559ba9320c187cdd07cb6" xml:space="preserve"><value>Filename template</value></data>
+  <data name="s_d37156813e1b0098bb2f7755" xml:space="preserve"><value>Fill rectangles and ellipses</value></data>
+  <data name="s_08585f1420f3eae53bf1c9e7" xml:space="preserve"><value>Filter by date range</value></data>
+  <data name="s_605d4da7bd3680971c1ab36a" xml:space="preserve"><value>Filter by source application</value></data>
+  <data name="s_db13de12d8c7ad36cc1c4934" xml:space="preserve"><value>Filter the history wall by project.</value></data>
+  <data name="s_1f8e97200b1d93f9d57d79b8" xml:space="preserve"><value>Find captures with a similar dominant color.</value></data>
+  <data name="s_9bb8e6c1288c916b94da8869" xml:space="preserve"><value>Find color</value></data>
+  <data name="s_4c9cbeb34d43f1b5b4c50861" xml:space="preserve"><value>Focus · blue</value></data>
+  <data name="s_d0b50e064a4f8d9438c977e0" xml:space="preserve"><value>Frame</value></data>
+  <data name="s_997fb52ad84ddae2651fd7cc" xml:space="preserve"><value>Frame-by-frame GIF editor</value></data>
+  <data name="s_f7cad45bd541a237a326f64f" xml:space="preserve"><value>Frames are kept in memory until you stop. Stop to edit frames before encoding the GIF.</value></data>
+  <data name="s_0208be425fa5bd228bde2462" xml:space="preserve"><value>Frames stream to disk for long-session safety.</value></data>
+  <data name="s_ffe2ba1c1616792e22b5c602" xml:space="preserve"><value>Full-text search over OCR text + window title + process name. SQLite FTS5 syntax allowed.</value></data>
+  <data name="s_7fc335bfbb5fa5b2e69933b2" xml:space="preserve"><value>Fullscreen capture</value></data>
+  <data name="s_56e0fa00f1c44f43e0af2254" xml:space="preserve"><value>GDI (legacy)</value></data>
+  <data name="s_c910d474dcd724bff83ddede" xml:space="preserve"><value>General</value></data>
+  <data name="s_5c5b64731d87a808e60d2d75" xml:space="preserve"><value>GIF recording</value></data>
+  <data name="s_88681f830c9f4b4cafa6e5fb" xml:space="preserve"><value>Gradient backdrop</value></data>
+  <data name="s_93638ea9e0b0aae93af40fcc" xml:space="preserve"><value>Grayscale</value></data>
+  <data name="s_af159a60f4ffefc379ae833b" xml:space="preserve"><value>Hable</value></data>
+  <data name="s_923be80248c56c439884a3b0" xml:space="preserve"><value>HDR display calibration recommended</value></data>
+  <data name="s_cc3c0aa7007f9223391b1d1a" xml:space="preserve"><value>HDR screenshot color correction (recommended)</value></data>
+  <data name="s_271782613fc25f9ba4f77c49" xml:space="preserve"><value>HDR tone mapping</value></data>
+  <data name="s_4d4a964e0320d8e1d1da38ca" xml:space="preserve"><value>HEX</value></data>
+  <data name="s_a7a2861fb06b221926290e91" xml:space="preserve"><value>Hide desktop icons while capturing</value></data>
+  <data name="s_0abba441f16eff90782e7a82" xml:space="preserve"><value>Horizontal</value></data>
+  <data name="s_c15f1530d219f94a59b95b26" xml:space="preserve"><value>Hotkeys</value></data>
+  <data name="s_2992e62de4fd549d7e6f0764" xml:space="preserve"><value>Hover a control, then click to capture it. PgUp/PgDn refines the target; Esc cancels.</value></data>
+  <data name="s_eb1c83301de339a9427f2233" xml:space="preserve"><value>Hover anywhere on screen; the swatch updates live.</value></data>
+  <data name="s_fc770a1cd535b3676841b459" xml:space="preserve"><value>HSL</value></data>
+  <data name="s_1aa4cb0bcca76e92e30677e8" xml:space="preserve"><value>Image</value></data>
+  <data name="s_c871b08c51b7af72d08abec4" xml:space="preserve"><value>Image (default)</value></data>
+  <data name="s_39713b64be4c2108f41c0e01" xml:space="preserve"><value>Image keeps the normal PNG clipboard. Markdown copies a relative link and writes the capture PNG into the configured vault folder. Ctrl+Alt+V always runs the Markdown pin for the most recent capture.</value></data>
+  <data name="s_2cff9baabf56ca002610e113" xml:space="preserve"><value>Import</value></data>
+  <data name="s_50c1c3d807735baf447a8e10" xml:space="preserve"><value>Import a .snapture-library archive into this history without moving existing files.</value></data>
+  <data name="s_b05e93377252de3030f5395f" xml:space="preserve"><value>Import a user-owned ShareX .sxcu or compatible JSON profile. Imported endpoints remain inert until you explicitly choose Upload from the editor or tray.</value></data>
+  <data name="s_1e651217d74dfcd16b94c4b2" xml:space="preserve"><value>Import declarative uploader</value></data>
+  <data name="s_b5900e2cfcf6b082cab10093" xml:space="preserve"><value>Import Mermaid or PlantUML text from the clipboard (Ctrl+Shift+V).</value></data>
+  <data name="s_81ce4f0a924fb770e78ba857" xml:space="preserve"><value>Import uploader…</value></data>
+  <data name="s_3fafb0cae272c785ed148db0" xml:space="preserve"><value>Inspect installed extensions and reload them without restarting Snapture.</value></data>
+  <data name="s_66752ecf491c2bd60b1368db" xml:space="preserve"><value>Install / update DLL</value></data>
+  <data name="s_112f3ccb1b36a86a2b35cdf1" xml:space="preserve"><value>Instruction</value></data>
+  <data name="s_090512d93fcc3c0d307d0c57" xml:space="preserve"><value>Integrations</value></data>
+  <data name="s_6c2588165c25f60e0dda37ab" xml:space="preserve"><value>Invert colors</value></data>
+  <data name="s_3ad13397dbccec2a99223119" xml:space="preserve"><value>JPEG (smaller)</value></data>
+  <data name="s_48b2293554cacd36341151ca" xml:space="preserve"><value>Keep the imported GIF&apos;s original palettes and compressed frame data. Available for deletion-only edits.</value></data>
+  <data name="s_78438f169a6ee6de55c72447" xml:space="preserve"><value>LAN share</value></data>
+  <data name="s_f7065a5f7e9f8bd2be353c5e" xml:space="preserve"><value>Last-region recapture</value></data>
+  <data name="s_bdfd4aa6da8cd361fbf4259a" xml:space="preserve"><value>Launch Snapture at Windows startup</value></data>
+  <data name="s_57df86070300ef3da0d994fd" xml:space="preserve"><value>Leave empty to discover sponeocr.exe beside Snapture or in the Snapture OCR folder.</value></data>
+  <data name="s_dbcd5e7bb7a0f538810de44c" xml:space="preserve"><value>Light</value></data>
+  <data name="s_0f0309db885a1881959a1a55" xml:space="preserve"><value>Loading recording…</value></data>
+  <data name="s_5e1793a819b5c3a7e84a3b74" xml:space="preserve"><value>Local AI</value></data>
+  <data name="s_116b1847fe982b04d533ec7a" xml:space="preserve"><value>Local AI providers</value></data>
+  <data name="s_926b8653eb8003474d4d568c" xml:space="preserve"><value>Local AI result</value></data>
+  <data name="s_639c7318c7a9a226fc9d4a6a" xml:space="preserve"><value>Local dominant-color and perceptual-hash metadata.</value></data>
+  <data name="s_153befcdafc3c8c9dc34ee60" xml:space="preserve"><value>Local share server</value></data>
+  <data name="s_af506d9dce7f57bd11a002d9" xml:space="preserve"><value>Loopback endpoint</value></data>
+  <data name="s_3f6c8970c098e76b292ad2e3" xml:space="preserve"><value>Markdown link</value></data>
+  <data name="s_b5a9aaf84866c722b31bdab5" xml:space="preserve"><value>Markdown vault or export folder</value></data>
+  <data name="s_1f0ebc6982b6c2d29b40badb" xml:space="preserve"><value>Mic</value></data>
+  <data name="s_5e2c614c23f02239bc03c6c0" xml:space="preserve"><value>Model</value></data>
+  <data name="s_18e5fdf81433e07d7f52e4f2" xml:space="preserve"><value>Model Context Protocol</value></data>
+  <data name="s_eef6c7f6ddd4067eb8afcea1" xml:space="preserve"><value>Modern</value></data>
+  <data name="s_738540c1aaaf8e34e71aadfc" xml:space="preserve"><value>Move selected</value></data>
+  <data name="s_22b89329a96a75e7a8ab7f89" xml:space="preserve"><value>Move selected captures back to the unassigned inbox.</value></data>
+  <data name="s_2d5548b9679328f3060dd55b" xml:space="preserve"><value>My step-by-step guide</value></data>
+  <data name="s_0a96a083362bbeda78dac68d" xml:space="preserve"><value>Near duplicates</value></data>
+  <data name="s_5f6ef51e5e9bcfea93829ae1" xml:space="preserve"><value>New captures appear here automatically. Try clearing search or filters if you expected existing results.</value></data>
+  <data name="s_a41eb2bf7245d3bcca0c66f7" xml:space="preserve"><value>New project</value></data>
+  <data name="s_84fe9cd0ecd5befe90d234d1" xml:space="preserve"><value>Nit · blue</value></data>
+  <data name="s_f499a243c542574838ec3321" xml:space="preserve"><value>No captures found</value></data>
+  <data name="s_40473d09ee4ba7668af579cf" xml:space="preserve"><value>No positioned table text found</value></data>
+  <data name="s_a4af780b9c99fcad5892f18e" xml:space="preserve"><value>No QR code or barcode found</value></data>
+  <data name="s_5358c322472fc2b0fe8145f5" xml:space="preserve"><value>No text recognized</value></data>
+  <data name="s_dc937b59892604f5a86ac969" xml:space="preserve"><value>None</value></data>
+  <data name="s_fe4b277912b4c41332164642" xml:space="preserve"><value>Obsidian vault root or a Joplin Markdown export folder. Obsidian can be discovered automatically when this is empty.</value></data>
+  <data name="s_5e5bea5354e3f22eb70cc9df" xml:space="preserve"><value>OCR</value></data>
+  <data name="s_092f1509928dd35e68184aa9" xml:space="preserve"><value>OCR all</value></data>
+  <data name="s_b0f795b5153da2cae9e2d489" xml:space="preserve"><value>OCR fallback</value></data>
+  <data name="s_6767a6cd78fd80439f7533b7" xml:space="preserve"><value>OCR Result</value></data>
+  <data name="s_4c483d22a5c2a02e9b9cc442" xml:space="preserve"><value>OCR table</value></data>
+  <data name="s_618fb6875c55c4da1ec96b75" xml:space="preserve"><value>OCR table extraction</value></data>
+  <data name="s_854b54fc170be6f5e80f141c" xml:space="preserve"><value>OCR text overlay</value></data>
+  <data name="s_50c23d0d72706cbe9e6c3abb" xml:space="preserve"><value>OneOCR sidecar (optional)</value></data>
+  <data name="s_e15d5f13f9fc9fc488fe4f72" xml:space="preserve"><value>Only models discovered from Foundry Local, Ollama, or LM Studio are listed.</value></data>
+  <data name="s_6062652e10dd84c67b307203" xml:space="preserve"><value>Opacity</value></data>
+  <data name="s_ed077f3d8125d60dca1979c7" xml:space="preserve"><value>Open</value></data>
+  <data name="s_6a9084025c4bf3e1e99c40dd" xml:space="preserve"><value>Open folder</value></data>
+  <data name="s_ea1d0f038bbdb9e9aa664967" xml:space="preserve"><value>Open in editor</value></data>
+  <data name="s_2f4bd03039b43b034b1575ec" xml:space="preserve"><value>Open the editor after each capture</value></data>
+  <data name="s_4736c3a05e4e2f833d8df4b7" xml:space="preserve"><value>Open Windows HDR calibration</value></data>
+  <data name="s_cbea8bebcfd354c00493c4ce" xml:space="preserve"><value>Optional built-in Nextcloud WebDAV and Immich destinations. Both stay disabled until explicitly enabled, and credentials are stored separately with Windows DPAPI.</value></data>
+  <data name="s_e1fdd609a530ecc6ca6e959a" xml:space="preserve"><value>Optional local-only model runtimes. Snapture probes loopback addresses only; cloud providers and cloud endpoints are intentionally absent.</value></data>
+  <data name="s_d0db8b5e364b6989e4b8f38a" xml:space="preserve"><value>Options</value></data>
+  <data name="s_b2439bcb8dee14b685f137f2" xml:space="preserve"><value>Output</value></data>
+  <data name="s_998915e5dfe6999331524811" xml:space="preserve"><value>Output folder</value></data>
+  <data name="s_a82200654468f43cd3c034df" xml:space="preserve"><value>Paste diagram</value></data>
+  <data name="s_858e4ba7a29fd38b630ed73a" xml:space="preserve"><value>Pause</value></data>
+  <data name="s_b2b928d7ee33737f30e8e3b8" xml:space="preserve"><value>Per-app capture profiles</value></data>
+  <data name="s_38045d10bf37e84b865957a6" xml:space="preserve"><value>Pick the source to capture.</value></data>
+  <data name="s_ff1cee74414621d812efa8f7" xml:space="preserve"><value>Pin</value></data>
+  <data name="s_f20c879465551f0d1457a13d" xml:space="preserve"><value>Pinned</value></data>
+  <data name="s_3db2f97be6d1a679cb8f3daa" xml:space="preserve"><value>Pixel ruler</value></data>
+  <data name="s_13b2c7037cd00802f54ed62a" xml:space="preserve"><value>Pixelate blur regions</value></data>
+  <data name="s_9514b7ff4860ead73491768e" xml:space="preserve"><value>Plugins</value></data>
+  <data name="s_2c3ad4dd078fc3537ef87219" xml:space="preserve"><value>PNG (lossless)</value></data>
+  <data name="s_72e9a59f5a1d6289dbacb35d" xml:space="preserve"><value>Port</value></data>
+  <data name="s_bcd505c1bf6c6e31013c2d0c" xml:space="preserve"><value>Preparing UI Automation scroll…</value></data>
+  <data name="s_dcb7fa3eadb36ec3505c6e1f" xml:space="preserve"><value>PrintScreen</value></data>
+  <data name="s_61fcba7a97dc4f4499f39b06" xml:space="preserve"><value>PrintScreen ownership</value></data>
+  <data name="s_985959785319747668373cc6" xml:space="preserve"><value>Project</value></data>
+  <data name="s_1d2b0e84e89462b45aacf0d7" xml:space="preserve"><value>QR and barcode extraction</value></data>
+  <data name="s_34f884429c02d640a9374ddc" xml:space="preserve"><value>QR and barcode results</value></data>
+  <data name="s_d5dbf10668861efcfb443134" xml:space="preserve"><value>Question · yellow</value></data>
+  <data name="s_d7e7b1cbcce96edd3ef7e794" xml:space="preserve"><value>Quick-share-LAN</value></data>
+  <data name="s_2b89651b1269f91ece1582d4" xml:space="preserve"><value>Ready to record a walkthrough</value></data>
+  <data name="s_50a45e647dbbd90e85ede9b3" xml:space="preserve"><value>REC</value></data>
+  <data name="s_690dbe9dc0993c4256683738" xml:space="preserve"><value>Recent</value></data>
+  <data name="s_7a40c6f62303c5ad1ff6d8ff" xml:space="preserve"><value>Reconstruct positioned OCR words into rows and columns, then copy them as TSV.</value></data>
+  <data name="s_bec9437c63c85483adc42ea9" xml:space="preserve"><value>Record a workflow, see key and click tracks, then export Markdown, Word, or PowerPoint.</value></data>
+  <data name="s_74273989b0966e2369b6d01a" xml:space="preserve"><value>Redo</value></data>
+  <data name="s_56b2d1fe3651ab5db0ce4901" xml:space="preserve"><value>Refresh providers</value></data>
+  <data name="s_04fbaa59ff2d0c2494d8673a" xml:space="preserve"><value>Region capture</value></data>
+  <data name="s_1777f302589ee906c4996552" xml:space="preserve"><value>Reinhard (default)</value></data>
+  <data name="s_764d27a2de40c78fe22edb8c" xml:space="preserve"><value>Relative folder under the vault, for example attachments or _resources.</value></data>
+  <data name="s_f4a8c472746de471dd2a0631" xml:space="preserve"><value>Reload all</value></data>
+  <data name="s_78d22b05b5081f5276035a41" xml:space="preserve"><value>Remove selected</value></data>
+  <data name="s_9916142a84323de47fa2b8d2" xml:space="preserve"><value>Removed · red</value></data>
+  <data name="s_b06f1662da4a13362baa31f7" xml:space="preserve"><value>Request access</value></data>
+  <data name="s_213b175e3ad444b3e28e2800" xml:space="preserve"><value>Restore library</value></data>
+  <data name="s_08f4f35ed423bccf06132b95" xml:space="preserve"><value>Restore PrintScreen shortcut</value></data>
+  <data name="s_1c62f54c28ffaf9964655f13" xml:space="preserve"><value>Retake</value></data>
+  <data name="s_d9e3159ad01baae5c2ea7a4a" xml:space="preserve"><value>Retake the capture. Hold Shift while clicking to refresh the background and keep annotations.</value></data>
+  <data name="s_b1d3c17e8d131616e4c9d243" xml:space="preserve"><value>Reveal in Explorer</value></data>
+  <data name="s_bf7187215099f26fa551e094" xml:space="preserve"><value>Reveal in folder</value></data>
+  <data name="s_3113c77cda867f848563dd9e" xml:space="preserve"><value>Reverse arrow direction</value></data>
+  <data name="s_88b5990f3ff597306bb82cf3" xml:space="preserve"><value>RGB</value></data>
+  <data name="s_8b84c8062f6019d965ae4b21" xml:space="preserve"><value>Right-click the canvas or a shape for the colour wheel.</value></data>
+  <data name="s_b3345528828dfe3e472f2844" xml:space="preserve"><value>Round the speech balloon body corners; the tail stays crisp.</value></data>
+  <data name="s_80ed131a45e40732cea575c7" xml:space="preserve"><value>Rounded corners</value></data>
+  <data name="s_898328a14d3b6a0b8495c9b4" xml:space="preserve"><value>Rule controls</value></data>
+  <data name="s_5ca0d370c6f29808131443ef" xml:space="preserve"><value>Run OCR</value></data>
+  <data name="s_3f0481b4cb79caa06b185357" xml:space="preserve"><value>Run OCR and the local rule pack, then add solid redactions for detected secrets.</value></data>
+  <data name="s_270d84c02ca68434cb518027" xml:space="preserve"><value>Run OCR on every entry that hasn&apos;t been indexed yet.</value></data>
+  <data name="s_aba5cf9d0cd894454c9f0315" xml:space="preserve"><value>Run positioned OCR and add editable text annotations anchored to the image regions.</value></data>
+  <data name="s_1509f561f2416598629b886a" xml:space="preserve"><value>Save</value></data>
+  <data name="s_ae63d915407b8905a45a49db" xml:space="preserve"><value>Save animated image</value></data>
+  <data name="s_5624a75d114ea3b153c9facf" xml:space="preserve"><value>Save lossless clip</value></data>
+  <data name="s_08330ed07cfe9e09a884fc54" xml:space="preserve"><value>Save project</value></data>
+  <data name="s_97394e6e6c8fca5b23e37bae" xml:space="preserve"><value>Save swatch</value></data>
+  <data name="s_77e80955d74fdefab4d22a25" xml:space="preserve"><value>Save the current document and copy a single-fetch LAN URL to the clipboard.</value></data>
+  <data name="s_b5c120b316c237a0deab3140" xml:space="preserve"><value>Saved</value></data>
+  <data name="s_27a993cce38c41fd54230227" xml:space="preserve"><value>Scan the capture locally for QR codes and barcodes.</value></data>
+  <data name="s_155cbc983caadbf07f325b1a" xml:space="preserve"><value>Scan to open the LAN share</value></data>
+  <data name="s_8bd01e67a19842548b20b8a0" xml:space="preserve"><value>SCROLL CAPTURE</value></data>
+  <data name="s_32e086fa471b43c2bbc4bc3a" xml:space="preserve"><value>Select a frame</value></data>
+  <data name="s_beafec79ffddbdecbb79b75d" xml:space="preserve"><value>Self-hosted</value></data>
+  <data name="s_bc105b69831a84080f1e06ba" xml:space="preserve"><value>Self-hosted destinations</value></data>
+  <data name="s_452e9331b76792191bf0056d" xml:space="preserve"><value>Send a flattened PNG to a selected local-only model.</value></data>
+  <data name="s_141cd0cb88e1bce349f70de2" xml:space="preserve"><value>Send PNG</value></data>
+  <data name="s_530a70af9b0cd7381c5beda0" xml:space="preserve"><value>Send the flattened PNG to a configured local command-line tool.</value></data>
+  <data name="s_85b0a19d271c80cb8f73ff55" xml:space="preserve"><value>Send the flattened PNG to an enabled Nextcloud or Immich destination.</value></data>
+  <data name="s_21afe2d60a8d4ae2d3464ffb" xml:space="preserve"><value>Send the flattened PNG to an explicitly selected declarative uploader.</value></data>
+  <data name="s_ec2389c1ff3520c8e1b632cd" xml:space="preserve"><value>Send to external command</value></data>
+  <data name="s_49ad0098d9cbcd524e8ce9c2" xml:space="preserve"><value>Send to LAN share</value></data>
+  <data name="s_0cb5e115505b23e59d70181c" xml:space="preserve"><value>Send to local AI</value></data>
+  <data name="s_22a8e55daa1b3ea1f5b87c81" xml:space="preserve"><value>Send to local LLM</value></data>
+  <data name="s_74a883a037bc227f91891ab6" xml:space="preserve"><value>Settings</value></data>
+  <data name="s_86e17bb7088eebff5046fb73" xml:space="preserve"><value>Settings file</value></data>
+  <data name="s_73814531d09bd272280a677d" xml:space="preserve"><value>Shape shadow</value></data>
+  <data name="s_5a8d57edce0872ccebe70eee" xml:space="preserve"><value>Shift+PrintScreen</value></data>
+  <data name="s_5e80222e22ab94fc5150c75a" xml:space="preserve"><value>Show a toast when a capture is saved</value></data>
+  <data name="s_6c39430570d0966c6dc56337" xml:space="preserve"><value>Show captures whose Auto-redact result was saved to disk.</value></data>
+  <data name="s_0783466e8ecb4a1fd47719d6" xml:space="preserve"><value>Show entries whose perceptual hashes are within six bits.</value></data>
+  <data name="s_4dc4cf6809d50807fb98c951" xml:space="preserve"><value>Show or hide the options panel (Spacebar)</value></data>
+  <data name="s_c1ee4e7bb643d9fd48ea7ad4" xml:space="preserve"><value>Sloppiness</value></data>
+  <data name="s_8ebbd60795f3980792030419" xml:space="preserve"><value>Smart element capture</value></data>
+  <data name="s_39210f62282de1f13dc33c4d" xml:space="preserve"><value>Snap a crop edge to the image boundary when it is within 16 pixels.</value></data>
+  <data name="s_18c13ebc877ba2608e667b6b" xml:space="preserve"><value>Snap to image edges</value></data>
+  <data name="s_11663aa0378876e2a9985dac" xml:space="preserve"><value>Snapture</value></data>
+  <data name="s_8b807cc2cabc4940bec2e2d3" xml:space="preserve"><value>Snapture - Color Picker</value></data>
+  <data name="s_4a088da7a04fcd741d7166a0" xml:space="preserve"><value>Snapture - GIF frame editor</value></data>
+  <data name="s_c1ad126a185508b3f6d75f81" xml:space="preserve"><value>Snapture - GIF recording</value></data>
+  <data name="s_56cfed0122a33b03448b23f8" xml:space="preserve"><value>Snapture - OCR result</value></data>
+  <data name="s_4ab03609f5848a4d1b22e165" xml:space="preserve"><value>Snapture - OCR table</value></data>
+  <data name="s_913e279e70a1316fe784fec4" xml:space="preserve"><value>Snapture - QR and barcode results</value></data>
+  <data name="s_67c1de5883a4963b58f0889f" xml:space="preserve"><value>Snapture - scrolling capture</value></data>
+  <data name="s_c78b62bf8bcb9a2994249191" xml:space="preserve"><value>Snapture - Settings</value></data>
+  <data name="s_da6bb8b5dc9d0f59cabda1e8" xml:space="preserve"><value>Snapture - Trim or split video</value></data>
+  <data name="s_a5e32f038b0ee5c0768afbac" xml:space="preserve"><value>Snapture - Video recording</value></data>
+  <data name="s_c2153c27ed8f7abf744d175e" xml:space="preserve"><value>Snapture — Capture History</value></data>
+  <data name="s_1eff9d992581e4fd23f187a1" xml:space="preserve"><value>Snapture — Editor</value></data>
+  <data name="s_37eb5d15a6781ecdeaa8e424" xml:space="preserve"><value>Snapture — LAN share QR</value></data>
+  <data name="s_9e9181b0f83fcda4c64321ff" xml:space="preserve"><value>Snapture — Local AI</value></data>
+  <data name="s_1316549ad671bb457d2b1aeb" xml:space="preserve"><value>Snapture — Local AI result</value></data>
+  <data name="s_dce8638dcc6d1a88e697d70d" xml:space="preserve"><value>Snapture — Plugins</value></data>
+  <data name="s_6077ea0d6c7e8225ffcbeb32" xml:space="preserve"><value>Snapture — Step Capture</value></data>
+  <data name="s_7609496c5faf35a5ffec438e" xml:space="preserve"><value>Snapture Editor</value></data>
+  <data name="s_75d5cefa218fe5407b05073c" xml:space="preserve"><value>Snapture Region</value></data>
+  <data name="s_5780d8b29e58f81b08ab578b" xml:space="preserve"><value>Snapture Ruler</value></data>
+  <data name="s_44bdccd84c94716b42c8aee6" xml:space="preserve"><value>Snapture Smart Capture</value></data>
+  <data name="s_74c61010a4eb214f3cb3d3e0" xml:space="preserve"><value>Snapture Window Picker</value></data>
+  <data name="s_b328b71982d199195475e7c9" xml:space="preserve"><value>Split at markers</value></data>
+  <data name="s_c99c96a6ad1175b6feb561dd" xml:space="preserve"><value>Split files</value></data>
+  <data name="s_c1be3e273e5b640ebe3bb3fb" xml:space="preserve"><value>Start (seconds)</value></data>
+  <data name="s_9ff3a615582ec81ce015f9a2" xml:space="preserve"><value>Start now</value></data>
+  <data name="s_30756af0134e4bf1194de803" xml:space="preserve"><value>Start recording</value></data>
+  <data name="s_0d7cee26bf926e953f2a76a6" xml:space="preserve"><value>Startup and capture flow</value></data>
+  <data name="s_5c14a2ac8e36fd4fa574fd66" xml:space="preserve"><value>Step Capture</value></data>
+  <data name="s_cae7d57bc067a514b8e34c95" xml:space="preserve"><value>Stop</value></data>
+  <data name="s_c2a7865d3b96dac6be7820b7" xml:space="preserve"><value>Stop &amp; save</value></data>
+  <data name="s_1582a13fefaa6db2a7598443" xml:space="preserve"><value>Stroke</value></data>
+  <data name="s_7e744141b40ea5501412e42c" xml:space="preserve"><value>Style</value></data>
+  <data name="s_6725e7bbcd28f3a8a586fa34" xml:space="preserve"><value>System</value></data>
+  <data name="s_16d1c9050a0b32e83764a81d" xml:space="preserve"><value>Table</value></data>
+  <data name="s_a081b78436d570ff68315949" xml:space="preserve"><value>Tag new or selected annotations as a blocker, question, or nit.</value></data>
+  <data name="s_cbf11d7e4960255f38841655" xml:space="preserve"><value>Temporarily hides the Windows desktop icon list during capture and restores it even if capture fails.</value></data>
+  <data name="s_4044b7181a29ecb8ae3aa923" xml:space="preserve"><value>Text direction</value></data>
+  <data name="s_cfa8342df33330ccb462b630" xml:space="preserve"><value>This instruction and the flattened PNG stay on the selected loopback runtime.</value></data>
+  <data name="s_7f6013d2b38518aed997b429" xml:space="preserve"><value>Tint a code line as added, removed, focus, blur, or fade.</value></data>
+  <data name="s_11fe09b898faf63744f47e3b" xml:space="preserve"><value>Toggle options panel</value></data>
+  <data name="s_cfea1902abba87100f126176" xml:space="preserve"><value>Token TTL (minutes)</value></data>
+  <data name="s_003d6ded708737445898f492" xml:space="preserve"><value>Tone-map HDR highlights for SDR viewers. Turn off to use a direct scRGB clamp; bright highlights may clip.</value></data>
+  <data name="s_7c58a5768f8e338dd465e813" xml:space="preserve"><value>Trim copy</value></data>
+  <data name="s_9d5690f5e21291e61f472405" xml:space="preserve"><value>Trim or split a recording</value></data>
+  <data name="s_d84d54be8ca8bbc7d8927ac9" xml:space="preserve"><value>Try a larger crop with more contrast and a clear quiet zone around the code.</value></data>
+  <data name="s_994039152f43e8c2c2f99d3c" xml:space="preserve"><value>Try a larger region, higher-contrast text, or install the matching Windows OCR language pack.</value></data>
+  <data name="s_0485f58a162db03bda0a77e6" xml:space="preserve"><value>Tune capture, output, privacy, sharing, and diagnostics from one place.</value></data>
+  <data name="s_6ca6a19e6007eae494d1830d" xml:space="preserve"><value>Unassign</value></data>
+  <data name="s_a8283ade31856f71220db0e6" xml:space="preserve"><value>Undo</value></data>
+  <data name="s_865e89de78d94c747184d6a7" xml:space="preserve"><value>Upload</value></data>
+  <data name="s_4473603ab32725a1318c0d99" xml:space="preserve"><value>Upload capture</value></data>
+  <data name="s_615e714ba55b494a0deecc1a" xml:space="preserve"><value>Upload to self-hosted destination</value></data>
+  <data name="s_d72c9175adc664d2389a5540" xml:space="preserve"><value>Use an OCR engine with word boxes and capture a table with clear row and column spacing.</value></data>
+  <data name="s_19f84357e6d401813147d9a6" xml:space="preserve"><value>Use System to follow the Windows app theme, or force Snapture into a fixed theme.</value></data>
+  <data name="s_1d6ae95d3aca4227acdf48a2" xml:space="preserve"><value>Use your phone camera while it is on the same Wi-Fi network. The link keeps the existing TTL and single-fetch rules.</value></data>
+  <data name="s_9580876d1bc26827e99d2f8e" xml:space="preserve"><value>Uses DirectML device 0 when the optional provider is available. Snapture falls back to CPU automatically if it is missing or cannot initialize.</value></data>
+  <data name="s_bdc1bbeb6d23393d56fc03a4" xml:space="preserve"><value>Verified-redacted only</value></data>
+  <data name="s_727cd3a64d792ad410e3cb60" xml:space="preserve"><value>Vertical</value></data>
+  <data name="s_a18994e07bbaf14da637e394" xml:space="preserve"><value>Video recording</value></data>
+  <data name="s_a521b198eea322d98eacf745" xml:space="preserve"><value>vs #FFFFFF: 0 Lc</value></data>
+  <data name="s_82cf04d53a8e9c205d2aa60d" xml:space="preserve"><value>Waiting for frame</value></data>
+  <data name="s_060ded6837f691788c9ed913" xml:space="preserve"><value>Waiting for the first viewport…</value></data>
+  <data name="s_d4c062affed551f03392f21d" xml:space="preserve"><value>When Windows HDR is active, Snapture captures FP16 surfaces and maps them to SDR exports and recordings with this operator. Reinhard is the conservative default.</value></data>
+  <data name="s_4b223c706f037a242f1600c5" xml:space="preserve"><value>WidthAndHeight</value></data>
+  <data name="s_b560a3558c5433197ff4b0c9" xml:space="preserve"><value>Win32 window class name, such as Chrome_WidgetWin_1</value></data>
+  <data name="s_388fffbe43b366eb7c910f37" xml:space="preserve"><value>Window capture</value></data>
+  <data name="s_e2f41bd7c331bde478c086eb" xml:space="preserve"><value>Windows 11 22H2+ can draw a yellow border around captured windows unless Snapture has borderless-capture access. The consent persists across reinstalls.</value></data>
+  <data name="s_19034993b8bae60826cb75bf" xml:space="preserve"><value>Windows AI and Windows OCR remain preferred for regular OCR. Auto-redact uses RapidOCR&apos;s shared DBNet text-region path first, with bundled Latin models. An optional OneOCR sidecar can use the Windows Snipping Tool model without sending images to the cloud.</value></data>
+  <data name="s_1520195daad73c516c60f26c" xml:space="preserve"><value>WinRT (Windows.Graphics.Capture)</value></data>
+  <data name="s_4cd598c32f82ff4a6908f45d" xml:space="preserve"><value>Wraps the image in a compact code-window frame on export.</value></data>
+</root>
+
+
