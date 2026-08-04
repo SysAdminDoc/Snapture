@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 using Snapture.App.Services;
 
 namespace Snapture.App.Views;
@@ -159,23 +158,27 @@ public partial class HistoryWindow : Window
         }
     }
 
-    private void OnBackupLibraryClicked(object sender, RoutedEventArgs e)
+    private async void OnBackupLibraryClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new SaveFileDialog
-        {
-            Filter = "Snapture library (*.snapture-library)|*.snapture-library",
-            DefaultExt = ".snapture-library",
-            AddExtension = true,
-            FileName = $"snapture-library-{DateTime.Now:yyyyMMdd-HHmm}.snapture-library",
-            Title = "Choose a Snapture history backup"
-        };
-        if (dialog.ShowDialog(this) != true)
+        var path = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "Snapture library (*.snapture-library)|*.snapture-library",
+            $"snapture-library-{DateTime.Now:yyyyMMdd-HHmm}.snapture-library",
+            ".snapture-library",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice(
+                    "Snapture library",
+                    new[] { ".snapture-library" })
+            },
+            title: "Choose a Snapture history backup");
+        if (path is null)
             return;
 
         try
         {
-            var path = _history.ExportLibrary(dialog.FileName);
-            StatusText.Text = $"Library backup created: {Path.GetFileName(path)}";
+            var backupPath = _history.ExportLibrary(path);
+            StatusText.Text = $"Library backup created: {Path.GetFileName(backupPath)}";
         }
         catch (Exception ex)
         {
@@ -183,20 +186,19 @@ public partial class HistoryWindow : Window
         }
     }
 
-    private void OnRestoreLibraryClicked(object sender, RoutedEventArgs e)
+    private async void OnRestoreLibraryClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog
-        {
-            Filter = "Snapture library (*.snapture-library)|*.snapture-library|All files (*.*)|*.*",
-            CheckFileExists = true,
-            Title = "Choose a Snapture history backup"
-        };
-        if (dialog.ShowDialog(this) != true)
+        var path = await StoragePickerService.PickOpenFileAsync(
+            this,
+            "Snapture library (*.snapture-library)|*.snapture-library|All files (*.*)|*.*",
+            new[] { ".snapture-library" },
+            title: "Choose a Snapture history backup");
+        if (path is null)
             return;
 
         try
         {
-            var result = _history.ImportLibrary(dialog.FileName);
+            var result = _history.ImportLibrary(path);
             PopulateFilters();
             PopulateProjects();
             ApplyFilters();

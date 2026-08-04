@@ -1,7 +1,6 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
-using Microsoft.Win32;
 using Snapture.App.Services;
 
 namespace Snapture.App.Views;
@@ -204,26 +203,31 @@ public partial class VideoRecordingWindow : Window
         FormatText.Text = $"Recording {_recorder.OutputResolutionDescription} to {_recorder.ContainerDescription} ({_recorder.SelectedCodecDescription}); {_recorder.CodecAvailabilityDescription}; {_recorder.CapturePixelFormatDescription}; {_recorder.HdrColorCorrectionDescription}; tone map: {_recorder.ToneMapOperatorDescription}; {_recorder.DirtyRegionDescription}; {_recorder.AudioDescription}; {_recorder.ZoomSuggestionsDescription}; {_recorder.AutoTightenDescription}. Frames stream to disk.";
     }
 
-    private void OnStopClicked(object sender, RoutedEventArgs e)
+    private async void OnStopClicked(object sender, RoutedEventArgs e)
     {
         _ui.Stop();
         _recorder.Stop();
 
-        var dlg = new SaveFileDialog
-        {
-            Filter = "MP4 Video (*.mp4)|*.mp4",
-            FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.mp4"
-        };
-        if (dlg.ShowDialog(this) == true)
+        var path = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "MP4 Video (*.mp4)|*.mp4",
+            $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.mp4",
+            ".mp4",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice("MP4 Video", new[] { ".mp4" })
+            },
+            title: "Save recording");
+        if (path is not null)
         {
             try
             {
                 if (File.Exists(_tempPath))
                 {
-                    File.Copy(_tempPath, dlg.FileName, overwrite: true);
-                    _ = _recorder.ExportZoomSuggestions(dlg.FileName);
+                    File.Copy(_tempPath, path, overwrite: true);
+                    _ = _recorder.ExportZoomSuggestions(path);
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                        "explorer.exe", $"/select,\"{dlg.FileName}\"") { UseShellExecute = true });
+                        "explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
                 }
             }
             catch (Exception ex)

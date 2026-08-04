@@ -6,7 +6,6 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using SkiaSharp.Views.WPF;
@@ -1266,16 +1265,17 @@ public partial class EditorWindow : Window
     private void OnAdjustmentClicked(object sender, RoutedEventArgs e) => Canvas.InvalidateVisual();
     private void OnFrameClicked(object sender, RoutedEventArgs e) => Canvas.InvalidateVisual();
 
-    private void OnOpenClicked(object sender, RoutedEventArgs e)
+    private async void OnOpenClicked(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog
-        {
-            Filter = "Snapture project (*.snapture)|*.snapture|Image (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp"
-        };
-        if (dlg.ShowDialog(DialogOwner) != true) return;
+        var path = await StoragePickerService.PickOpenFileAsync(
+            DialogOwner,
+            "Snapture project (*.snapture)|*.snapture|Image (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp",
+            new[] { ".snapture", ".png", ".jpg", ".jpeg", ".bmp" },
+            title: "Open a Snapture project or image");
+        if (path is null) return;
         try
         {
-            EditorTabHostWindow.Open(new EditorWindow(dlg.FileName));
+            EditorTabHostWindow.Open(new EditorWindow(path));
         }
         catch (Exception ex)
         {
@@ -1334,17 +1334,23 @@ public partial class EditorWindow : Window
         return true;
     }
 
-    private void OnSaveProjectClicked(object sender, RoutedEventArgs e)
+    private async void OnSaveProjectClicked(object sender, RoutedEventArgs e)
     {
         if (_projectPath is null)
         {
-            var dlg = new SaveFileDialog
-            {
-                Filter = "Snapture project (*.snapture)|*.snapture",
-                FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.snapture"
-            };
-            if (dlg.ShowDialog(DialogOwner) != true) return;
-            _projectPath = dlg.FileName;
+            _projectPath = await StoragePickerService.PickSaveFileAsync(
+                DialogOwner,
+                "Snapture project (*.snapture)|*.snapture",
+                $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.snapture",
+                ".snapture",
+                new[]
+                {
+                    new StoragePickerService.FileTypeChoice(
+                        "Snapture project",
+                        new[] { ".snapture" })
+                },
+                title: "Save the Snapture project");
+            if (_projectPath is null) return;
         }
         try
         {
@@ -1369,16 +1375,25 @@ public partial class EditorWindow : Window
         ExportTo(_exportPath);
     }
 
-    private void OnExportAsClicked(object sender, RoutedEventArgs e)
+    private async void OnExportAsClicked(object sender, RoutedEventArgs e)
     {
-        var dlg = new SaveFileDialog
-        {
-            Filter = "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|BMP (*.bmp)|*.bmp|WebP (*.webp)|*.webp|SVG (*.svg)|*.svg",
-            FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png"
-        };
-        if (dlg.ShowDialog(DialogOwner) != true) return;
-        ExportTo(dlg.FileName);
-        _exportPath = dlg.FileName;
+        var path = await StoragePickerService.PickSaveFileAsync(
+            DialogOwner,
+            "PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|BMP (*.bmp)|*.bmp|WebP (*.webp)|*.webp|SVG (*.svg)|*.svg",
+            $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.png",
+            ".png",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice("PNG", new[] { ".png" }),
+                new StoragePickerService.FileTypeChoice("JPEG", new[] { ".jpg", ".jpeg" }),
+                new StoragePickerService.FileTypeChoice("BMP", new[] { ".bmp" }),
+                new StoragePickerService.FileTypeChoice("WebP", new[] { ".webp" }),
+                new StoragePickerService.FileTypeChoice("SVG", new[] { ".svg" })
+            },
+            title: "Export capture");
+        if (path is null) return;
+        ExportTo(path);
+        _exportPath = path;
         NotifyDocumentTitleChanged();
     }
 

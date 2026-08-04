@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — WinAppSDK storage pickers
+
+- File and folder selection now uses the Windows App SDK 1.8 `Microsoft.Windows.Storage.Pickers` APIs for WPF windows, with an owner-aware Win32 fallback for tray-only flows and runtime compatibility.
+
 ### Added — Optional OneOCR sidecar
 
 - OCR now discovers or accepts a user-supplied `sponeocr.exe` sidecar that follows the community OneOCR pattern (`stdin stdout`). Images remain local, the process is launched without a shell, and bounded timeout/output guards fail back cleanly to RapidOCR.

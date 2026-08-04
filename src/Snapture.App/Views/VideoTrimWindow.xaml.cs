@@ -38,21 +38,26 @@ public partial class VideoTrimWindow : Window
         if (!TryReadRange(out var start, out var end))
             return;
 
-        var dialog = new Microsoft.Win32.SaveFileDialog
-        {
-            Filter = "MP4 video (*.mp4)|*.mp4",
-            FileName = $"{Path.GetFileNameWithoutExtension(_inputPath)}_trim.mp4",
-            OverwritePrompt = true
-        };
-        if (dialog.ShowDialog(this) != true)
+        var path = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "MP4 video (*.mp4)|*.mp4",
+            $"{Path.GetFileNameWithoutExtension(_inputPath)}_trim.mp4",
+            ".mp4",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice("MP4 video", new[] { ".mp4" })
+            },
+            Path.GetDirectoryName(_inputPath),
+            "Choose the trimmed recording destination");
+        if (path is null)
             return;
 
         try
         {
             SetBusy(true);
             SetStatus("Rendering the trimmed copy…");
-            await VideoSegmentService.TrimAsync(_inputPath, dialog.FileName, start, end);
-            SetStatus($"Saved {Path.GetFileName(dialog.FileName)}.");
+            await VideoSegmentService.TrimAsync(_inputPath, path, start, end);
+            SetStatus($"Saved {Path.GetFileName(path)}.");
         }
         catch (Exception ex)
         {
@@ -70,20 +75,19 @@ public partial class VideoTrimWindow : Window
         if (cutPoints is null)
             return;
 
-        var dialog = new Microsoft.Win32.OpenFolderDialog
-        {
-            Title = "Choose a folder for the split files",
-            InitialDirectory = Path.GetDirectoryName(_inputPath)
-        };
-        if (dialog.ShowDialog() != true)
+        var folderPath = await StoragePickerService.PickFolderAsync(
+            this,
+            Path.GetDirectoryName(_inputPath),
+            "Choose a folder for the split files");
+        if (folderPath is null)
             return;
 
         try
         {
             SetBusy(true);
             SetStatus("Rendering split files…");
-            var outputs = await VideoSegmentService.SplitAsync(_inputPath, dialog.FolderName, cutPoints);
-            SetStatus($"Saved {outputs.Count} segment(s) to {dialog.FolderName}.");
+            var outputs = await VideoSegmentService.SplitAsync(_inputPath, folderPath, cutPoints);
+            SetStatus($"Saved {outputs.Count} segment(s) to {folderPath}.");
         }
         catch (Exception ex)
         {

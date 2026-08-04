@@ -226,14 +226,15 @@ public sealed class TrayIconHost : IDisposable
         var ocrFromFile = new MenuItem { Header = "OCR from file…" };
         ocrFromFile.Click += async (_, _) =>
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Image (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp"
-            };
-            if (dlg.ShowDialog() != true) return;
+            var path = await StoragePickerService.PickOpenFileAsync(
+                owner: null,
+                "Image (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp",
+                new[] { ".png", ".jpg", ".jpeg", ".bmp" },
+                title: "Choose an image for OCR");
+            if (path is null) return;
             try
             {
-                var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(dlg.FileName));
+                var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(path));
                 var result = await OcrService.RecognizeAsync(bi);
                 string text = result?.Text ?? string.Empty;
                 if (!string.IsNullOrEmpty(text))
@@ -271,19 +272,19 @@ public sealed class TrayIconHost : IDisposable
         tools.Items.Add(recordGif);
 
         var editGif = new MenuItem { Header = "Edit GIF…" };
-        editGif.Click += (_, _) =>
+        editGif.Click += async (_, _) =>
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "Animated GIF (*.gif)|*.gif",
-                CheckFileExists = true
-            };
-            if (dlg.ShowDialog() != true)
+            var path = await StoragePickerService.PickOpenFileAsync(
+                owner: null,
+                "Animated GIF (*.gif)|*.gif",
+                new[] { ".gif" },
+                title: "Choose an animated GIF");
+            if (path is null)
                 return;
 
             try
             {
-                using var editor = GifFrameEditor.LoadGif(dlg.FileName);
+                using var editor = GifFrameEditor.LoadGif(path);
                 new Views.GifFrameEditorWindow(editor).ShowDialog();
             }
             catch (Exception ex)
@@ -393,15 +394,15 @@ public sealed class TrayIconHost : IDisposable
         recordVideo.Items.Add(autoTighten);
 
         var editVideo = new MenuItem { Header = "Trim or split a video…" };
-        editVideo.Click += (_, _) =>
+        editVideo.Click += async (_, _) =>
         {
-            var dlg = new Microsoft.Win32.OpenFileDialog
-            {
-                Filter = "MP4 video (*.mp4)|*.mp4|All files (*.*)|*.*",
-                CheckFileExists = true
-            };
-            if (dlg.ShowDialog() == true)
-                new Views.VideoTrimWindow(dlg.FileName).Show();
+            var path = await StoragePickerService.PickOpenFileAsync(
+                owner: null,
+                "MP4 video (*.mp4)|*.mp4|All files (*.*)|*.*",
+                new[] { ".mp4" },
+                title: "Choose a recording to trim or split");
+            if (path is not null)
+                new Views.VideoTrimWindow(path).Show();
         };
         recordVideo.Items.Add(editVideo);
 
@@ -470,20 +471,25 @@ public sealed class TrayIconHost : IDisposable
             if (!_ringBuffer.IsRunning)
                 return;
 
-            var dlg = new Microsoft.Win32.SaveFileDialog
-            {
-                Filter = "MP4 video (*.mp4)|*.mp4",
-                FileName = $"Snapture_Ring_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.mp4"
-            };
-            if (dlg.ShowDialog() != true)
+            var path = await StoragePickerService.PickSaveFileAsync(
+                owner: null,
+                "MP4 video (*.mp4)|*.mp4",
+                $"Snapture_Ring_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.mp4",
+                ".mp4",
+                new[]
+                {
+                    new StoragePickerService.FileTypeChoice("MP4 video", new[] { ".mp4" })
+                },
+                title: "Save ring-buffer recording");
+            if (path is null)
                 return;
 
             try
             {
-                await _ringBuffer.SaveRecentAsync(duration, dlg.FileName);
+                await _ringBuffer.SaveRecentAsync(duration, path);
                 ShowToast("Ring buffer saved", $"Saved the last {duration.TotalSeconds:0} seconds.");
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                    "explorer.exe", $"/select,\"{dlg.FileName}\"") { UseShellExecute = true });
+                    "explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
             }
             catch (Exception ex)
             {

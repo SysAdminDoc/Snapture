@@ -1,6 +1,5 @@
 using System.Windows;
 using System.Windows.Threading;
-using Microsoft.Win32;
 using Snapture.App.Services;
 
 namespace Snapture.App.Views;

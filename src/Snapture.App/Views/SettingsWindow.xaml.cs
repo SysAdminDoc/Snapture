@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
-using Microsoft.Win32;
 using Snapture.App.Editor;
 using Snapture.App.Services;
 using Snapture.Capture;
@@ -192,15 +191,16 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void OnBrowseFolderClicked(object sender, RoutedEventArgs e)
+    private async void OnBrowseFolderClicked(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFolderDialog
-        {
-            InitialDirectory = Directory.Exists(OutputFolderBox.Text) ? OutputFolderBox.Text : Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
-            Title = "Pick a folder for new captures"
-        };
-        if (dlg.ShowDialog(this) == true)
-            OutputFolderBox.Text = dlg.FolderName;
+        var path = await StoragePickerService.PickFolderAsync(
+            this,
+            Directory.Exists(OutputFolderBox.Text)
+                ? OutputFolderBox.Text
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+            "Pick a folder for new captures");
+        if (path is not null)
+            OutputFolderBox.Text = path;
     }
 
     private void OnRequestBorderlessClicked(object sender, RoutedEventArgs e)
@@ -355,19 +355,23 @@ public partial class SettingsWindow : Window
             $"Test: open {lan.BaseUrl}/ in any LAN browser";
     }
 
-    private void OnImportClicked(object sender, RoutedEventArgs e)
+    private async void OnImportClicked(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog { Filter = "Snapture settings (*.json)|*.json|All files|*.*" };
-        if (dlg.ShowDialog(this) != true) return;
+        var path = await StoragePickerService.PickOpenFileAsync(
+            this,
+            "Snapture settings (*.json)|*.json|All files|*.*",
+            new[] { ".json" },
+            title: "Import Snapture settings");
+        if (path is null) return;
         try
         {
-            var json = File.ReadAllText(dlg.FileName);
+            var json = File.ReadAllText(path);
             var imported = JsonSerializer.Deserialize<SnaptureSettings>(json,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             if (imported is null) { StatusText.Text = "Could not parse settings."; return; }
             CopyInto(imported, _draft);
             Bind();
-            StatusText.Text = $"Imported settings from {Path.GetFileName(dlg.FileName)}";
+            StatusText.Text = $"Imported settings from {Path.GetFileName(path)}";
         }
         catch (Exception ex)
         {
@@ -375,19 +379,26 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void OnExportClicked(object sender, RoutedEventArgs e)
+    private async void OnExportClicked(object sender, RoutedEventArgs e)
     {
-        var dlg = new SaveFileDialog
-        {
-            Filter = "Snapture settings (*.json)|*.json",
-            FileName = $"snapture-settings-{DateTime.Now:yyyy-MM-dd}.json"
-        };
-        if (dlg.ShowDialog(this) != true) return;
+        var path = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "Snapture settings (*.json)|*.json",
+            $"snapture-settings-{DateTime.Now:yyyy-MM-dd}.json",
+            ".json",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice(
+                    "Snapture settings",
+                    new[] { ".json" })
+            },
+            title: "Export Snapture settings");
+        if (path is null) return;
         try
         {
-            File.WriteAllText(dlg.FileName, JsonSerializer.Serialize(_draft,
+            File.WriteAllText(path, JsonSerializer.Serialize(_draft,
                 new JsonSerializerOptions { WriteIndented = true }));
-            StatusText.Text = $"Exported to {Path.GetFileName(dlg.FileName)}";
+            StatusText.Text = $"Exported to {Path.GetFileName(path)}";
         }
         catch (Exception ex)
         {
@@ -436,17 +447,16 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void OnBrowseOneOcrClicked(object sender, RoutedEventArgs e)
+    private async void OnBrowseOneOcrClicked(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog
+        var path = await StoragePickerService.PickOpenFileAsync(
+            this,
+            "OneOCR sidecar (sponeocr.exe)|sponeocr.exe;sp-oneocr.exe|Executable files (*.exe)|*.exe",
+            new[] { ".exe" },
+            title: "Select the optional sp-oneocr executable");
+        if (path is not null)
         {
-            Filter = "OneOCR sidecar (sponeocr.exe)|sponeocr.exe;sp-oneocr.exe|Executable files (*.exe)|*.exe",
-            CheckFileExists = true,
-            Title = "Select the optional sp-oneocr executable"
-        };
-        if (dlg.ShowDialog(this) == true)
-        {
-            OneOcrPathBox.Text = dlg.FileName;
+            OneOcrPathBox.Text = path;
             OneOcrStatusText.Text = "OneOCR: selected; click Save to enable this sidecar.";
         }
     }

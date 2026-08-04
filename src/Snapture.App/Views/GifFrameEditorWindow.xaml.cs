@@ -5,7 +5,6 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 using Snapture.App.Services;
 
 namespace Snapture.App.Views;
@@ -141,23 +140,29 @@ public partial class GifFrameEditorWindow : Window
         }
     }
 
-    private void OnSaveClicked(object sender, RoutedEventArgs e)
+    private async void OnSaveClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new SaveFileDialog
-        {
-            Filter = "Animated GIF (*.gif)|*.gif|Animated PNG (*.apng)|*.apng|Animated AVIF (*.avif)|*.avif",
-            FilterIndex = 1,
-            FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.gif"
-        };
-        if (dialog.ShowDialog(this) != true)
+        var selectedPath = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "Animated GIF (*.gif)|*.gif|Animated PNG (*.apng)|*.apng|Animated AVIF (*.avif)|*.avif",
+            $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.gif",
+            ".gif",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice("Animated GIF", new[] { ".gif" }),
+                new StoragePickerService.FileTypeChoice("Animated PNG", new[] { ".apng" }),
+                new StoragePickerService.FileTypeChoice("Animated AVIF", new[] { ".avif" })
+            },
+            title: "Save animated image");
+        if (selectedPath is null)
             return;
 
         try
         {
-            var format = dialog.FilterIndex switch
+            var format = Path.GetExtension(selectedPath).ToLowerInvariant() switch
             {
-                2 => AnimatedImageFormat.Apng,
-                3 => AnimatedImageFormat.Avif,
+                ".apng" => AnimatedImageFormat.Apng,
+                ".avif" => AnimatedImageFormat.Avif,
                 _ => AnimatedImageFormat.Gif
             };
             if (!GifEncoder.IsFormatSupported(format))
@@ -171,7 +176,7 @@ public partial class GifFrameEditorWindow : Window
             }
 
             string outputPath = Path.ChangeExtension(
-                dialog.FileName,
+                selectedPath,
                 GifEncoder.GetExtension(format).TrimStart('.'));
             _editor.SaveAs(outputPath, format);
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
@@ -186,21 +191,28 @@ public partial class GifFrameEditorWindow : Window
         }
     }
 
-    private void OnSaveLosslessClicked(object sender, RoutedEventArgs e)
+    private async void OnSaveLosslessClicked(object sender, RoutedEventArgs e)
     {
-        var dialog = new SaveFileDialog
-        {
-            Filter = "Lossless GIF clip (*.gif)|*.gif",
-            FileName = $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_clip.gif"
-        };
-        if (dialog.ShowDialog(this) != true)
+        var path = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "Lossless GIF clip (*.gif)|*.gif",
+            $"Snapture_{DateTime.Now:yyyy-MM-dd_HH-mm-ss}_clip.gif",
+            ".gif",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice(
+                    "Lossless GIF clip",
+                    new[] { ".gif" })
+            },
+            title: "Save lossless GIF clip");
+        if (path is null)
             return;
 
         try
         {
-            _editor.SaveLossless(dialog.FileName);
+            _editor.SaveLossless(path);
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(
-                "explorer.exe", $"/select,\"{dialog.FileName}\"") { UseShellExecute = true });
+                "explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
             DialogResult = true;
             Close();
         }

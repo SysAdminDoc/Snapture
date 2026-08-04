@@ -4,7 +4,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using Microsoft.Win32;
 using Snapture.App.Services;
 
 namespace Snapture.App.Views;
@@ -183,23 +182,29 @@ public partial class StepCaptureWindow : Window
         catch { return null; }
     }
 
-    private void OnExportClicked(object sender, RoutedEventArgs e)
+    private async void OnExportClicked(object sender, RoutedEventArgs e)
     {
         if (_session is null || _session.Frames.Count == 0)
         {
             StatusText.Text = "Nothing to export — record some steps first.";
             return;
         }
-        var dlg = new SaveFileDialog
-        {
-            Filter = "Markdown bundle (*.md)|*.md",
-            FileName = "steps.md",
-            InitialDirectory = _session.SessionFolder,
-            Title = "Choose output location for the steps.md file"
-        };
-        if (dlg.ShowDialog(this) != true) return;
+        var selectedPath = await StoragePickerService.PickSaveFileAsync(
+            this,
+            "Markdown bundle (*.md)|*.md",
+            "steps.md",
+            ".md",
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice(
+                    "Markdown bundle",
+                    new[] { ".md" })
+            },
+            _session.SessionFolder,
+            "Choose output location for the steps.md file");
+        if (selectedPath is null) return;
 
-        var outDir = Path.GetDirectoryName(dlg.FileName)!;
+        var outDir = Path.GetDirectoryName(selectedPath)!;
         var entries = _session.Frames
             .Select(f => new StepCaptureExporter.StepEntry(
                 f.Number, f.FilePath,
@@ -210,9 +215,9 @@ public partial class StepCaptureWindow : Window
 
         try
         {
-            var path = StepCaptureExporter.ExportMarkdown(outDir, TitleBox.Text, entries);
-            StatusText.Text = $"Exported: {path}";
-            try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true }); } catch { }
+            var outputPath = StepCaptureExporter.ExportMarkdown(outDir, TitleBox.Text, entries);
+            StatusText.Text = $"Exported: {outputPath}";
+            try { Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{outputPath}\"") { UseShellExecute = true }); } catch { }
         }
         catch (Exception ex)
         {
@@ -220,13 +225,13 @@ public partial class StepCaptureWindow : Window
         }
     }
 
-    private void OnExportDocxClicked(object sender, RoutedEventArgs e) =>
-        ExportOfficeDocument(pptx: false);
+    private async void OnExportDocxClicked(object sender, RoutedEventArgs e) =>
+        await ExportOfficeDocument(pptx: false);
 
-    private void OnExportPptxClicked(object sender, RoutedEventArgs e) =>
-        ExportOfficeDocument(pptx: true);
+    private async void OnExportPptxClicked(object sender, RoutedEventArgs e) =>
+        await ExportOfficeDocument(pptx: true);
 
-    private void ExportOfficeDocument(bool pptx)
+    private async Task ExportOfficeDocument(bool pptx)
     {
         if (_session is null || _session.Frames.Count == 0)
         {
@@ -236,29 +241,33 @@ public partial class StepCaptureWindow : Window
 
         var extension = pptx ? ".pptx" : ".docx";
         var label = pptx ? "PowerPoint" : "Word";
-        var dlg = new SaveFileDialog
-        {
-            Filter = pptx
+        var selectedPath = await StoragePickerService.PickSaveFileAsync(
+            this,
+            pptx
                 ? "PowerPoint presentation (*.pptx)|*.pptx"
                 : "Word document (*.docx)|*.docx",
-            DefaultExt = extension,
-            AddExtension = true,
-            FileName = $"{SafeFileName(TitleBox.Text)}{extension}",
-            InitialDirectory = _session.SessionFolder,
-            Title = $"Choose output location for the {label} document"
-        };
-        if (dlg.ShowDialog(this) != true) return;
+            $"{SafeFileName(TitleBox.Text)}{extension}",
+            extension,
+            new[]
+            {
+                new StoragePickerService.FileTypeChoice(
+                    pptx ? "PowerPoint presentation" : "Word document",
+                    new[] { extension })
+            },
+            _session.SessionFolder,
+            $"Choose output location for the {label} document");
+        if (selectedPath is null) return;
 
         var entries = BuildExportEntries();
         try
         {
-            var path = pptx
-                ? StepCaptureOfficeExporter.ExportPptx(dlg.FileName, TitleBox.Text, entries)
-                : StepCaptureOfficeExporter.ExportDocx(dlg.FileName, TitleBox.Text, entries);
-            StatusText.Text = $"Exported {label}: {path}";
+            var outputPath = pptx
+                ? StepCaptureOfficeExporter.ExportPptx(selectedPath, TitleBox.Text, entries)
+                : StepCaptureOfficeExporter.ExportDocx(selectedPath, TitleBox.Text, entries);
+            StatusText.Text = $"Exported {label}: {outputPath}";
             try
             {
-                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{outputPath}\"")
                 {
                     UseShellExecute = true
                 });
