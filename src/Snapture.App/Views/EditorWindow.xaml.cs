@@ -58,6 +58,7 @@ public partial class EditorWindow : Window
     private float _sloppiness;
     private ArrowStyle _arrowStyle = ArrowStyle.Classic;
     private float _arrowCurve;
+    private TextOrientation _textOrientation = TextOrientation.Horizontal;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
 
@@ -276,6 +277,7 @@ public partial class EditorWindow : Window
         }
         Canvas.Cursor = tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
         ArrowOptionsPanel.Visibility = tool == EditorTool.Arrow ? Visibility.Visible : Visibility.Collapsed;
+        TextOptionsPanel.Visibility = tool == EditorTool.Text ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = $"Tool: {tool}";
     }
 
@@ -982,7 +984,7 @@ public partial class EditorWindow : Window
             EditorTool.Line      => new LineShape        { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed },
             EditorTool.Arrow     => new ArrowShape       { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed, Bidirectional = bidir, Reversed = ReversedCheck.IsChecked == true, Style = _arrowStyle, Curve = _arrowCurve },
             EditorTool.Freehand  => new FreehandShape    { Points = new() { p }, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness },
-            EditorTool.Text      => new TextShape        { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, Text = PromptForText() ?? "" },
+            EditorTool.Text      => new TextShape        { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, Text = PromptForText() ?? "", Orientation = _textOrientation },
             EditorTool.Highlight => new HighlightShape   { X = p.X, Y = p.Y, StrokeColorArgb = 0xFFFFD43B },
             EditorTool.Blur      => new BlurShape        { X = p.X, Y = p.Y, BlurRadius = Math.Max(8, _strokeThickness * 4), Pixelate = pixelate },
             EditorTool.Redact    => new RedactShape      { X = p.X, Y = p.Y },
@@ -1085,6 +1087,12 @@ public partial class EditorWindow : Window
         _arrowCurve = (float)Math.Clamp(e.NewValue / 100.0, -1, 1);
         if (ArrowCurveValue is not null)
             ArrowCurveValue.Text = $"{e.NewValue:0}%";
+    }
+    private void OnTextOrientationChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (TextOrientationCombo.SelectedItem is ComboBoxItem { Tag: string tag } &&
+            Enum.TryParse<TextOrientation>(tag, out var orientation))
+            _textOrientation = orientation;
     }
     private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

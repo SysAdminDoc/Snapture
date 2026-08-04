@@ -514,6 +514,12 @@ public sealed class FreehandShape : Shape
     }
 }
 
+public enum TextOrientation
+{
+    Horizontal,
+    Vertical
+}
+
 public sealed class TextShape : Shape
 {
     public float X { get; set; }
@@ -523,6 +529,7 @@ public sealed class TextShape : Shape
     public string FontFamily { get; set; } = "Segoe UI";
     public bool Bold { get; set; }
     public bool Italic { get; set; }
+    public TextOrientation Orientation { get; set; }
 
     public override void Render(SKCanvas canvas, AnnotationDocument doc)
     {
@@ -539,18 +546,33 @@ public sealed class TextShape : Shape
             TextAlign = SKTextAlign.Left,
             SubpixelText = true
         };
-        canvas.DrawText(Text, X, Y + FontSize, paint);
+        if (Orientation == TextOrientation.Vertical)
+        {
+            float lineHeight = FontSize * 1.4f;
+            canvas.Save();
+            canvas.Translate(X + lineHeight, Y);
+            canvas.RotateDegrees(90);
+            canvas.DrawText(Text, 0, FontSize, paint);
+            canvas.Restore();
+        }
+        else
+        {
+            canvas.DrawText(Text, X, Y + FontSize, paint);
+        }
     }
 
     public override SKRect GetBounds()
     {
         // Rough estimate; precise measurement requires SKFont.MeasureText which we keep cheap.
-        return new SKRect(X, Y, X + Math.Max(40, Text.Length * FontSize * 0.6f), Y + FontSize * 1.4f);
+        float textLength = Math.Max(40, Text.Length * FontSize * 0.6f);
+        return Orientation == TextOrientation.Vertical
+            ? new SKRect(X, Y, X + FontSize * 1.4f, Y + textLength)
+            : new SKRect(X, Y, X + textLength, Y + FontSize * 1.4f);
     }
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
     public override Shape Clone() => new TextShape
     {
-        X = X, Y = Y, Text = Text, FontSize = FontSize, FontFamily = FontFamily, Bold = Bold, Italic = Italic,
+        X = X, Y = Y, Text = Text, FontSize = FontSize, FontFamily = FontFamily, Bold = Bold, Italic = Italic, Orientation = Orientation,
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }

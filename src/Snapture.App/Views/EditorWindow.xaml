@@ -203,6 +203,17 @@
                                         ToolTip="Bend the arrow left or right along a smooth quadratic curve." />
                             </StackPanel>
 
+                            <StackPanel x:Name="TextOptionsPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                <TextBlock Text="Text direction" Style="{StaticResource HelpText}" Margin="0,0,0,4" />
+                                <ComboBox x:Name="TextOrientationCombo"
+                                          SelectedIndex="0"
+                                          SelectionChanged="OnTextOrientationChanged"
+                                          ToolTip="Choose horizontal or vertical text for new annotations.">
+                                    <ComboBoxItem Content="Horizontal" Tag="Horizontal" />
+                                    <ComboBoxItem Content="Vertical" Tag="Vertical" />
+                                </ComboBox>
+                            </StackPanel>
+
                             <CheckBox x:Name="DashedCheck" Content="Dashed line or arrow" Margin="0,10,0,0" />
                             <CheckBox x:Name="BidirCheck" Content="Arrowheads at both ends" />
                             <CheckBox x:Name="ReversedCheck" Content="Reverse arrow direction" />
