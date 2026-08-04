@@ -620,6 +620,44 @@ public sealed class TrayIconHost : IDisposable
         beforeAfterGif.Click += (_, _) => new Views.BeforeAfterGifWindow().ShowDialog();
         tools.Items.Add(beforeAfterGif);
 
+        var codeAwareExport = new MenuItem { Header = "Code-aware export…" };
+        codeAwareExport.Click += async (_, _) =>
+        {
+            var input = await StoragePickerService.PickOpenFileAsync(
+                owner: null,
+                "Images|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp;*.tif;*.tiff",
+                new[] { ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff" },
+                title: "Choose a code screenshot");
+            if (input is null)
+                return;
+            var output = await StoragePickerService.PickSaveFileAsync(
+                owner: null,
+                "PNG image (*.png)|*.png|JPEG image (*.jpg)|*.jpg|Bitmap image (*.bmp)|*.bmp|WebP image (*.webp)|*.webp",
+                "code-snapture.png",
+                ".png",
+                new[]
+                {
+                    new StoragePickerService.FileTypeChoice("PNG image", new[] { ".png" }),
+                    new StoragePickerService.FileTypeChoice("JPEG image", new[] { ".jpg" }),
+                    new StoragePickerService.FileTypeChoice("Bitmap image", new[] { ".bmp" }),
+                    new StoragePickerService.FileTypeChoice("WebP image", new[] { ".webp" })
+                },
+                title: "Save code-aware export");
+            if (output is null)
+                return;
+            try
+            {
+                var result = await CodeAwareCaptureService.CreateFromImageAsync(input, output);
+                ShowToast("Code-aware export", $"Exported {result.Analysis.CodeLineCount} code lines.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not create code-aware export:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        tools.Items.Add(codeAwareExport);
+
         var stepCapture = new MenuItem { Header = "Step capture…" };
         stepCapture.Click += (_, _) =>
         {

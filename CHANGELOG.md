@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Code-aware capture export
+
+- Tray → Tools → Code-aware export runs local OCR, scores code and monospace signals, and exports syntax-highlighted code text with the existing gradient, drop-shadow, and code-window chrome.
+
 ### Added — Before/after comparison GIFs
 
 - Tray → Tools → Before/after GIF creates a local ping-pong cross-fade animation from two still images, with bounded transition frames and frame delay.
