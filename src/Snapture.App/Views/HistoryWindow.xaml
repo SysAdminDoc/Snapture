@@ -18,41 +18,75 @@
 
         <Border Grid.Row="0"
                 Style="{StaticResource HeaderBar}">
-            <DockPanel LastChildFill="True">
-                <TextBlock Text="Capture History"
-                           Style="{StaticResource WindowTitleText}"
-                           Foreground="{DynamicResource AppAccent}"
-                           VerticalAlignment="Center"
-                           Margin="0,0,18,0"
-                           DockPanel.Dock="Left" />
-                <TextBox x:Name="SearchBox"
-                         DockPanel.Dock="Left"
-                         Width="310"
-                         KeyUp="OnSearchKey"
-                         ToolTip="Full-text search over OCR text + window title + process name. SQLite FTS5 syntax allowed." />
-                <ComboBox x:Name="AppFilter"
-                          DockPanel.Dock="Left"
-                          Width="160"
-                          Margin="8,0,0,0"
-                          SelectionChanged="OnFilterChanged"
-                          ToolTip="Filter by source application" />
-                <ComboBox x:Name="DateFilter"
-                          DockPanel.Dock="Left"
-                          Width="110"
-                          Margin="8,0,0,0"
-                          SelectionChanged="OnFilterChanged"
-                          ToolTip="Filter by date range" />
-                <Button x:Name="OcrAllButton"
-                        DockPanel.Dock="Right"
-                        Content="OCR all"
-                        Click="OnOcrAllClicked"
-                        ToolTip="Run OCR on every entry that hasn't been indexed yet." />
-                <TextBlock x:Name="StatusText"
-                           Foreground="{DynamicResource AppMutedForeground}"
-                           VerticalAlignment="Center"
-                           HorizontalAlignment="Right"
-                           Margin="14,0,8,0" />
-            </DockPanel>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <StackPanel Grid.Row="0"
+                            Orientation="Horizontal">
+                    <TextBlock Text="Capture History"
+                               Style="{StaticResource WindowTitleText}"
+                               Foreground="{DynamicResource AppAccent}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,18,0" />
+                    <TextBox x:Name="SearchBox"
+                             Width="310"
+                             KeyUp="OnSearchKey"
+                             ToolTip="Full-text search over OCR text + window title + process name. SQLite FTS5 syntax allowed." />
+                    <ComboBox x:Name="AppFilter"
+                              Width="160"
+                              Margin="8,0,0,0"
+                              SelectionChanged="OnFilterChanged"
+                              ToolTip="Filter by source application" />
+                    <ComboBox x:Name="DateFilter"
+                              Width="110"
+                              Margin="8,0,0,0"
+                              SelectionChanged="OnFilterChanged"
+                              ToolTip="Filter by date range" />
+                </StackPanel>
+                <Grid Grid.Row="1" Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <TextBlock Text="Color similarity"
+                                   Foreground="{DynamicResource AppMutedForeground}"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,8,0" />
+                        <TextBox x:Name="ColorSearchBox"
+                                 Width="100"
+                                 ToolTip="Enter a dominant RGB color such as #CBA6F7. Results use a local color-distance match." />
+                        <Button Content="Find color"
+                                Click="OnColorSearchClicked"
+                                ToolTip="Find captures with a similar dominant color." />
+                        <Button x:Name="NearDuplicateButton"
+                                Content="Near duplicates"
+                                Click="OnNearDuplicatesClicked"
+                                ToolTip="Show entries whose perceptual hashes are within six bits." />
+                        <Button Content="Clear feature filters"
+                                Click="OnClearFeatureFiltersClicked"
+                                ToolTip="Clear color and near-duplicate filters." />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2"
+                                Orientation="Horizontal"
+                                VerticalAlignment="Center">
+                        <Button x:Name="OcrAllButton"
+                                Content="OCR all"
+                                Click="OnOcrAllClicked"
+                                ToolTip="Run OCR on every entry that hasn't been indexed yet." />
+                        <TextBlock x:Name="StatusText"
+                                   Foreground="{DynamicResource AppMutedForeground}"
+                                   VerticalAlignment="Center"
+                                   HorizontalAlignment="Right"
+                                   Margin="14,0,8,0" />
+                    </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
 
         <Grid Grid.Row="1" Background="{DynamicResource AppCanvas}">
@@ -126,6 +160,22 @@
                                            Foreground="{DynamicResource AppSubtleForeground}"
                                            FontSize="11"
                                            Margin="0,2,0,0" />
+                                <StackPanel Orientation="Horizontal"
+                                            Margin="0,5,0,0">
+                                    <Border Width="12"
+                                            Height="12"
+                                            CornerRadius="2"
+                                            BorderBrush="{DynamicResource AppBorderStrong}"
+                                            BorderThickness="1"
+                                            Background="{Binding DominantColorBrush}"
+                                            ToolTip="Dominant color sampled locally from this image." />
+                                    <TextBlock Text="{Binding FeatureLine}"
+                                               Foreground="{DynamicResource AppSubtleForeground}"
+                                               FontSize="10"
+                                               Margin="6,0,0,0"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip="Local dominant-color and perceptual-hash metadata." />
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </DataTemplate>

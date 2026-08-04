@@ -15,6 +15,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Step Capture now records key chords and cursor click coordinates/buttons with each screenshot, shows the track during review, and includes it in Markdown, DOCX, and PPTX exports.
 
+### Added — History image features
+
+- History now stores a local dominant-color signature and 64-bit perceptual hash for each capture, supports color-similarity and near-duplicate filters, and shows the feature metadata in the thumbnail wall.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.

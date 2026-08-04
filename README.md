@@ -70,7 +70,7 @@ The existing landscape on Windows in 2026:
 - **OCR table mode** — Editor → **Table** reconstructs rows and columns from positioned OCR word boxes and copies the result as tab-separated values. Text-only engines decline cleanly instead of guessing columns.
 - **Step Capture mode** — Records key chords and cursor clicks, snapshots the foreground window, presents a review window with per-step input tracks and captions, and exports Markdown, editable DOCX, or title-plus-step PPTX bundles. The Snagit single-vendor feature with no OSS equivalent.
 - **QR and barcode extraction** — Editor → **Codes** runs a local ZXing.Net pass across QR, Data Matrix, Aztec, PDF417, Code 128, EAN/UPC, and other common formats, then lists payloads and image regions for copying.
-- **Capture history** with **SQLite + FTS5** at `%LOCALAPPDATA%\Snapture\history\index.db`. Every capture auto-tagged with foreground process + window title. The History window lets you search across OCR text, process name, and window title with FTS5 syntax. Right-click → Open in editor / Pin / Run OCR / Reveal / Delete.
+- **Capture history** with **SQLite + FTS5** at `%LOCALAPPDATA%\Snapture\history\index.db`. Every capture auto-tagged with foreground process + window title, plus a local dominant-color signature and perceptual hash for color-similarity search and near-duplicate filtering. The History window lets you search across OCR text, process name, and window title with FTS5 syntax. Right-click → Open in editor / Pin / Run OCR / Reveal / Delete.
 - **Scrolling capture (alpha)** via UIA `IScrollProvider`. Native scroll panes (Office side-panes, Explorer, WPF/WinForms apps) work; browsers fall through to a clear "this window doesn't expose UIA scroll" message. Image-stitching for browsers ships in v0.4.
 
 ## What ships in v0.2.0
@@ -202,7 +202,7 @@ Snapture.sln
 │     │  ├─ PrintScreenHijackDetector  ← 24H2 registry probe + reclaim
 │     │  ├─ OcrService                 ← Windows AI / Windows OCR / RapidOCR / optional OneOCR wrapper
 │     │  ├─ OcrOverlayBuilder           ← OCR line boxes → editable anchored text shapes
-│     │  ├─ CaptureHistoryService      ← SQLite + FTS5 history index
+│     │  ├─ CaptureHistoryService      ← SQLite + FTS5 + image-feature history index
 │     │  ├─ ScrollingCaptureService    ← UIA IScrollProvider driver (alpha)
 │     │  ├─ LanShareServer             ← Kestrel + token registry
 │     │  ├─ PluginLoader               ← AssemblyLoadContext-based plugin host
@@ -223,7 +223,7 @@ Snapture.sln
 │        ├─ ColorPickerWindow          ← HEX / RGB / HSL / APCA-Lc + global click capture
 │        ├─ PixelRulerWindow           ← Δx / Δy / length / angle across the virtual screen
 │        ├─ SmartCaptureWindow         ← UIA element-level live highlight + click capture
-│        ├─ HistoryWindow              ← Thumbnail wall + FTS5 search
+│        ├─ HistoryWindow              ← Thumbnail wall + FTS5 + color/dedup search
 │        ├─ OcrResultWindow            ← Recognised-text reviewer
 │        ├─ PluginsWindow              ← Plugin inventory + reload
 │        ├─ StepCaptureWindow          ← Step Capture review + Markdown/DOCX/PPTX export

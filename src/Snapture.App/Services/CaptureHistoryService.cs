@@ -15,7 +15,9 @@ public sealed record HistoryEntry(
     string? WindowTitle,
     int Width,
     int Height,
-    string? OcrText);
+    string? OcrText,
+    string? DominantColorHex,
+    string? PerceptualHash);
 
 /// <summary>
 /// SQLite-backed history index at <c>%LOCALAPPDATA%\Snapture\history\index.db</c>. Exposes a
@@ -31,11 +33,16 @@ public sealed class CaptureHistoryService : IDisposable
     private readonly SqliteConnection _conn;
     private bool _disposed;
 
-    public CaptureHistoryService()
+    public CaptureHistoryService() : this(DbPath)
     {
-        Directory.CreateDirectory(Dir);
+    }
+
+    internal CaptureHistoryService(string dbPath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(dbPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dbPath))!);
         Batteries.EnsureInitialized();
-        _conn = new SqliteConnection($"Data Source={DbPath};Pooling=False");
+        _conn = new SqliteConnection($"Data Source={dbPath};Pooling=False");
         _conn.Open();
         Migrate();
     }
@@ -50,7 +57,7 @@ public sealed class CaptureHistoryService : IDisposable
         }
     }
 
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
 
     private void Migrate()
     {
@@ -69,7 +76,9 @@ CREATE TABLE IF NOT EXISTS captures (
     window_title  TEXT,
     width         INTEGER NOT NULL,
     height        INTEGER NOT NULL,
-    ocr_text      TEXT
+    ocr_text      TEXT,
+    dominant_color TEXT,
+    perceptual_hash TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_captures_at ON captures(captured_at DESC);
 CREATE VIRTUAL TABLE IF NOT EXISTS captures_fts USING fts5(
@@ -94,10 +103,68 @@ END;
             cmd.ExecuteNonQuery();
         }
 
-        // Future migrations go here:
-        // if (version < 2) { ... }
+        if (version < 2)
+        {
+            EnsureColumn("dominant_color", "TEXT");
+            EnsureColumn("perceptual_hash", "TEXT");
+            BackfillFeatures();
+        }
 
         SetUserVersion(CurrentSchemaVersion);
+    }
+
+    private void EnsureColumn(string name, string type)
+    {
+        if (HasColumn(name))
+            return;
+
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = $"ALTER TABLE captures ADD COLUMN {name} {type};";
+        cmd.ExecuteNonQuery();
+    }
+
+    private bool HasColumn(string name)
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "PRAGMA table_info(captures);";
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), name, StringComparison.OrdinalIgnoreCase))
+                return true;
+        }
+
+        return false;
+    }
+
+    private void BackfillFeatures()
+    {
+        var pending = new List<(long Id, string FilePath)>();
+        using (var cmd = _conn.CreateCommand())
+        {
+            cmd.CommandText = @"SELECT id, file_path FROM captures
+                                WHERE dominant_color IS NULL OR perceptual_hash IS NULL";
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                pending.Add((reader.GetInt64(0), reader.GetString(1)));
+        }
+
+        foreach (var item in pending)
+        {
+            var features = ImageFeatureService.Compute(item.FilePath);
+            if (features is null)
+                continue;
+
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"UPDATE captures
+                                SET dominant_color = $dominant_color,
+                                    perceptual_hash = $perceptual_hash
+                                WHERE id = $id";
+            cmd.Parameters.AddWithValue("$dominant_color", features.DominantColorHex);
+            cmd.Parameters.AddWithValue("$perceptual_hash", features.PerceptualHash);
+            cmd.Parameters.AddWithValue("$id", item.Id);
+            cmd.ExecuteNonQuery();
+        }
     }
 
     private int GetUserVersion()
@@ -117,9 +184,10 @@ END;
     public long Add(string filePath, string source, string? sourceApp, string? windowTitle,
                     int width, int height, string? ocrText)
     {
+        var features = ImageFeatureService.Compute(filePath);
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"INSERT INTO captures(file_path, captured_at, source, source_app, window_title, width, height, ocr_text)
-                            VALUES($file_path, $captured_at, $source, $source_app, $window_title, $width, $height, $ocr_text);
+        cmd.CommandText = @"INSERT INTO captures(file_path, captured_at, source, source_app, window_title, width, height, ocr_text, dominant_color, perceptual_hash)
+                            VALUES($file_path, $captured_at, $source, $source_app, $window_title, $width, $height, $ocr_text, $dominant_color, $perceptual_hash);
                             SELECT last_insert_rowid();";
         cmd.Parameters.AddWithValue("$file_path", filePath);
         cmd.Parameters.AddWithValue("$captured_at", DateTime.UtcNow.ToString("O"));
@@ -129,13 +197,15 @@ END;
         cmd.Parameters.AddWithValue("$width", width);
         cmd.Parameters.AddWithValue("$height", height);
         cmd.Parameters.AddWithValue("$ocr_text", (object?)ocrText ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$dominant_color", (object?)features?.DominantColorHex ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$perceptual_hash", (object?)features?.PerceptualHash ?? DBNull.Value);
         return (long)(cmd.ExecuteScalar() ?? 0L);
     }
 
     public IReadOnlyList<HistoryEntry> Recent(int limit = 60)
     {
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"SELECT id, file_path, captured_at, source, source_app, window_title, width, height, ocr_text
+        cmd.CommandText = @"SELECT id, file_path, captured_at, source, source_app, window_title, width, height, ocr_text, dominant_color, perceptual_hash
                             FROM captures ORDER BY captured_at DESC LIMIT $limit";
         cmd.Parameters.AddWithValue("$limit", limit);
         return Read(cmd);
@@ -145,7 +215,7 @@ END;
     {
         if (string.IsNullOrWhiteSpace(query)) return Recent(limit);
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text
+        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash
                             FROM captures c
                             JOIN captures_fts f ON f.rowid = c.id
                             WHERE captures_fts MATCH $q
@@ -154,6 +224,53 @@ END;
         cmd.Parameters.AddWithValue("$q", BuildFtsQuery(query));
         cmd.Parameters.AddWithValue("$limit", limit);
         return Read(cmd);
+    }
+
+    public IReadOnlyList<HistoryEntry> SearchByDominantColor(string hex, int maxDistance = 90, int limit = 60)
+    {
+        if (!ImageFeatureService.TryParseHex(hex, out _))
+            return Array.Empty<HistoryEntry>();
+
+        int boundedLimit = Math.Clamp(limit, 1, 5000);
+        int boundedDistance = Math.Clamp(maxDistance, 0, 441);
+        return Recent(5000)
+            .Select(entry => (Entry: entry, Distance: ImageFeatureService.ColorDistance(entry.DominantColorHex, hex)))
+            .Where(candidate => candidate.Distance <= boundedDistance)
+            .OrderBy(candidate => candidate.Distance)
+            .ThenByDescending(candidate => candidate.Entry.CapturedAtUtc)
+            .Take(boundedLimit)
+            .Select(candidate => candidate.Entry)
+            .ToList();
+    }
+
+    public IReadOnlySet<long> FindNearDuplicateIds(
+        IReadOnlyList<HistoryEntry> entries,
+        int maxDistance = 6)
+    {
+        var duplicates = new HashSet<long>();
+        int boundedDistance = Math.Clamp(maxDistance, 0, 64);
+        for (int i = 0; i < entries.Count; i++)
+        {
+            if (string.IsNullOrWhiteSpace(entries[i].PerceptualHash))
+                continue;
+
+            for (int j = i + 1; j < entries.Count; j++)
+            {
+                if (ImageFeatureService.IsNearDuplicate(
+                    entries[i].PerceptualHash,
+                    entries[j].PerceptualHash,
+                    boundedDistance)
+                    && ImageFeatureService.ColorDistance(
+                        entries[i].DominantColorHex,
+                        entries[j].DominantColorHex) <= 72)
+                {
+                    duplicates.Add(entries[i].Id);
+                    duplicates.Add(entries[j].Id);
+                }
+            }
+        }
+
+        return duplicates;
     }
 
     private static string BuildFtsQuery(string user)
@@ -206,7 +323,9 @@ END;
                 r.IsDBNull(5) ? null : r.GetString(5),
                 r.GetInt32(6),
                 r.GetInt32(7),
-                r.IsDBNull(8) ? null : r.GetString(8)));
+                r.IsDBNull(8) ? null : r.GetString(8),
+                r.IsDBNull(9) ? null : r.GetString(9),
+                r.IsDBNull(10) ? null : r.GetString(10)));
         }
         return list;
     }

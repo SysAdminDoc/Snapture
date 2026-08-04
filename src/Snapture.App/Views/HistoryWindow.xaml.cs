@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Snapture.App.Services;
 
@@ -9,7 +10,10 @@ namespace Snapture.App.Views;
 
 public partial class HistoryWindow : Window
 {
+    private const int DominantColorTolerance = 90;
     private readonly CaptureHistoryService _history;
+    private string? _dominantColorFilter;
+    private bool _nearDuplicatesOnly;
 
     public sealed class Row
     {
@@ -19,6 +23,8 @@ public partial class HistoryWindow : Window
         public string TitleLine { get; init; } = "";
         public string SubLine { get; init; } = "";
         public string TimeLine { get; init; } = "";
+        public string FeatureLine { get; init; } = "";
+        public Brush? DominantColorBrush { get; init; }
         public string? OcrText { get; init; }
     }
 
@@ -50,7 +56,17 @@ public partial class HistoryWindow : Window
 
     private void ApplyFilters()
     {
-        var all = string.IsNullOrWhiteSpace(SearchBox.Text) ? _history.Recent(500) : _history.Search(SearchBox.Text, 500);
+        var all = string.IsNullOrWhiteSpace(SearchBox.Text)
+            ? _history.Recent(_dominantColorFilter is null ? 500 : 5000)
+            : _history.Search(SearchBox.Text, 5000);
+        if (_dominantColorFilter is not null)
+        {
+            all = all
+                .Where(entry => ImageFeatureService.ColorDistance(entry.DominantColorHex, _dominantColorFilter)
+                    <= DominantColorTolerance)
+                .ToList();
+        }
+
         string? appFilter = AppFilter.SelectedIndex > 0 ? AppFilter.SelectedItem as string : null;
         DateTime? dateCutoff = DateFilter.SelectedIndex switch
         {
@@ -62,13 +78,19 @@ public partial class HistoryWindow : Window
         var filtered = all.Where(e =>
             (appFilter is null || e.SourceApp == appFilter) &&
             (dateCutoff is null || e.CapturedAtUtc >= dateCutoff)).ToList();
+        if (_nearDuplicatesOnly)
+        {
+            var duplicateIds = _history.FindNearDuplicateIds(filtered);
+            filtered = filtered.Where(entry => duplicateIds.Contains(entry.Id)).ToList();
+        }
         Populate(filtered);
     }
 
-    private void LoadRecent() => Populate(_history.Recent());
+    private void LoadRecent() => ApplyFilters();
 
     private void Populate(IReadOnlyList<HistoryEntry> entries)
     {
+        var duplicateIds = _history.FindNearDuplicateIds(entries);
         var rows = new List<Row>();
         foreach (var e in entries)
         {
@@ -80,12 +102,33 @@ public partial class HistoryWindow : Window
                 TitleLine = string.IsNullOrWhiteSpace(e.WindowTitle) ? Path.GetFileName(e.FilePath) : e.WindowTitle!,
                 SubLine = $"{e.Source} · {(e.SourceApp ?? "—")} · {e.Width}×{e.Height}",
                 TimeLine = e.CapturedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
+                FeatureLine = BuildFeatureLine(e, duplicateIds.Contains(e.Id)),
+                DominantColorBrush = CreateColorBrush(e.DominantColorHex),
                 OcrText = e.OcrText
             });
         }
         HistoryList.ItemsSource = rows;
         EmptyState.Visibility = rows.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = rows.Count == 0 ? "No captures" : $"{rows.Count} captures";
+    }
+
+    private static string BuildFeatureLine(HistoryEntry entry, bool nearDuplicate)
+    {
+        var color = entry.DominantColorHex ?? "color —";
+        var hash = string.IsNullOrWhiteSpace(entry.PerceptualHash)
+            ? "pHash —"
+            : $"pHash {entry.PerceptualHash[..Math.Min(8, entry.PerceptualHash.Length)]}…";
+        return nearDuplicate ? $"{color} · {hash} · near duplicate" : $"{color} · {hash}";
+    }
+
+    private static Brush? CreateColorBrush(string? hex)
+    {
+        if (!ImageFeatureService.TryParseHex(hex, out var color))
+            return null;
+
+        var brush = new SolidColorBrush(Color.FromRgb(color.Red, color.Green, color.Blue));
+        brush.Freeze();
+        return brush;
     }
 
     private static BitmapSource? LoadThumbnail(string path)
@@ -107,10 +150,45 @@ public partial class HistoryWindow : Window
 
     private void OnSearchKey(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape) { SearchBox.Text = ""; LoadRecent(); return; }
-        var q = SearchBox.Text;
-        if (string.IsNullOrWhiteSpace(q)) LoadRecent();
-        else Populate(_history.Search(q));
+        if (e.Key == Key.Escape)
+            SearchBox.Text = "";
+        ApplyFilters();
+    }
+
+    private void OnColorSearchClicked(object sender, RoutedEventArgs e)
+    {
+        var query = ColorSearchBox.Text.Trim();
+        if (query.Length == 0)
+        {
+            _dominantColorFilter = null;
+            ApplyFilters();
+            return;
+        }
+
+        if (!ImageFeatureService.TryParseHex(query, out var color))
+        {
+            StatusText.Text = "Use a 6-digit RGB color such as #CBA6F7.";
+            return;
+        }
+
+        _dominantColorFilter = ImageFeatureService.ToHex(color);
+        ApplyFilters();
+    }
+
+    private void OnNearDuplicatesClicked(object sender, RoutedEventArgs e)
+    {
+        _nearDuplicatesOnly = !_nearDuplicatesOnly;
+        NearDuplicateButton.Content = _nearDuplicatesOnly ? "Show all" : "Near duplicates";
+        ApplyFilters();
+    }
+
+    private void OnClearFeatureFiltersClicked(object sender, RoutedEventArgs e)
+    {
+        ColorSearchBox.Clear();
+        _dominantColorFilter = null;
+        _nearDuplicatesOnly = false;
+        NearDuplicateButton.Content = "Near duplicates";
+        ApplyFilters();
     }
 
     private Row? Selected => HistoryList.SelectedItem as Row;
@@ -194,8 +272,7 @@ public partial class HistoryWindow : Window
     {
         if (Selected is not { } row) return;
         _history.Delete(row.Id);
-        if (string.IsNullOrWhiteSpace(SearchBox.Text)) LoadRecent();
-        else Populate(_history.Search(SearchBox.Text));
+        ApplyFilters();
     }
 
     private async void OnOcrAllClicked(object sender, RoutedEventArgs e)
