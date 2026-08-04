@@ -545,6 +545,18 @@ public sealed class TrayIconHost : IDisposable
         };
         tools.Items.Add(stepCapture);
 
+        var pinLatest = new MenuItem
+        {
+            Header = "Pin latest as Markdown",
+            InputGestureText = "Ctrl+Alt+V"
+        };
+        pinLatest.Click += async (_, _) =>
+        {
+            try { await (App.Host?.PinLatestCaptureAsMarkdownAsync() ?? Task.CompletedTask); }
+            catch (Exception ex) { ShowToast("Markdown pin failed", ex.Message); }
+        };
+        tools.Items.Add(pinLatest);
+
         var pluginsItem = new MenuItem { Header = "Plugins…" };
         pluginsItem.Click += (_, _) =>
         {

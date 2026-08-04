@@ -375,6 +375,39 @@
                                 </ComboBox>
                             </StackPanel>
                         </Border>
+
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
+                                <TextBlock Text="Clipboard integration" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="Image keeps the normal PNG clipboard. Markdown copies a relative link and writes the capture PNG into the configured vault folder. Ctrl+Alt+V always runs the Markdown pin for the most recent capture."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8" />
+                                <ComboBox x:Name="ClipboardModeCombo"
+                                          Width="260"
+                                          HorizontalAlignment="Left">
+                                    <ComboBoxItem Tag="image" Content="Image (default)" />
+                                    <ComboBoxItem Tag="markdown" Content="Markdown link" />
+                                </ComboBox>
+                                <TextBlock Text="Markdown vault or export folder"
+                                           Style="{StaticResource SectionTitleText}"
+                                           Margin="0,16,0,0" />
+                                <DockPanel LastChildFill="True">
+                                    <Button x:Name="BrowseMarkdownVaultButton"
+                                            DockPanel.Dock="Right"
+                                            Content="Browse"
+                                            Click="OnBrowseMarkdownVaultClicked"
+                                            Margin="8,0,0,0" />
+                                    <TextBox x:Name="MarkdownVaultFolderBox"
+                                             ToolTip="Obsidian vault root or a Joplin Markdown export folder. Obsidian can be discovered automatically when this is empty." />
+                                </DockPanel>
+                                <TextBlock Text="Attachment subfolder"
+                                           Style="{StaticResource SectionTitleText}"
+                                           Margin="0,16,0,0" />
+                                <TextBox x:Name="MarkdownAttachmentFolderBox"
+                                         ToolTip="Relative folder under the vault, for example attachments or _resources." />
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

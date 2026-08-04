@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using Serilog;
 using Snapture.App.Editor;
@@ -237,6 +238,36 @@ public sealed class AppHost : IDisposable
         TryRegister(Settings.Current.WindowHotkey,     () => Run(() => Orchestrator.CaptureForegroundWindowAsync()));
         TryRegister(Settings.Current.FullscreenHotkey, () => Run(() => Orchestrator.CaptureFullscreenAsync()));
         TryRegister(Settings.Current.LastRegionHotkey, () => Run(() => Orchestrator.CaptureLastRegionAsync()));
+        TryRegister(new HotkeyBinding(Native.MOD_CONTROL | Native.MOD_ALT, "V"),
+            () => Run(PinLatestCaptureAsMarkdownAsync));
+    }
+
+    public Task PinLatestCaptureAsMarkdownAsync()
+    {
+        var latest = History.Recent(1).FirstOrDefault();
+        if (latest is null)
+        {
+            _tray?.ShowToast("Markdown pin", "No saved capture is available yet.");
+            return Task.CompletedTask;
+        }
+
+        var result = ClipboardIntegrationService.TryCopyCaptureAsMarkdown(
+            latest.FilePath,
+            Settings.Current.MarkdownVaultFolder,
+            Settings.Current.MarkdownAttachmentFolder,
+            ClipboardIntegrationService.GetForegroundTarget());
+        if (result.Succeeded)
+        {
+            _tray?.ShowToast(
+                "Markdown pin copied",
+                $"{result.Markdown}\n{Path.GetFileName(result.DestinationPath)}");
+        }
+        else
+        {
+            _tray?.ShowToast("Markdown pin unavailable", result.Error ?? "Choose a vault folder in Settings > Output.");
+        }
+
+        return Task.CompletedTask;
     }
 
     private void TryRegister(HotkeyBinding b, Action handler)

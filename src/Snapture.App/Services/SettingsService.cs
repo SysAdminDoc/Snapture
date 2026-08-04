@@ -21,6 +21,15 @@ public sealed class SnaptureSettings
 
     public bool CopyToClipboard { get; set; } = true;
 
+    /// <summary>Automatic clipboard payload: image or a relative Markdown link.</summary>
+    public string ClipboardCopyMode { get; set; } = ClipboardIntegrationService.ImageMode;
+
+    /// <summary>Optional Obsidian/Joplin-compatible Markdown vault or export folder.</summary>
+    public string MarkdownVaultFolder { get; set; } = string.Empty;
+
+    /// <summary>Relative folder under the Markdown vault where capture PNGs are copied.</summary>
+    public string MarkdownAttachmentFolder { get; set; } = ClipboardIntegrationService.DefaultAttachmentFolder;
+
     public bool OpenEditorAfterCapture { get; set; } = true;
 
     public bool ShowToastOnSave { get; set; } = true;

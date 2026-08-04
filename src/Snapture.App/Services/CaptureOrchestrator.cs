@@ -367,12 +367,31 @@ public sealed class CaptureOrchestrator
 
         if (_settings.Current.CopyToClipboard || _settings.Current.QuickMode)
         {
-            try
+            bool copiedAsMarkdown = false;
+            if (_settings.Current.ClipboardCopyMode.Equals(
+                    ClipboardIntegrationService.MarkdownMode,
+                    StringComparison.OrdinalIgnoreCase)
+                && savedPath is not null)
             {
-                var bs = ToBitmapSource(result.Bitmap);
-                Clipboard.SetImage(bs);
+                var markdownResult = ClipboardIntegrationService.TryCopyCaptureAsMarkdown(
+                    savedPath,
+                    _settings.Current.MarkdownVaultFolder,
+                    _settings.Current.MarkdownAttachmentFolder,
+                    ClipboardIntegrationService.GetForegroundTarget());
+                copiedAsMarkdown = markdownResult.Succeeded;
+                if (!copiedAsMarkdown)
+                    Log.Warning("Clipboard.MarkdownCopyFailed {Error}", markdownResult.Error ?? "unknown");
             }
-            catch { /* clipboard contention is not fatal */ }
+
+            if (!copiedAsMarkdown)
+            {
+                try
+                {
+                    var bs = ToBitmapSource(result.Bitmap);
+                    Clipboard.SetImage(bs);
+                }
+                catch { /* clipboard contention is not fatal */ }
+            }
         }
 
         if (_settings.Current.OpenEditorAfterCapture && !_settings.Current.QuickMode)

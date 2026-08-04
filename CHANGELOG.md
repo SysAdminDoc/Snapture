@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Markdown clipboard integration
+
+- Settings → Output can keep image clipboard behavior or switch automatic copies to a relative Markdown link. Snapture writes a PNG under the configured vault/export folder, discovers the active Obsidian vault when possible, and provides Ctrl+Alt+V plus a tray action to pin the most recent capture. Joplin users can select a Markdown export or attachment folder because live Joplin resources are managed internally.
+
 ### Added — Daemon-safe plugin metadata responses
 
 - External processor callers now have a shared invocation boundary that returns dimensions, stride, SHA-256 pixel hash, capture source, timestamp, and optional saved path by default. Processed pixel buffers require an explicit opt-in response mode, while the normal capture flow continues to retain pixels in-process.

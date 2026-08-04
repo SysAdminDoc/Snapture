@@ -37,6 +37,7 @@ public partial class SettingsWindow : Window
         LaunchAtStartupCheck.IsChecked = _draft.LaunchAtStartup;
         OpenEditorCheck.IsChecked      = _draft.OpenEditorAfterCapture;
         CopyClipboardCheck.IsChecked   = _draft.CopyToClipboard;
+        SelectComboByTag(ClipboardModeCombo, _draft.ClipboardCopyMode);
         ShowToastCheck.IsChecked       = _draft.ShowToastOnSave;
 
         SelectComboByTag(ThemeCombo, ThemeManager.NormalizeMode(_draft.ThemeMode));
@@ -60,6 +61,8 @@ public partial class SettingsWindow : Window
 
         OutputFolderBox.Text = _draft.OutputFolder;
         FilenameTemplateBox.Text = _draft.FilenamePattern;
+        MarkdownVaultFolderBox.Text = _draft.MarkdownVaultFolder;
+        MarkdownAttachmentFolderBox.Text = _draft.MarkdownAttachmentFolder;
 
         RegionHotkeyBox.Text       = HotkeyToString(_draft.RegionHotkey);
         WindowHotkeyBox.Text       = HotkeyToString(_draft.WindowHotkey);
@@ -344,6 +347,18 @@ public partial class SettingsWindow : Window
             OutputFolderBox.Text = path;
     }
 
+    private async void OnBrowseMarkdownVaultClicked(object sender, RoutedEventArgs e)
+    {
+        var path = await StoragePickerService.PickFolderAsync(
+            this,
+            Directory.Exists(MarkdownVaultFolderBox.Text)
+                ? MarkdownVaultFolderBox.Text
+                : Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+            "Pick an Obsidian vault or Joplin Markdown export folder");
+        if (path is not null)
+            MarkdownVaultFolderBox.Text = path;
+    }
+
     private void OnRequestBorderlessClicked(object sender, RoutedEventArgs e)
     {
         if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621))
@@ -608,9 +623,13 @@ public partial class SettingsWindow : Window
         _draft.LaunchAtStartup        = LaunchAtStartupCheck.IsChecked == true;
         _draft.OpenEditorAfterCapture = OpenEditorCheck.IsChecked == true;
         _draft.CopyToClipboard        = CopyClipboardCheck.IsChecked == true;
+        _draft.ClipboardCopyMode     = ((ComboBoxItem)ClipboardModeCombo.SelectedItem).Tag as string
+            ?? ClipboardIntegrationService.ImageMode;
         _draft.ShowToastOnSave        = ShowToastCheck.IsChecked == true;
         _draft.OutputFolder           = OutputFolderBox.Text;
         _draft.FilenamePattern        = FilenameTemplateBox.Text;
+        _draft.MarkdownVaultFolder = MarkdownVaultFolderBox.Text.Trim();
+        _draft.MarkdownAttachmentFolder = MarkdownAttachmentFolderBox.Text.Trim();
         _draft.OutputFormat           = ((ComboBoxItem)FormatCombo.SelectedItem).Tag as string ?? "PNG";
         _draft.HdrToneMapOperator     = ((ComboBoxItem)ToneMapCombo.SelectedItem).Tag as string ?? HdrToneMapOperators.DefaultKey;
         _draft.HdrColorCorrection    = HdrColorCorrectionCheck.IsChecked == true;
@@ -673,6 +692,9 @@ public partial class SettingsWindow : Window
         dst.ActiveCapturePreset = src.ActiveCapturePreset;
         dst.OutputFormat = src.OutputFormat;
         dst.CopyToClipboard = src.CopyToClipboard;
+        dst.ClipboardCopyMode = src.ClipboardCopyMode;
+        dst.MarkdownVaultFolder = src.MarkdownVaultFolder;
+        dst.MarkdownAttachmentFolder = src.MarkdownAttachmentFolder;
         dst.OpenEditorAfterCapture = src.OpenEditorAfterCapture;
         dst.ShowToastOnSave = src.ShowToastOnSave;
         dst.LaunchAtStartup = src.LaunchAtStartup;
