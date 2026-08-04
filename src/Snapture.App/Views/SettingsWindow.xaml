@@ -200,6 +200,32 @@
                 </ScrollViewer>
             </TabItem>
 
+            <TabItem x:Name="LocalAiTab" Header="AI tools">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
+                                <TextBlock Text="Local AI providers" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="Optional local-only model runtimes. Snapture probes loopback addresses only; cloud providers and cloud endpoints are intentionally absent."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,10" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button x:Name="RefreshLocalAiButton"
+                                            Content="Refresh providers"
+                                            Click="OnRefreshLocalAiClicked" />
+                                    <TextBlock x:Name="LocalAiStatusText"
+                                               Style="{StaticResource MonoCaptionText}"
+                                               VerticalAlignment="Center"
+                                               Margin="12,0,0,0" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                        <StackPanel x:Name="LocalAiProvidersPanel" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
             <TabItem Header="Hotkeys">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="20">

@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Local AI provider discovery
+
+- Settings now probes Foundry Local, Ollama, and LM Studio on loopback-only endpoints and shows their locally available models with `provider/model` references. Cloud providers are intentionally absent.
+
 ### Added — WinAppSDK storage pickers
 
 - File and folder selection now uses the Windows App SDK 1.8 `Microsoft.Windows.Storage.Pickers` APIs for WPF windows, with an owner-aware Win32 fallback for tray-only flows and runtime compatibility.

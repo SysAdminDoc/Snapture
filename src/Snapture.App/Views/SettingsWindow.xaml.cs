@@ -14,6 +14,7 @@ public partial class SettingsWindow : Window
 {
     private readonly SettingsService _settings;
     private readonly SnaptureSettings _draft;
+    private CancellationTokenSource? _localAiDiscoveryCts;
 
     public SettingsWindow(SettingsService settings)
     {
@@ -21,6 +22,8 @@ public partial class SettingsWindow : Window
         _settings = settings;
         _draft = Clone(settings.Current);
         Bind();
+        Loaded += OnLoaded;
+        Closed += OnClosed;
     }
 
     private static SnaptureSettings Clone(SnaptureSettings s)
@@ -106,6 +109,144 @@ public partial class SettingsWindow : Window
             ? "Windows is currently sending PrintScreen to the Snipping Tool. Restore the shortcut to let apps receive it again."
             : "PrintScreen is not hijacked.";
         ReclaimPrintScreenButton.IsEnabled = hijacked;
+    }
+
+    private async void OnLoaded(object? sender, RoutedEventArgs e)
+    {
+        await RefreshLocalAiAsync();
+    }
+
+    private void OnClosed(object? sender, EventArgs e)
+    {
+        _localAiDiscoveryCts?.Cancel();
+    }
+
+    private async void OnRefreshLocalAiClicked(object sender, RoutedEventArgs e)
+    {
+        await RefreshLocalAiAsync();
+    }
+
+    private async Task RefreshLocalAiAsync()
+    {
+        _localAiDiscoveryCts?.Cancel();
+        using var cts = new CancellationTokenSource();
+        _localAiDiscoveryCts = cts;
+        RefreshLocalAiButton.IsEnabled = false;
+        LocalAiStatusText.Text = "Checking loopback providers…";
+
+        try
+        {
+            var providers = await LocalAiProviderService.DiscoverAsync(cts.Token);
+            if (ReferenceEquals(_localAiDiscoveryCts, cts))
+            {
+                RenderLocalAiProviders(providers);
+                var available = providers.Count(provider => provider.IsAvailable);
+                LocalAiStatusText.Text = available == 0
+                    ? "No local providers detected."
+                    : $"{available} local provider{(available == 1 ? string.Empty : "s")} detected.";
+            }
+        }
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            // A refresh or window close superseded this probe.
+        }
+        catch
+        {
+            if (ReferenceEquals(_localAiDiscoveryCts, cts))
+            {
+                LocalAiStatusText.Text = "Provider discovery failed; try Refresh providers again.";
+                LocalAiProvidersPanel.Children.Clear();
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(_localAiDiscoveryCts, cts))
+            {
+                _localAiDiscoveryCts = null;
+                RefreshLocalAiButton.IsEnabled = true;
+            }
+        }
+    }
+
+    private void RenderLocalAiProviders(IReadOnlyList<LocalAiProviderInfo> providers)
+    {
+        LocalAiProvidersPanel.Children.Clear();
+        foreach (var provider in providers)
+        {
+            var panel = new StackPanel();
+            var heading = new Grid();
+            heading.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            heading.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var name = new TextBlock
+            {
+                Text = provider.DisplayName,
+                FontSize = 14,
+                FontWeight = FontWeights.SemiBold
+            };
+            name.SetResourceReference(TextBlock.ForegroundProperty, "AppForeground");
+            heading.Children.Add(name);
+
+            var status = new TextBlock
+            {
+                Text = provider.Status,
+                HorizontalAlignment = HorizontalAlignment.Right
+            };
+            status.SetResourceReference(
+                TextBlock.ForegroundProperty,
+                provider.IsAvailable ? "AppAccent" : "AppMutedForeground");
+            Grid.SetColumn(status, 1);
+            heading.Children.Add(status);
+            panel.Children.Add(heading);
+
+            var endpoint = new TextBlock
+            {
+                Text = provider.OpenAiBaseUri is null
+                    ? "OpenAI endpoint: dynamic loopback endpoint"
+                    : $"OpenAI endpoint: {provider.OpenAiBaseUri}",
+                Margin = new Thickness(0, 5, 0, 0)
+            };
+            endpoint.SetResourceReference(TextBlock.StyleProperty, "MonoCaptionText");
+            panel.Children.Add(endpoint);
+
+            if (provider.Models.Count == 0)
+            {
+                var empty = new TextBlock
+                {
+                    Text = provider.IsAvailable
+                        ? "No cached models reported. Start or load a local model, then refresh."
+                        : "Start this local runtime, then refresh to discover its models.",
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+                empty.SetResourceReference(TextBlock.StyleProperty, "HelpText");
+                panel.Children.Add(empty);
+            }
+            else
+            {
+                var models = new TextBlock
+                {
+                    Text = "Models: " + string.Join(", ", provider.Models.Select(model =>
+                        LocalAiProviderService.FormatModelReference(provider, model))),
+                    TextWrapping = TextWrapping.Wrap,
+                    Margin = new Thickness(0, 6, 0, 0)
+                };
+                models.SetResourceReference(TextBlock.StyleProperty, "MonoCaptionText");
+                panel.Children.Add(models);
+            }
+
+            var row = new Border
+            {
+                Child = panel,
+                Padding = new Thickness(12),
+                Margin = new Thickness(0, 0, 0, 8),
+                CornerRadius = new CornerRadius(6),
+                BorderThickness = new Thickness(1)
+            };
+            row.SetResourceReference(Border.BackgroundProperty, "AppSurface");
+            row.SetResourceReference(Border.BorderBrushProperty, "AppBorder");
+            LocalAiProvidersPanel.Children.Add(row);
+        }
     }
 
     private static void SelectComboByTag(ComboBox combo, string tag)
