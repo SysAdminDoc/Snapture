@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Omnidirectional scrolling capture
+
+- Tray capture now exposes horizontal and omnidirectional UIA scrolling modes. Captured tiles are placed from both scroll axes into a bounded canvas, with the existing vertical mode unchanged.
+
 ### Added — Pinned comparison boards
 
 - Selected pins can open a local comparison board with vertical, horizontal, or grid snap-arrangement, bounded spacing/columns, and named layout presets stored without copying image pixels.

@@ -219,9 +219,16 @@ public sealed class CaptureOrchestrator
 
     public Task CaptureScrollingForegroundAsync() => CaptureScrollingForegroundAsync(null, null);
 
+    public Task CaptureHorizontalScrollingForegroundAsync() =>
+        CaptureScrollingForegroundAsync(null, null, ScrollCaptureDirection.Horizontal);
+
+    public Task CaptureOmnidirectionalScrollingForegroundAsync() =>
+        CaptureScrollingForegroundAsync(null, null, ScrollCaptureDirection.Both);
+
     internal async Task CaptureScrollingForegroundAsync(
         bool? copyToClipboardOverride,
-        bool? openEditorOverride)
+        bool? openEditorOverride,
+        ScrollCaptureDirection direction = ScrollCaptureDirection.Vertical)
     {
         using var desktopIcons = BeginDesktopIconScope();
         var hwnd = Native2.GetForegroundWindow();
@@ -235,7 +242,8 @@ public sealed class CaptureOrchestrator
             var bmp = await svc.CaptureScrollingForegroundAsync(
                 hwnd,
                 new Progress<string>(preview.UpdateStatus),
-                preview.UpdateFrame).ConfigureAwait(true);
+                preview.UpdateFrame,
+                direction).ConfigureAwait(true);
             if (bmp is null)
             {
                 MessageBox.Show(
@@ -249,7 +257,7 @@ public sealed class CaptureOrchestrator
             await DeliverCaptureAsync(
                 new CaptureResult(
                     bmp, new Rectangle(0, 0, bmp.Width, bmp.Height),
-                    DateTime.UtcNow, "Scrolling", hwnd),
+                    DateTime.UtcNow, direction == ScrollCaptureDirection.Vertical ? "Scrolling" : "Omnidirectional scrolling", hwnd),
                 copyToClipboardOverride: copyToClipboardOverride,
                 openEditorOverride: openEditorOverride).ConfigureAwait(true);
         }

@@ -50,6 +50,7 @@ The existing landscape on Windows in 2026:
 - **Code-aware export** — Tray → Tools → Code-aware export uses local OCR plus code/monospace heuristics, then renders syntax-highlighted text with the existing gradient, drop-shadow, and code-window chrome.
 - **Edge-detection ruler** — Pixel ruler Alt+click finds the nearest high-contrast UI edge in a frozen local screen sample while preserving the regular distance-and-angle measurement mode.
 - **Pinned comparison boards** — select pins with Ctrl+click, then open a board for vertical, horizontal, or grid snap-arrangement; named layout presets persist locally without duplicating image pixels.
+- **Omnidirectional scrolling capture** — tray actions cover vertical, horizontal, and two-axis UIA scroll hosts, placing captured tiles into a bounded stitched canvas.
 - **Polished desktop UX** — shared WPF chrome, calmer settings/editor/history surfaces, explicit empty states, refined capture picker and recording HUDs, consistent overlay guidance, safer pinned captures, and dark-theme controls across the app.
 - **`docs/HOTKEYS.md`** + **`docs/CAPTURE-MATRIX.md`** + **`manifests/`** for winget submission.
 

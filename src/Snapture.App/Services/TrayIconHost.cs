@@ -94,6 +94,12 @@ public sealed class TrayIconHost : IDisposable
         var scrollingWin = new MenuItem { Header = "_Scrolling window (alpha)" };
         scrollingWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureScrollingForegroundAsync);
         m.Items.Add(scrollingWin);
+        var horizontalScrollingWin = new MenuItem { Header = "Horizontal scrolling window" };
+        horizontalScrollingWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureHorizontalScrollingForegroundAsync);
+        m.Items.Add(horizontalScrollingWin);
+        var omnidirectionalScrollingWin = new MenuItem { Header = "Omnidirectional scrolling window" };
+        omnidirectionalScrollingWin.Click += async (_, _) => await SafeRun(_orchestrator.CaptureOmnidirectionalScrollingForegroundAsync);
+        m.Items.Add(omnidirectionalScrollingWin);
 
         var monitorParent = new MenuItem { Header = "_Monitor" };
         try
