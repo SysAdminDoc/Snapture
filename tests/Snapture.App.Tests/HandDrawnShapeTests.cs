@@ -21,6 +21,7 @@ public sealed class HandDrawnShapeTests
             ("Freehand", () => new FreehandShape { Points = new() { new(20, 30), new(75, 100), new(150, 50) } }),
             ("Text", () => new TextShape { X = 20, Y = 30, Text = "Sketch" }),
             ("Highlight", () => new HighlightShape { X = 20, Y = 20, Width = 100, Height = 60, StrokeColorArgb = 0xFFFFD43B }),
+            ("LineStateMarker", () => new LineStateMarkerShape { X = 20, Y = 20, Width = 100, Height = 60, State = LineState.Added }),
             ("Blur", () => new BlurShape { X = 20, Y = 20, Width = 100, Height = 60 }),
             ("Redact", () => new RedactShape { X = 20, Y = 20, Width = 100, Height = 60 }),
             ("Step", () => new StepShape { X = 80, Y = 80, Radius = 28 })

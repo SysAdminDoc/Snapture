@@ -81,6 +81,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The editor now exposes an accessible Options button and a Spacebar toggle for the side panel. Hiding it collapses the panel column so the canvas expands, while focused buttons, sliders, checkboxes, and text controls retain their normal Spacebar behavior.
 
+### Added — Code line-state markers
+
+- The editor now has a Code line marker tool with Added, Removed, Focus, Blur, and Fade states. Markers persist in `.snapture` projects, render over captured code lines, and carry through Carbon code-window and beautifier exports.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

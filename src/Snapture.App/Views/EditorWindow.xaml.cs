@@ -20,7 +20,7 @@ public partial class EditorWindow : Window
 {
     public enum EditorTool
     {
-        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, SpeechBalloon, Highlight, Blur, Redact, Step, Crop, Eyedropper, Spotlight, Ruler
+        Select, Rectangle, Ellipse, Line, Arrow, Freehand, Text, SpeechBalloon, Highlight, LineStateMarker, Blur, Redact, Step, Crop, Eyedropper, Spotlight, Ruler
     }
 
     private static readonly (EditorTool tool, string label, Key hotkey, string glyph)[] ToolButtons =
@@ -34,6 +34,7 @@ public partial class EditorWindow : Window
         (EditorTool.Text,      "Text",                Key.T, "T"),
         (EditorTool.SpeechBalloon, "Speech balloon", Key.Q, "☁"),
         (EditorTool.Highlight, "Highlight",           Key.H, "▣"),
+        (EditorTool.LineStateMarker, "Code line marker", Key.G, "±"),
         (EditorTool.Blur,      "Blur / pixelate",     Key.B, "▦"),
         (EditorTool.Redact,    "Redact secrets",      Key.X, "■"),
         (EditorTool.Step,      "Step counter",        Key.N, "①"),
@@ -62,6 +63,7 @@ public partial class EditorWindow : Window
     private TextOrientation _textOrientation = TextOrientation.Horizontal;
     private float _balloonCornerRadius = 16f;
     private AnnotationCategory _annotationCategory = AnnotationCategory.None;
+    private LineState _lineState = LineState.Added;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
     private SKRect? _cropSelection;
@@ -286,6 +288,7 @@ public partial class EditorWindow : Window
         TextOptionsPanel.Visibility = tool == EditorTool.Text ? Visibility.Visible : Visibility.Collapsed;
         BalloonOptionsPanel.Visibility = tool == EditorTool.SpeechBalloon ? Visibility.Visible : Visibility.Collapsed;
         CropOptionsPanel.Visibility = tool == EditorTool.Crop ? Visibility.Visible : Visibility.Collapsed;
+        LineMarkerOptionsPanel.Visibility = tool == EditorTool.LineStateMarker ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = $"Tool: {tool}";
     }
 
@@ -1060,6 +1063,7 @@ public partial class EditorWindow : Window
             EditorTool.Text      => new TextShape        { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, Text = PromptForText() ?? "", Orientation = _textOrientation },
             EditorTool.SpeechBalloon => new SpeechBalloonShape { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, FillColorArgb = (_activeColor & 0x00FFFFFF) | 0x33000000, CornerRadius = _balloonCornerRadius },
             EditorTool.Highlight => new HighlightShape   { X = p.X, Y = p.Y, StrokeColorArgb = 0xFFFFD43B },
+            EditorTool.LineStateMarker => new LineStateMarkerShape { X = p.X, Y = p.Y, State = _lineState, StrokeColorArgb = _activeColor },
             EditorTool.Blur      => new BlurShape        { X = p.X, Y = p.Y, BlurRadius = Math.Max(8, _strokeThickness * 4), Pixelate = pixelate },
             EditorTool.Redact    => new RedactShape      { X = p.X, Y = p.Y },
             EditorTool.Step      => new StepShape        { X = p.X, Y = p.Y, Label = _stepCounter.ToString(), StrokeColorArgb = _activeColor, Radius = Math.Max(14, _strokeThickness * 5) },
@@ -1103,6 +1107,10 @@ public partial class EditorWindow : Window
                 h.X = Math.Min(a.X, b.X); h.Y = Math.Min(a.Y, b.Y);
                 h.Width = Math.Abs(b.X - a.X); h.Height = Math.Abs(b.Y - a.Y);
                 break;
+            case LineStateMarkerShape lm:
+                lm.X = Math.Min(a.X, b.X); lm.Y = Math.Min(a.Y, b.Y);
+                lm.Width = Math.Abs(b.X - a.X); lm.Height = Math.Abs(b.Y - a.Y);
+                break;
             case BlurShape bs:
                 bs.X = Math.Min(a.X, b.X); bs.Y = Math.Min(a.Y, b.Y);
                 bs.Width = Math.Abs(b.X - a.X); bs.Height = Math.Abs(b.Y - a.Y);
@@ -1128,6 +1136,7 @@ public partial class EditorWindow : Window
         TextShape t        => !string.IsNullOrWhiteSpace(t.Text),
         SpeechBalloonShape sb => sb.Width >= 4 && sb.Height >= 4,
         HighlightShape h   => h.Width >= 4 && h.Height >= 4,
+        LineStateMarkerShape lm => lm.Width >= 4 && lm.Height >= 4,
         BlurShape b        => b.Width >= 4 && b.Height >= 4,
         RedactShape r      => r.Width >= 4 && r.Height >= 4,
         StepShape          => true,
@@ -1220,6 +1229,12 @@ public partial class EditorWindow : Window
         _balloonCornerRadius = (float)Math.Clamp(e.NewValue, 0, 64);
         if (BalloonCornerRadiusValue is not null)
             BalloonCornerRadiusValue.Text = $"{e.NewValue:0}px";
+    }
+    private void OnLineMarkerStateChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (LineMarkerStateCombo.SelectedItem is ComboBoxItem { Tag: string tag } &&
+            Enum.TryParse<LineState>(tag, out var state))
+            _lineState = state;
     }
     private void OnAnnotationCategoryChanged(object sender, SelectionChangedEventArgs e)
     {

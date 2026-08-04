@@ -259,6 +259,24 @@
                                            Margin="0,6,0,0" />
                             </StackPanel>
 
+                            <StackPanel x:Name="LineMarkerOptionsPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                <TextBlock Text="Code line state" Style="{StaticResource HelpText}" Margin="0,0,0,4" />
+                                <ComboBox x:Name="LineMarkerStateCombo"
+                                          SelectedIndex="0"
+                                          SelectionChanged="OnLineMarkerStateChanged"
+                                          ToolTip="Tint a code line as added, removed, focus, blur, or fade.">
+                                    <ComboBoxItem Content="Added · green" Tag="Added" />
+                                    <ComboBoxItem Content="Removed · red" Tag="Removed" />
+                                    <ComboBoxItem Content="Focus · blue" Tag="Focus" />
+                                    <ComboBoxItem Content="Blur · gray" Tag="Blur" />
+                                    <ComboBoxItem Content="Fade · purple" Tag="Fade" />
+                                </ComboBox>
+                                <TextBlock Text="Draw one marker over each code line; markers export with the Carbon code-window frame."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0" />
+                            </StackPanel>
+
                             <CheckBox x:Name="DashedCheck" Content="Dashed line or arrow" Margin="0,10,0,0" />
                             <CheckBox x:Name="BidirCheck" Content="Arrowheads at both ends" />
                             <CheckBox x:Name="ReversedCheck" Content="Reverse arrow direction" />

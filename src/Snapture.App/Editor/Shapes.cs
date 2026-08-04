@@ -16,6 +16,7 @@ namespace Snapture.App.Editor;
 [JsonDerivedType(typeof(FreehandShape),   typeDiscriminator: "freehand")]
 [JsonDerivedType(typeof(TextShape),       typeDiscriminator: "text")]
 [JsonDerivedType(typeof(HighlightShape),  typeDiscriminator: "highlight")]
+[JsonDerivedType(typeof(LineStateMarkerShape), typeDiscriminator: "line-state")]
 [JsonDerivedType(typeof(BlurShape),       typeDiscriminator: "blur")]
 [JsonDerivedType(typeof(RedactShape),     typeDiscriminator: "redact")]
 [JsonDerivedType(typeof(StepShape),       typeDiscriminator: "step")]
@@ -147,6 +148,15 @@ public enum ArrowStyle
 {
     Classic,
     Modern
+}
+
+public enum LineState
+{
+    Added,
+    Removed,
+    Focus,
+    Blur,
+    Fade
 }
 
 public sealed class RectangleShape : Shape
@@ -789,6 +799,100 @@ public sealed class HighlightShape : Shape
     {
         X = X, Y = Y, Width = Width, Height = Height,
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow, Category = Category
+    };
+    public override void Offset(float dx, float dy) { X += dx; Y += dy; }
+    public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
+}
+
+/// <summary>Snappify-style state tint for a line or code region in an export.</summary>
+public sealed class LineStateMarkerShape : Shape
+{
+    public float X { get; set; }
+    public float Y { get; set; }
+    public float Width { get; set; }
+    public float Height { get; set; }
+    public LineState State { get; set; }
+
+    public override void Render(SKCanvas canvas, AnnotationDocument doc)
+    {
+        var rect = new SKRect(X, Y, X + Width, Y + Height);
+        var color = StateColor(State);
+        using var fill = new SKPaint
+        {
+            Style = SKPaintStyle.Fill,
+            Color = new SKColor(color.Red, color.Green, color.Blue, (byte)(State == LineState.Blur ? 155 : 62)),
+            IsAntialias = true
+        };
+        ApplyShadowIfNeeded(fill);
+        if (State == LineState.Fade)
+        {
+            using var shader = SKShader.CreateLinearGradient(
+                new SKPoint(rect.Left, rect.MidY), new SKPoint(rect.Right, rect.MidY),
+                new[] { new SKColor(color.Red, color.Green, color.Blue, 145), new SKColor(color.Red, color.Green, color.Blue, 0) },
+                null, SKShaderTileMode.Clamp);
+            fill.Shader = shader;
+        }
+
+        if (Sloppiness > 0)
+        {
+            using var rough = RoughStroke.CreateRectangle(rect, Sloppiness, StrokeThickness, 887);
+            canvas.DrawPath(rough, fill);
+        }
+        else
+        {
+            canvas.DrawRect(rect, fill);
+        }
+
+        using var stripe = new SKPaint
+        {
+            Style = SKPaintStyle.Fill,
+            Color = new SKColor(color.Red, color.Green, color.Blue, 235),
+            IsAntialias = true
+        };
+        canvas.DrawRect(new SKRect(rect.Left, rect.Top, Math.Min(rect.Right, rect.Left + 4), rect.Bottom), stripe);
+
+        if (rect.Height >= 16)
+        {
+            using var glyph = new SKPaint
+            {
+                Style = SKPaintStyle.Fill,
+                Color = new SKColor(255, 255, 255, 225),
+                TextSize = Math.Clamp(rect.Height * 0.58f, 10, 22),
+                TextAlign = SKTextAlign.Center,
+                IsAntialias = true,
+                Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright)
+            };
+            canvas.DrawText(StateGlyph(State), rect.Left + 13, rect.MidY + glyph.TextSize * 0.34f, glyph);
+        }
+    }
+
+    internal static SKColor StateColor(LineState state) => state switch
+    {
+        LineState.Added => new SKColor(166, 227, 161),
+        LineState.Removed => new SKColor(243, 139, 168),
+        LineState.Focus => new SKColor(137, 180, 250),
+        LineState.Blur => new SKColor(108, 112, 134),
+        LineState.Fade => new SKColor(203, 166, 247),
+        _ => SKColors.White
+    };
+
+    private static string StateGlyph(LineState state) => state switch
+    {
+        LineState.Added => "+",
+        LineState.Removed => "−",
+        LineState.Focus => "•",
+        LineState.Blur => "≈",
+        LineState.Fade => "↘",
+        _ => "•"
+    };
+
+    public override SKRect GetBounds() => new(X, Y, X + Width, Y + Height);
+    public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
+    public override Shape Clone() => new LineStateMarkerShape
+    {
+        X = X, Y = Y, Width = Width, Height = Height, State = State,
+        StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness,
+        Sloppiness = Sloppiness, DropShadow = DropShadow, Category = Category
     };
     public override void Offset(float dx, float dy) { X += dx; Y += dy; }
     public override void ResizeTo(SKRect r) { X = r.Left; Y = r.Top; Width = r.Width; Height = r.Height; }
