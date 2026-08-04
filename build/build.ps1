@@ -6,6 +6,7 @@ param(
     [switch]$Publish,
     [switch]$Zip,
     [switch]$Msix,
+    [switch]$Velopack,
     [ValidateSet('canary', 'pilot', 'stable')]
     [string]$RolloutRing = 'stable',
     [string]$AppInstallerBaseUri = 'https://sysadmindoc.github.io/Snapture'
@@ -136,6 +137,65 @@ function New-MsixPackage {
     Write-Host '    Signing intentionally omitted; release signing remains an operator-controlled step.' -ForegroundColor Yellow
 }
 
+function New-VelopackPackage {
+    $version = Get-ProjectVersion
+    if ($Runtime -notin @('win-x64', 'win-arm64')) { throw "Velopack supports win-x64 or win-arm64, not '$Runtime'." }
+    $channel = if ($Runtime -eq 'win-arm64') { 'win-arm64-stable' } else { 'win-x64-stable' }
+    $velopackRoot = Join-Path $root "publish\velopack\$Runtime"
+    $payload = Join-Path $velopackRoot 'payload'
+    if (Test-Path -LiteralPath $velopackRoot) { [System.IO.Directory]::Delete($velopackRoot, $true) }
+    New-Item -ItemType Directory -Path $payload -Force | Out-Null
+
+    Write-Host "==> dotnet publish -c $Configuration -r $Runtime for Velopack" -ForegroundColor Cyan
+    dotnet publish "$root\src\Snapture.App\Snapture.App.csproj" `
+        -c $Configuration `
+        -r $Runtime `
+        --self-contained false `
+        -p:PublishSingleFile=false `
+        -p:PublishTrimmed=false `
+        -o $payload `
+        --nologo
+    if ($LASTEXITCODE -ne 0) { throw "Velopack publish failed." }
+    Copy-Item -LiteralPath "$root\build\uninstall.ps1" -Destination (Join-Path $payload 'Uninstall-Snapture.ps1') -Force
+
+    Write-Host '==> dotnet tool restore (vpk 1.2.0)' -ForegroundColor Cyan
+    dotnet tool restore
+    if ($LASTEXITCODE -ne 0) { throw 'Velopack CLI tool restore failed.' }
+    dotnet tool run vpk --yes true --legacyConsole true pack `
+        --outputDir $velopackRoot `
+        --channel $channel `
+        --runtime $Runtime `
+        --packId SysAdminDoc.Snapture `
+        --packVersion $version `
+        --packDir $payload `
+        --packAuthors SysAdminDoc `
+        --packTitle Snapture `
+        --releaseNotes "$root\CHANGELOG.md" `
+        --mainExe Snapture.App.exe
+    if ($LASTEXITCODE -ne 0) { throw 'Velopack pack failed.' }
+    $expectedAssets = @(
+        "SysAdminDoc.Snapture-$version-$channel-full.nupkg",
+        "SysAdminDoc.Snapture-$channel-Portable.zip",
+        "SysAdminDoc.Snapture-$channel-Setup.exe",
+        "releases.$channel.json",
+        "assets.$channel.json",
+        "RELEASES-$channel"
+    )
+    foreach ($asset in $expectedAssets) {
+        if (-not (Test-Path -LiteralPath (Join-Path $velopackRoot $asset))) {
+            throw "Velopack output is missing '$asset'."
+        }
+    }
+    $feed = Get-Content -LiteralPath (Join-Path $velopackRoot "releases.$channel.json") -Raw | ConvertFrom-Json
+    foreach ($asset in $feed.Assets) {
+        if (-not (Test-Path -LiteralPath (Join-Path $velopackRoot $asset.FileName))) {
+            throw "Velopack feed references missing asset '$($asset.FileName)'."
+        }
+    }
+    Write-Host "==> Wrote Velopack release assets to $velopackRoot" -ForegroundColor Green
+    Write-Host '    Signing intentionally omitted; release signing remains an operator-controlled step.' -ForegroundColor Yellow
+}
+
 if ($Clean) {
     Write-Host "==> Cleaning bin/obj/publish" -ForegroundColor Cyan
     Get-ChildItem -Path $root -Recurse -Directory -Force `
@@ -172,5 +232,6 @@ if ($Publish) {
 }
 
 if ($Msix) { New-MsixPackage }
+if ($Velopack) { New-VelopackPackage }
 
 Write-Host "==> Done." -ForegroundColor Green

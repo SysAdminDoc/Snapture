@@ -9,11 +9,29 @@ public static class UpdateChecker
 {
     private const string ReleaseUrl = "https://api.github.com/repos/SysAdminDoc/Snapture/releases/latest";
 
-    public sealed record UpdateResult(bool Available, string CurrentVersion, string LatestVersion, string? HtmlUrl);
+    public sealed record UpdateResult(
+        bool Available,
+        string CurrentVersion,
+        string LatestVersion,
+        string? HtmlUrl,
+        bool VelopackEnabled = false,
+        string? Error = null);
 
     public static async Task<UpdateResult> CheckAsync()
     {
         string current = Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
+        var velopack = await VelopackUpdateService.CheckAsync().ConfigureAwait(false);
+        if (velopack.Supported)
+        {
+            return new UpdateResult(
+                velopack.Available,
+                velopack.CurrentVersion,
+                velopack.LatestVersion,
+                null,
+                VelopackEnabled: true,
+                velopack.Error);
+        }
+
         try
         {
             using var http = new HttpClient();
@@ -34,7 +52,14 @@ public static class UpdateChecker
         catch (Exception ex)
         {
             Log.Warning(ex, "UpdateChecker.Failed");
-            return new UpdateResult(false, current, current, null);
+            return new UpdateResult(false, current, current, null, Error: ex.Message);
         }
     }
+
+    public static Task<bool> DownloadPendingAsync(
+        Action<int>? progress = null,
+        CancellationToken cancellationToken = default) =>
+        VelopackUpdateService.DownloadPendingAsync(progress, cancellationToken);
+
+    public static bool ApplyPendingAndRestart() => VelopackUpdateService.ApplyPendingAndRestart();
 }

@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Hardcodet.Wpf.TaskbarNotification;
+using Serilog;
 using Snapture.Capture;
 
 namespace Snapture.App.Services;
@@ -751,8 +752,61 @@ public sealed class TrayIconHost : IDisposable
                 var result = await UpdateChecker.CheckAsync();
                 checkUpdate.IsEnabled = true;
                 checkUpdate.Header = "Check for _updates…";
-                if (result.Available)
+                if (result.Error is not null)
                 {
+                    ShowToast("Update check failed", result.Error);
+                }
+                else if (result.Available)
+                {
+                    if (result.VelopackEnabled)
+                    {
+                        var downloadAnswer = MessageBox.Show(
+                            $"A newer version is available: v{result.LatestVersion}\nYou are running: v{result.CurrentVersion}\n\nDownload it now?",
+                            "Snapture Update", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                        if (downloadAnswer == MessageBoxResult.Yes)
+                        {
+                            checkUpdate.Header = "Downloading update…";
+                            try
+                            {
+                                bool downloaded = await UpdateChecker.DownloadPendingAsync(
+                                    progress => Application.Current.Dispatcher.BeginInvoke(() =>
+                                        checkUpdate.Header = $"Downloading update… {progress}%"));
+                                if (downloaded)
+                                {
+                                    var restartAnswer = MessageBox.Show(
+                                        "The update is ready. Restart Snapture now to apply it?",
+                                        "Snapture Update", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                                    if (restartAnswer == MessageBoxResult.Yes)
+                                    {
+                                        bool applied = UpdateChecker.ApplyPendingAndRestart();
+                                        if (applied)
+                                        {
+                                            App.Host?.Dispose();
+                                            return;
+                                        }
+
+                                        ShowToast("Update restart failed", "The downloaded update is still staged; try again from the tray menu.");
+                                    }
+                                }
+                                else
+                                {
+                                    ShowToast("Update download failed", result.Error ?? "The update could not be staged.");
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Log.Warning(ex, "Velopack.UpdateDownloadFailed");
+                                ShowToast("Update download failed", ex.Message);
+                            }
+                            finally
+                            {
+                                checkUpdate.IsEnabled = true;
+                                checkUpdate.Header = "Check for _updates…";
+                            }
+                        }
+                        return;
+                    }
+
                     var answer = MessageBox.Show(
                         $"A newer version is available: v{result.LatestVersion}\nYou are running: v{result.CurrentVersion}\n\nOpen the release page?",
                         "Snapture Update", MessageBoxButton.YesNo, MessageBoxImage.Information);

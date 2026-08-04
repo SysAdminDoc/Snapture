@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Velopack auto-updates
+
+- Installed builds now use the pinned Velopack 1.2.0 architecture-specific stable channel to check, download, and apply GitHub Release updates from the tray, with an explicit restart prompt.
+- `build/build.ps1 -Velopack` produces unsigned `win-x64-stable` and `win-arm64-stable` assets, including each feed, full package, setup executable, and portable archive. Unpackaged source builds retain the existing GitHub release-page fallback.
+
 ### Added — MSIX packaging path
 
 - `build/build.ps1 -Msix` publishes and validates an unsigned MSIX with `runFullTrust`, the Windows startup-task extension, no broad file-system capability, generated tile assets, and a pinned App Installer feed for canary/pilot/stable rollout rings.
