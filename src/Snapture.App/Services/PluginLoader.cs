@@ -20,7 +20,8 @@ public sealed class PluginLoader : IDisposable
         IReadOnlyList<IDestination> Destinations,
         IReadOnlyList<ICaptureProcessor> CaptureProcessors,
         IReadOnlyList<IEditorEffect> EditorEffects,
-        AssemblyLoadContext Context);
+        AssemblyLoadContext Context,
+        IReadOnlyList<IPluginConfigurable> Configurables);
 
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly IPluginHost _host;
@@ -126,18 +127,132 @@ public sealed class PluginLoader : IDisposable
         var destinations = InstantiateAll<IDestination>(asm, contracts);
         var processors = InstantiateAll<ICaptureProcessor>(asm, contracts);
         var effects = InstantiateAll<IEditorEffect>(asm, contracts);
+        var configurables = InstantiateAll<IPluginConfigurable>(asm, contracts);
 
         var info = new LoadedPluginInfo(
             dllPath, attr.Name, attr.Author, attr.Version, attr.Description,
             attr.Capabilities, contracts, attr.MinHostVersion, attr.MaxHostVersion);
 
-        var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx);
+        var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx, configurables);
         _plugins.Add(loaded);
         Log.Information("Plugin.Loaded {PluginName} {PluginVersion}", info.Name, info.Version);
         _host.Log($"Plugin loaded: {info.Name} v{info.Version} by {info.Author} " +
                   $"(caps: {info.Capabilities}; types: {string.Join(", ", info.ContractTypes)})");
         return loaded;
     }
+
+    /// <summary>Install a user-selected DLL, replacing the same plugin by declared name.</summary>
+    public LoadedPlugin InstallOrUpdate(string sourcePath)
+    {
+        string source = Path.GetFullPath(sourcePath);
+        if (!File.Exists(source)) throw new FileNotFoundException("The selected plugin DLL does not exist.", source);
+        if (!string.Equals(Path.GetExtension(source), ".dll", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Plugins must be DLL files.", nameof(sourcePath));
+
+        var manifest = ReadManifest(source);
+        var hostVersion = typeof(PluginLoader).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
+        if (!PluginCompatibility.TryValidate(manifest.MinHostVersion, manifest.MaxHostVersion, hostVersion, out var reason))
+            throw new InvalidDataException($"Plugin '{manifest.Name}' is incompatible: {reason}");
+
+        var existing = _plugins.FirstOrDefault(plugin =>
+            string.Equals(plugin.Info.Name, manifest.Name, StringComparison.OrdinalIgnoreCase));
+        string destination = existing?.Info.AssemblyPath
+            ?? Path.Combine(PluginsDirectory, Path.GetFileName(source));
+        destination = Path.GetFullPath(destination);
+        Directory.CreateDirectory(PluginsDirectory);
+
+        var pathOwner = _plugins.FirstOrDefault(plugin =>
+            string.Equals(plugin.Info.AssemblyPath, destination, StringComparison.OrdinalIgnoreCase));
+        if (pathOwner is not null && !ReferenceEquals(pathOwner, existing))
+            throw new InvalidOperationException($"The destination is already owned by plugin '{pathOwner.Info.Name}'.");
+
+        var temporary = destination + $".install-{Guid.NewGuid():N}.tmp";
+        var backup = destination + $".backup-{Guid.NewGuid():N}.tmp";
+        bool hadExistingFile = File.Exists(destination);
+        try
+        {
+            if (existing is not null)
+            {
+                _plugins.Remove(existing);
+                Unload(existing);
+            }
+            if (hadExistingFile) File.Copy(destination, backup, overwrite: true);
+            File.Copy(source, temporary, overwrite: true);
+            File.Move(temporary, destination, overwrite: true);
+
+            var loaded = LoadOne(destination)
+                ?? throw new InvalidDataException($"Plugin '{manifest.Name}' could not be loaded after installation.");
+            if (File.Exists(backup)) File.Delete(backup);
+            return loaded;
+        }
+        catch
+        {
+            try
+            {
+                if (File.Exists(destination)) File.Delete(destination);
+                if (File.Exists(backup))
+                {
+                    File.Move(backup, destination, overwrite: true);
+                    LoadOne(destination);
+                }
+            }
+            catch (Exception restoreError)
+            {
+                Log.Error(restoreError, "Plugin.Install.RestoreFailed {Path}", destination);
+            }
+            throw;
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+            if (File.Exists(backup)) File.Delete(backup);
+        }
+    }
+
+    /// <summary>Unload and remove a plugin selected in the Plugins window.</summary>
+    public bool Uninstall(LoadedPlugin plugin)
+    {
+        ArgumentNullException.ThrowIfNull(plugin);
+        if (!_plugins.Remove(plugin)) return false;
+        Unload(plugin);
+        try
+        {
+            if (File.Exists(plugin.Info.AssemblyPath)) File.Delete(plugin.Info.AssemblyPath);
+            return true;
+        }
+        catch
+        {
+            Log.Warning("Plugin.Uninstall.DeleteFailed {Path}", plugin.Info.AssemblyPath);
+            return false;
+        }
+    }
+
+    private void Unload(LoadedPlugin plugin)
+    {
+        try { plugin.Context.Unload(); } catch { }
+    }
+
+    private static PluginManifest ReadManifest(string dllPath)
+    {
+        var context = new AssemblyLoadContext($"snapture-plugin-manifest:{Guid.NewGuid():N}", isCollectible: true);
+        context.Resolving += (_, name) =>
+            name.Name == typeof(SnapturePluginAttribute).Assembly.GetName().Name
+                ? typeof(SnapturePluginAttribute).Assembly
+                : null;
+        try
+        {
+            using var stream = File.OpenRead(dllPath);
+            var assembly = context.LoadFromStream(stream);
+            var entry = assembly.DefinedTypes
+                .FirstOrDefault(type => type.GetCustomAttribute<SnapturePluginAttribute>() is not null);
+            if (entry?.GetCustomAttribute<SnapturePluginAttribute>() is not { } attr)
+                throw new InvalidDataException("The DLL has no [SnapturePlugin] entry point.");
+            return new PluginManifest(attr.Name, attr.MinHostVersion, attr.MaxHostVersion);
+        }
+        finally { context.Unload(); }
+    }
+
+    private sealed record PluginManifest(string Name, string? MinHostVersion, string? MaxHostVersion);
 
     private static IReadOnlyList<T> InstantiateAll<T>(Assembly asm, List<string> contractsTrace)
     {

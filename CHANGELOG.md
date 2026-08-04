@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Plugin manager workflow
+
+- The Plugins window can install/update a selected DLL, uninstall a loaded plugin, and open a host-rendered JSON configuration editor for plugins implementing `IPluginConfigurable`.
+- Install/update is staged through a temporary file, validates the plugin manifest and host-version range before loading, and restores the prior DLL if activation fails.
+
 ### Changed — Plugin host compatibility guard
 
 - `[SnapturePlugin]` now accepts inclusive `minHostVersion` and `maxHostVersion` bounds. Snapture rejects invalid, reversed, or out-of-range manifests before instantiating plugin contracts and surfaces the declared range in the Plugins window.

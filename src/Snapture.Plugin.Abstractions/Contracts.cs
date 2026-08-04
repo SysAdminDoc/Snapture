@@ -165,6 +165,18 @@ public interface IEditorEffect
     Task<PluginCapture> ApplyAsync(PluginCapture capture, IPluginHost host, CancellationToken ct = default);
 }
 
+/// <summary>
+/// Optional host-rendered configuration surface. The payload is JSON so a plugin can keep its
+/// own schema and persistence policy while Snapture provides a safe local editor and validates
+/// that the submitted document is well-formed before handing it back.
+/// </summary>
+public interface IPluginConfigurable
+{
+    string ConfigurationTitle { get; }
+    string ConfigurationJson { get; }
+    void ApplyConfigurationJson(string configurationJson);
+}
+
 /// <summary>Collected loader-level result for one plugin assembly.</summary>
 public sealed class LoadedPluginInfo
 {

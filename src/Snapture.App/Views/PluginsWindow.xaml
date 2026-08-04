@@ -32,6 +32,7 @@
                 <StackPanel Orientation="Horizontal"
                             HorizontalAlignment="Right"
                             DockPanel.Dock="Right">
+                    <Button Content="Install / update DLL" Click="OnInstallClicked" />
                     <Button Content="Open folder" Click="OnOpenFolderClicked" />
                     <Button x:Name="ReloadButton"
                             Content="Reload all"

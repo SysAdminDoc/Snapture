@@ -114,6 +114,21 @@ public partial class PluginsWindow : Window
             };
             path.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleForeground");
             stack.Children.Add(path);
+            var actions = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                Margin = new Thickness(0, 10, 0, 0)
+            };
+            if (p.Configurables.Count > 0)
+            {
+                var configure = new Button { Content = "Configure", Tag = p };
+                configure.Click += OnConfigureClicked;
+                actions.Children.Add(configure);
+            }
+            var uninstall = new Button { Content = "Uninstall", Tag = p };
+            uninstall.Click += OnUninstallClicked;
+            actions.Children.Add(uninstall);
+            stack.Children.Add(actions);
             card.Child = stack;
             PluginList.Children.Add(card);
         }
@@ -163,6 +178,60 @@ public partial class PluginsWindow : Window
         catch (Exception ex)
         {
             StatusText.Text = $"Reload failed: {ex.Message}";
+        }
+    }
+
+    private async void OnInstallClicked(object sender, RoutedEventArgs e)
+    {
+        var path = await StoragePickerService.PickOpenFileAsync(
+            this,
+            "Snapture plugin (*.dll)|*.dll",
+            new[] { ".dll" },
+            title: "Install or update a Snapture plugin");
+        if (path is null || App.Host is null) return;
+        try
+        {
+            var installed = App.Host.Plugins.InstallOrUpdate(path);
+            Refresh();
+            StatusText.Text = $"Installed {installed.Info.Name} v{installed.Info.Version}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Install failed: {ex.Message}";
+        }
+    }
+
+    private void OnConfigureClicked(object sender, RoutedEventArgs e)
+    {
+        if (App.Host is null || (sender as Button)?.Tag is not PluginLoader.LoadedPlugin plugin)
+            return;
+        var dialog = new PluginConfigurationWindow(plugin.Info.Name, plugin.Configurables)
+        {
+            Owner = this
+        };
+        _ = dialog.ShowDialog();
+    }
+
+    private void OnUninstallClicked(object sender, RoutedEventArgs e)
+    {
+        if (App.Host is null || (sender as Button)?.Tag is not PluginLoader.LoadedPlugin plugin)
+            return;
+        var answer = MessageBox.Show(
+            $"Remove {plugin.Info.Name} v{plugin.Info.Version} from Snapture?\n\n{plugin.Info.AssemblyPath}",
+            "Uninstall plugin",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Question);
+        if (answer != MessageBoxResult.Yes) return;
+        try
+        {
+            if (!App.Host.Plugins.Uninstall(plugin))
+                throw new InvalidOperationException("The plugin could not be removed.");
+            Refresh();
+            StatusText.Text = $"Uninstalled {plugin.Info.Name}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Uninstall failed: {ex.Message}";
         }
     }
 
