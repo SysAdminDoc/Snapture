@@ -44,6 +44,7 @@ The existing landscape on Windows in 2026:
 - **GIF clip editing** — Tray → Tools → Edit GIF opens an existing animation for frame deletion and editing; deletion-only changes can be saved as a lossless clip that keeps the source palettes and compressed frame data.
 - **Per-rule auto-redact toggles** — Settings → Auto-redact lists every detector rule as a checkbox. Disabled set is persisted; new rules ship enabled.
 - **Plugin contract resize support** — capture processors may now resize, not just replace pixels. Plugin output lands in the saved file and the history index (the order is now capture → plugins → save).
+- **Local batch image processing** — Tray → Tools → Batch process images applies resize, border, watermark, and PNG/JPG/BMP/WebP conversion to a local folder with bounded file counts and per-file failure reporting.
 - **Polished desktop UX** — shared WPF chrome, calmer settings/editor/history surfaces, explicit empty states, refined capture picker and recording HUDs, consistent overlay guidance, safer pinned captures, and dark-theme controls across the app.
 - **`docs/HOTKEYS.md`** + **`docs/CAPTURE-MATRIX.md`** + **`manifests/`** for winget submission.
 

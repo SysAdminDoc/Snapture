@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Local batch image processing
+
+- Tray → Tools → Batch process images applies bounded resize, border, watermark, and format conversion effects to a selected local folder, with per-file results and no automatic uploads.
+
 ### Security — Hostile project and plugin input boundaries
 
 - `.snapture` loading now rejects malformed ZIPs, unsupported or duplicate entries, oversized payloads, oversized backgrounds, and invalid document JSON before exposing data to the editor; fuzz coverage asserts clean rejection and no path traversal.
