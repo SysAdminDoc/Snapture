@@ -67,6 +67,7 @@ public partial class SettingsWindow : Window
         MarkdownVaultFolderBox.Text = _draft.MarkdownVaultFolder;
         MarkdownAttachmentFolderBox.Text = _draft.MarkdownAttachmentFolder;
         BindExternalCommandsStatus();
+        BindDeclarativeUploadersStatus();
 
         RegionHotkeyBox.Text       = HotkeyToString(_draft.RegionHotkey);
         WindowHotkeyBox.Text       = HotkeyToString(_draft.WindowHotkey);
@@ -743,6 +744,27 @@ public partial class SettingsWindow : Window
             : $"{count} profile{(count == 1 ? string.Empty : "s")} configured.";
     }
 
+    private void OnConfigureDeclarativeUploadersClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new DeclarativeUploaderConfigurationWindow(_draft.DeclarativeUploaders)
+        {
+            Owner = this
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            _draft.DeclarativeUploaders = dialog.Profiles.ToList();
+            BindDeclarativeUploadersStatus();
+        }
+    }
+
+    private void BindDeclarativeUploadersStatus()
+    {
+        int count = _draft.DeclarativeUploaders?.Count ?? 0;
+        DeclarativeUploadersStatusText.Text = count == 0
+            ? "No uploader profiles imported."
+            : $"{count} profile{(count == 1 ? string.Empty : "s")} imported.";
+    }
+
     private void OnOkClicked(object sender, RoutedEventArgs e)
     {
         // Pull edited fields from controls
@@ -869,6 +891,7 @@ public partial class SettingsWindow : Window
         dst.McpPort = src.McpPort;
         dst.ApprovedPluginManifests = new List<string>(src.ApprovedPluginManifests);
         dst.ExternalCommands = (src.ExternalCommands ?? new()).Select(profile => profile.Clone()).ToList();
+        dst.DeclarativeUploaders = (src.DeclarativeUploaders ?? new()).Select(profile => profile.Clone()).ToList();
         dst.DisabledRedactRules = new List<string>(src.DisabledRedactRules);
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;

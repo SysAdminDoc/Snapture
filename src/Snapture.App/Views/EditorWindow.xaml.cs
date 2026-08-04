@@ -1668,6 +1668,70 @@ public partial class EditorWindow : Window
         return value.Length <= 180 ? value : value[..180] + "…";
     }
 
+    private async void OnUploadClicked(object sender, RoutedEventArgs e)
+    {
+        var host = App.Host;
+        if (host is null) return;
+        var profiles = host.Settings.Current.DeclarativeUploaders ?? new List<DeclarativeUploaderProfile>();
+        if (profiles.Count == 0)
+        {
+            StatusText.Text = "No uploaders imported — open Settings → Output.";
+            try
+            {
+                var settings = new SettingsWindow(host.Settings) { Owner = DialogOwner };
+                settings.ShowDialog();
+            }
+            catch { }
+            return;
+        }
+
+        DeclarativeUploaderProfile? profile = profiles.Count == 1
+            ? profiles[0].Clone()
+            : ChooseUploader(profiles);
+        if (profile is null) return;
+
+        try
+        {
+            using var flattened = RenderForExport();
+            using var image = SKImage.FromBitmap(flattened);
+            using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+            string fileName = BuildUploadFileName();
+            StatusText.Text = $"Uploading to {profile.Name}…";
+            var result = await DeclarativeUploaderService.UploadAsync(
+                profile,
+                new DeclarativeUploaderRequest(
+                    data.ToArray(),
+                    fileName,
+                    _captureResult?.Source ?? "Editor",
+                    _doc.Width,
+                    _doc.Height,
+                    DateTime.UtcNow));
+            StatusText.Text = result.Succeeded
+                ? result.Url is { Length: > 0 } url ? $"Uploaded: {url}" : $"{profile.Name} completed."
+                : $"Upload failed: {result.ErrorMessage ?? $"HTTP {result.StatusCode}"}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Upload failed: {ex.Message}";
+        }
+    }
+
+    private DeclarativeUploaderProfile? ChooseUploader(IReadOnlyList<DeclarativeUploaderProfile> profiles)
+    {
+        var picker = new DeclarativeUploaderPickerWindow(profiles) { Owner = DialogOwner };
+        return picker.ShowDialog() == true ? picker.SelectedProfile : null;
+    }
+
+    private string BuildUploadFileName()
+    {
+        string stem = _exportPath is { Length: > 0 }
+            ? Path.GetFileNameWithoutExtension(_exportPath)
+            : $"Snapture_{DateTime.UtcNow:yyyyMMdd_HHmmss}";
+        var invalid = Path.GetInvalidFileNameChars();
+        stem = new string(stem.Select(ch => invalid.Contains(ch) ? '_' : ch).ToArray());
+        return (string.IsNullOrWhiteSpace(stem) ? "Snapture_capture" : stem) + ".png";
+    }
+
     private async void OnRetakeClicked(object sender, RoutedEventArgs e)
     {
         if (_captureResult is null || App.Host is null) return;

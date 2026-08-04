@@ -662,6 +662,32 @@ public sealed class TrayIconHost : IDisposable
         externalCommands.Items.Add(runLatest);
         tools.Items.Add(externalCommands);
 
+        var uploaders = new MenuItem { Header = "Declarative uploaders" };
+        var configureUploaders = new MenuItem { Header = "Import .sxcu / JSON…" };
+        configureUploaders.Click += (_, _) =>
+        {
+            try
+            {
+                if (App.Host is null) return;
+                var dialog = new Views.DeclarativeUploaderConfigurationWindow(App.Host.Settings.Current.DeclarativeUploaders);
+                if (dialog.ShowDialog() == true)
+                {
+                    App.Host.Settings.Current.DeclarativeUploaders = dialog.Profiles.ToList();
+                    App.Host.Settings.Save();
+                    ShowToast("Declarative uploaders saved", $"{dialog.Profiles.Count} profile(s) available in the editor.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not configure declarative uploaders:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        uploaders.Items.Add(configureUploaders);
+        var uploadLatest = new MenuItem { Header = "Upload latest capture" };
+        uploadLatest.Click += async (_, _) => await UploadLatestCaptureAsync();
+        uploaders.Items.Add(uploadLatest);
+        tools.Items.Add(uploaders);
+
         var history = new MenuItem { Header = "Capture history…" };
         history.Click += (_, _) =>
         {
@@ -919,6 +945,53 @@ public sealed class TrayIconHost : IDisposable
     private static ExternalCommandProfile? ChooseExternalCommand(IReadOnlyList<ExternalCommandProfile> profiles)
     {
         var picker = new Views.ExternalCommandPickerWindow(profiles);
+        return picker.ShowDialog() == true ? picker.SelectedProfile : null;
+    }
+
+    private async Task UploadLatestCaptureAsync()
+    {
+        if (App.Host is null) return;
+        var profiles = App.Host.Settings.Current.DeclarativeUploaders ?? new List<DeclarativeUploaderProfile>();
+        if (profiles.Count == 0)
+        {
+            ShowToast("No uploaders imported", "Import a ShareX .sxcu or compatible JSON profile first.");
+            return;
+        }
+        var latest = App.Host.History.Recent(1).FirstOrDefault();
+        if (latest is null || !File.Exists(latest.FilePath))
+        {
+            ShowToast("No capture available", "Take or save a capture before uploading.");
+            return;
+        }
+        DeclarativeUploaderProfile? profile = profiles.Count == 1
+            ? profiles[0].Clone()
+            : ChooseUploader(profiles);
+        if (profile is null) return;
+        try
+        {
+            ShowToast("Uploader", $"Uploading to {profile.Name}…");
+            var result = await DeclarativeUploaderService.UploadAsync(
+                profile,
+                new DeclarativeUploaderRequest(
+                    await File.ReadAllBytesAsync(latest.FilePath),
+                    Path.GetFileName(latest.FilePath),
+                    latest.Source,
+                    latest.Width,
+                    latest.Height,
+                    latest.CapturedAtUtc));
+            ShowToast(
+                result.Succeeded ? "Upload complete" : "Upload failed",
+                result.Succeeded ? result.Url ?? $"{profile.Name} completed." : result.ErrorMessage ?? $"HTTP {result.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            ShowToast("Upload failed", ex.Message);
+        }
+    }
+
+    private static DeclarativeUploaderProfile? ChooseUploader(IReadOnlyList<DeclarativeUploaderProfile> profiles)
+    {
+        var picker = new Views.DeclarativeUploaderPickerWindow(profiles);
         return picker.ShowDialog() == true ? picker.SelectedProfile : null;
     }
 

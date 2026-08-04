@@ -74,6 +74,9 @@ public sealed class SnaptureSettings
     /// <summary>Explicit local CLI destinations available from the editor.</summary>
     public List<ExternalCommandProfile> ExternalCommands { get; set; } = new();
 
+    /// <summary>Inert, user-imported ShareX-compatible HTTP uploader profiles.</summary>
+    public List<DeclarativeUploaderProfile> DeclarativeUploaders { get; set; } = new();
+
     /// <summary>
     /// Auto-redact: rule IDs that are disabled. Empty list = all rules enabled (the default).
     /// We persist disabled rather than enabled so a future rule pack expansion ships enabled
@@ -170,6 +173,7 @@ public sealed class SettingsService
             Current.PerAppCaptureProfiles ??= new();
             Current.ApprovedPluginManifests ??= new();
             Current.ExternalCommands ??= new();
+            Current.DeclarativeUploaders ??= new();
         }
         catch { Current = new SnaptureSettings(); }
     }

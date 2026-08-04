@@ -101,6 +101,11 @@
                             Click="OnExternalCommandClicked"
                             AutomationProperties.Name="Send to external command"
                             ToolTip="Send the flattened PNG to a configured local command-line tool." />
+                    <Button x:Name="UploadButton"
+                            Content="Upload"
+                            Click="OnUploadClicked"
+                            AutomationProperties.Name="Upload capture"
+                            ToolTip="Send the flattened PNG to an explicitly selected declarative uploader." />
                     </StackPanel>
                 </ScrollViewer>
 

@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Declarative uploader profiles
+
+- Added ShareX-compatible `.sxcu` / JSON import for user-owned HTTP uploaders, including multipart, form-url-encoded, JSON, XML, binary, query, header, and response JSON-path handling.
+- Imported uploaders remain inert until an explicit editor or tray action and enforce bounded payloads, response sizes, timeouts, and no implicit destination changes.
+
 ### Added — External command destination
 
 - Settings → Output can store explicit local CLI profiles that receive a flattened editor PNG through stdin or a temporary `{file}` path argument, with metadata placeholders, timeout bounds, captured output, and direct no-shell process execution.
