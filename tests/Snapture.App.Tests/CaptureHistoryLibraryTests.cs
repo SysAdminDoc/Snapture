@@ -27,6 +27,7 @@ public sealed class CaptureHistoryLibraryTests
                 var projectId = source.CreateProject("Release guide");
                 source.CreateProject("Empty project");
                 source.AssignToProject(new[] { firstId }, projectId);
+                source.SetVerifiedRedacted(firstPath, true);
 
                 Assert.AreEqual(archivePath, source.ExportLibrary(archivePath));
             }
@@ -49,6 +50,7 @@ public sealed class CaptureHistoryLibraryTests
             Assert.HasCount(2, restored.Projects());
             Assert.AreEqual(1, entries.Count(entry => entry.ProjectName == "Release guide"));
             Assert.AreEqual(1, entries.Count(entry => entry.OcrText == "first OCR"));
+            Assert.AreEqual(1, entries.Count(entry => entry.VerifiedRedacted));
             Assert.IsTrue(entries.All(entry => File.Exists(entry.FilePath)));
 
             var duplicateResult = restored.ImportLibrary(archivePath);

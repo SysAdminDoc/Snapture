@@ -107,7 +107,7 @@ public sealed partial class CaptureHistoryService
             using var importedConnection = new SqliteConnection($"Data Source={stagedDatabase};Pooling=False;Mode=ReadOnly");
             importedConnection.Open();
             var projects = ReadImportedProjects(importedConnection);
-            var captures = ReadImportedCaptures(importedConnection);
+            var captures = ReadImportedCaptures(importedConnection, manifest.HistorySchemaVersion >= 4);
             var assets = manifestAssets
                 .ToDictionary(asset => asset.CaptureId);
             var destinationDirectory = Path.Combine(
@@ -252,13 +252,17 @@ public sealed partial class CaptureHistoryService
         return projects;
     }
 
-    private static List<ImportedCapture> ReadImportedCaptures(SqliteConnection connection)
+    private static List<ImportedCapture> ReadImportedCaptures(SqliteConnection connection, bool hasVerificationColumn)
     {
         var captures = new List<ImportedCapture>();
         using var command = connection.CreateCommand();
-        command.CommandText = @"SELECT id, file_path, captured_at, source, source_app, window_title,
-                                       width, height, ocr_text, dominant_color, perceptual_hash, project_id
-                                FROM captures";
+        command.CommandText = hasVerificationColumn
+            ? @"SELECT id, file_path, captured_at, source, source_app, window_title,
+                       width, height, ocr_text, dominant_color, perceptual_hash, project_id, verified_redacted
+                FROM captures"
+            : @"SELECT id, file_path, captured_at, source, source_app, window_title,
+                       width, height, ocr_text, dominant_color, perceptual_hash, project_id, 0 AS verified_redacted
+                FROM captures";
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
@@ -274,7 +278,8 @@ public sealed partial class CaptureHistoryService
                 reader.IsDBNull(8) ? null : reader.GetString(8),
                 reader.IsDBNull(9) ? null : reader.GetString(9),
                 reader.IsDBNull(10) ? null : reader.GetString(10),
-                reader.IsDBNull(11) ? null : reader.GetInt64(11)));
+                reader.IsDBNull(11) ? null : reader.GetInt64(11),
+                reader.GetInt64(12) != 0));
         }
 
         return captures;
@@ -284,7 +289,7 @@ public sealed partial class CaptureHistoryService
     {
         using var command = _conn.CreateCommand();
         command.Transaction = transaction;
-        command.CommandText = @"SELECT 1 FROM captures
+        command.CommandText = @"SELECT id, verified_redacted FROM captures
                                 WHERE captured_at = $captured_at
                                   AND source = $source
                                   AND COALESCE(source_app, '') = COALESCE($source_app, '')
@@ -304,7 +309,22 @@ public sealed partial class CaptureHistoryService
         command.Parameters.AddWithValue("$ocr_text", (object?)capture.OcrText ?? DBNull.Value);
         command.Parameters.AddWithValue("$dominant_color", (object?)capture.DominantColorHex ?? DBNull.Value);
         command.Parameters.AddWithValue("$perceptual_hash", (object?)capture.PerceptualHash ?? DBNull.Value);
-        return command.ExecuteScalar() is not null;
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+            return false;
+
+        if (capture.VerifiedRedacted && reader.GetInt64(1) == 0)
+        {
+            var id = reader.GetInt64(0);
+            reader.Close();
+            using var update = _conn.CreateCommand();
+            update.Transaction = transaction;
+            update.CommandText = "UPDATE captures SET verified_redacted = 1 WHERE id = $id";
+            update.Parameters.AddWithValue("$id", id);
+            update.ExecuteNonQuery();
+        }
+
+        return true;
     }
 
     private long GetOrCreateProject(ImportedProject project, SqliteTransaction transaction, out bool created)
@@ -335,10 +355,10 @@ public sealed partial class CaptureHistoryService
         command.Transaction = transaction;
         command.CommandText = @"INSERT INTO captures(
                                     file_path, captured_at, source, source_app, window_title,
-                                    width, height, ocr_text, dominant_color, perceptual_hash, project_id)
+                                    width, height, ocr_text, dominant_color, perceptual_hash, project_id, verified_redacted)
                                 VALUES(
                                     $file_path, $captured_at, $source, $source_app, $window_title,
-                                    $width, $height, $ocr_text, $dominant_color, $perceptual_hash, $project_id)";
+                                    $width, $height, $ocr_text, $dominant_color, $perceptual_hash, $project_id, $verified_redacted)";
         command.Parameters.AddWithValue("$file_path", destinationPath);
         command.Parameters.AddWithValue("$captured_at", capture.CapturedAt);
         command.Parameters.AddWithValue("$source", capture.Source);
@@ -350,6 +370,7 @@ public sealed partial class CaptureHistoryService
         command.Parameters.AddWithValue("$dominant_color", (object?)capture.DominantColorHex ?? DBNull.Value);
         command.Parameters.AddWithValue("$perceptual_hash", (object?)capture.PerceptualHash ?? DBNull.Value);
         command.Parameters.AddWithValue("$project_id", (object?)projectId ?? DBNull.Value);
+        command.Parameters.AddWithValue("$verified_redacted", capture.VerifiedRedacted ? 1 : 0);
         command.ExecuteNonQuery();
     }
 
@@ -406,7 +427,8 @@ public sealed partial class CaptureHistoryService
         string? OcrText,
         string? DominantColorHex,
         string? PerceptualHash,
-        long? ProjectId);
+        long? ProjectId,
+        bool VerifiedRedacted);
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

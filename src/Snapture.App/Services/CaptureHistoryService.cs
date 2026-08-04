@@ -19,7 +19,8 @@ public sealed record HistoryEntry(
     string? DominantColorHex,
     string? PerceptualHash,
     long? ProjectId,
-    string? ProjectName);
+    string? ProjectName,
+    bool VerifiedRedacted);
 
 public sealed record HistoryProject(
     long Id,
@@ -66,7 +67,7 @@ public sealed partial class CaptureHistoryService : IDisposable
         }
     }
 
-    private const int CurrentSchemaVersion = 3;
+    private const int CurrentSchemaVersion = 4;
 
     private void Migrate()
     {
@@ -88,7 +89,8 @@ CREATE TABLE IF NOT EXISTS captures (
     ocr_text      TEXT,
     dominant_color TEXT,
     perceptual_hash TEXT,
-    project_id    INTEGER
+    project_id    INTEGER,
+    verified_redacted INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS projects (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -141,6 +143,9 @@ CREATE TABLE IF NOT EXISTS projects (
             index.CommandText = "CREATE INDEX IF NOT EXISTS idx_captures_project ON captures(project_id);";
             index.ExecuteNonQuery();
         }
+
+        if (version < 4)
+            EnsureColumn("verified_redacted", "INTEGER NOT NULL DEFAULT 0");
 
         SetUserVersion(CurrentSchemaVersion);
     }
@@ -214,12 +219,12 @@ CREATE TABLE IF NOT EXISTS projects (
     }
 
     public long Add(string filePath, string source, string? sourceApp, string? windowTitle,
-                    int width, int height, string? ocrText)
+                    int width, int height, string? ocrText, bool verifiedRedacted = false)
     {
         var features = ImageFeatureService.Compute(filePath);
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"INSERT INTO captures(file_path, captured_at, source, source_app, window_title, width, height, ocr_text, dominant_color, perceptual_hash)
-                            VALUES($file_path, $captured_at, $source, $source_app, $window_title, $width, $height, $ocr_text, $dominant_color, $perceptual_hash);
+        cmd.CommandText = @"INSERT INTO captures(file_path, captured_at, source, source_app, window_title, width, height, ocr_text, dominant_color, perceptual_hash, verified_redacted)
+                            VALUES($file_path, $captured_at, $source, $source_app, $window_title, $width, $height, $ocr_text, $dominant_color, $perceptual_hash, $verified_redacted);
                             SELECT last_insert_rowid();";
         cmd.Parameters.AddWithValue("$file_path", filePath);
         cmd.Parameters.AddWithValue("$captured_at", DateTime.UtcNow.ToString("O"));
@@ -231,13 +236,32 @@ CREATE TABLE IF NOT EXISTS projects (
         cmd.Parameters.AddWithValue("$ocr_text", (object?)ocrText ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$dominant_color", (object?)features?.DominantColorHex ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$perceptual_hash", (object?)features?.PerceptualHash ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("$verified_redacted", verifiedRedacted ? 1 : 0);
         return (long)(cmd.ExecuteScalar() ?? 0L);
+    }
+
+    public int SetVerifiedRedacted(string filePath, bool verifiedRedacted)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+        using var count = _conn.CreateCommand();
+        count.CommandText = "SELECT COUNT(*) FROM captures WHERE file_path = $file_path";
+        count.Parameters.AddWithValue("$file_path", filePath);
+        int matches = Convert.ToInt32(count.ExecuteScalar() ?? 0);
+        if (matches == 0)
+            return 0;
+
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE captures SET verified_redacted = $verified_redacted WHERE file_path = $file_path";
+        cmd.Parameters.AddWithValue("$verified_redacted", verifiedRedacted ? 1 : 0);
+        cmd.Parameters.AddWithValue("$file_path", filePath);
+        cmd.ExecuteNonQuery();
+        return matches;
     }
 
     public IReadOnlyList<HistoryEntry> Recent(int limit = 60)
     {
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash, c.project_id, p.name
+        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash, c.project_id, p.name, c.verified_redacted
                             FROM captures c
                             LEFT JOIN projects p ON p.id = c.project_id
                             ORDER BY c.captured_at DESC LIMIT $limit";
@@ -249,7 +273,7 @@ CREATE TABLE IF NOT EXISTS projects (
     {
         if (string.IsNullOrWhiteSpace(query)) return Recent(limit);
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash, c.project_id, p.name
+        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash, c.project_id, p.name, c.verified_redacted
                             FROM captures c
                             JOIN captures_fts f ON f.rowid = c.id
                             LEFT JOIN projects p ON p.id = c.project_id
@@ -456,7 +480,8 @@ CREATE TABLE IF NOT EXISTS projects (
                 r.IsDBNull(9) ? null : r.GetString(9),
                 r.IsDBNull(10) ? null : r.GetString(10),
                 r.IsDBNull(11) ? null : r.GetInt64(11),
-                r.IsDBNull(12) ? null : r.GetString(12)));
+                r.IsDBNull(12) ? null : r.GetString(12),
+                r.GetInt64(13) != 0));
         }
         return list;
     }

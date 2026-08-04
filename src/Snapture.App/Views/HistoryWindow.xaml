@@ -66,6 +66,10 @@
                         <Button Content="Clear feature filters"
                                 Click="OnClearFeatureFiltersClicked"
                                 ToolTip="Clear color and near-duplicate filters." />
+                        <Button x:Name="VerifiedRedactedButton"
+                                Content="Verified-redacted only"
+                                Click="OnVerifiedRedactedClicked"
+                                ToolTip="Show captures whose Auto-redact result was saved to disk." />
                         <Button x:Name="OcrAllButton"
                                 Content="OCR all"
                                 Click="OnOcrAllClicked"
@@ -180,6 +184,23 @@
                                            FontSize="11"
                                            Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding VerificationLine}"
+                                           Foreground="{DynamicResource AppGreen}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis">
+                                    <TextBlock.Style>
+                                        <Style TargetType="{x:Type TextBlock}">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsVerifiedRedacted}" Value="False">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
                                 <TextBlock Text="{Binding TimeLine}"
                                            Foreground="{DynamicResource AppSubtleForeground}"
                                            FontSize="11"

@@ -15,6 +15,7 @@ public partial class HistoryWindow : Window
     private readonly CaptureHistoryService _history;
     private string? _dominantColorFilter;
     private bool _nearDuplicatesOnly;
+    private bool _verifiedRedactedOnly;
 
     public sealed record ProjectChoice(long? Id, string Name)
     {
@@ -29,6 +30,8 @@ public partial class HistoryWindow : Window
         public string TitleLine { get; init; } = "";
         public string SubLine { get; init; } = "";
         public string ProjectLine { get; init; } = "";
+        public bool IsVerifiedRedacted { get; init; }
+        public string VerificationLine => IsVerifiedRedacted ? "Verified-redacted" : "";
         public string TimeLine { get; init; } = "";
         public string FeatureLine { get; init; } = "";
         public Brush? DominantColorBrush { get; init; }
@@ -230,6 +233,7 @@ public partial class HistoryWindow : Window
         var filtered = all.Where(e =>
             (appFilter is null || e.SourceApp == appFilter) &&
             (dateCutoff is null || e.CapturedAtUtc >= dateCutoff) &&
+            (!_verifiedRedactedOnly || e.VerifiedRedacted) &&
             (ProjectFilter.SelectedItem is not ProjectChoice project
                 || project.Id is null
                 || e.ProjectId == project.Id)).ToList();
@@ -257,6 +261,7 @@ public partial class HistoryWindow : Window
                 TitleLine = string.IsNullOrWhiteSpace(e.WindowTitle) ? Path.GetFileName(e.FilePath) : e.WindowTitle!,
                 SubLine = $"{e.Source} · {(e.SourceApp ?? "—")} · {e.Width}×{e.Height}",
                 ProjectLine = e.ProjectName is null ? "Inbox · unassigned" : $"Project · {e.ProjectName}",
+                IsVerifiedRedacted = e.VerifiedRedacted,
                 TimeLine = e.CapturedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
                 FeatureLine = BuildFeatureLine(e, duplicateIds.Contains(e.Id)),
                 DominantColorBrush = CreateColorBrush(e.DominantColorHex),
@@ -343,7 +348,16 @@ public partial class HistoryWindow : Window
         ColorSearchBox.Clear();
         _dominantColorFilter = null;
         _nearDuplicatesOnly = false;
+        _verifiedRedactedOnly = false;
         NearDuplicateButton.Content = "Near duplicates";
+        VerifiedRedactedButton.Content = "Verified-redacted only";
+        ApplyFilters();
+    }
+
+    private void OnVerifiedRedactedClicked(object sender, RoutedEventArgs e)
+    {
+        _verifiedRedactedOnly = !_verifiedRedactedOnly;
+        VerifiedRedactedButton.Content = _verifiedRedactedOnly ? "Show all captures" : "Verified-redacted only";
         ApplyFilters();
     }
 

@@ -77,6 +77,7 @@ public partial class EditorWindow : Window
 
     // Selection model — tracks shapes the user has clicked in Select mode
     private readonly HashSet<Shape> _selectedShapes = new();
+    private readonly HashSet<Shape> _autoRedactionShapes = new();
     private Popup? _colorWheelPopup;
 
     // Transform handles: resize selected shape via corner/edge drag
@@ -1403,6 +1404,7 @@ public partial class EditorWindow : Window
             using var data = image.Encode(fmt, quality);
             using var fs = File.Create(path);
             data.SaveTo(fs);
+            MarkHistoryExport(path);
             StatusText.Text = $"Exported {Path.GetFileName(path)}";
             PathText.Text = path;
         }
@@ -1425,6 +1427,7 @@ public partial class EditorWindow : Window
             // Draw all shapes
             foreach (var shape in _doc.Shapes)
                 shape.Render(svgCanvas, _doc);
+            MarkHistoryExport(path);
             StatusText.Text = $"Exported {Path.GetFileName(path)}";
             PathText.Text = path;
         }
@@ -1434,6 +1437,38 @@ public partial class EditorWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
+
+    private void MarkHistoryExport(string path)
+    {
+        try
+        {
+            var history = App.Host?.History;
+            if (history is null)
+                return;
+
+            bool verified = _autoRedactionShapes.Any(_doc.Shapes.Contains);
+            int matches = history.SetVerifiedRedacted(path, verified);
+            if (!verified || matches > 0 || !IsRasterExport(path))
+                return;
+
+            history.Add(
+                path,
+                "Editor",
+                "Snapture",
+                Path.GetFileName(path),
+                _doc.Width,
+                _doc.Height,
+                ocrText: null,
+                verifiedRedacted: true);
+        }
+        catch
+        {
+            // History metadata must never turn a successful export into a failed save.
+        }
+    }
+
+    private static bool IsRasterExport(string path) => Path.GetExtension(path).ToLowerInvariant() is
+        ".png" or ".jpg" or ".jpeg" or ".bmp" or ".gif" or ".webp";
 
     private SKBitmap RenderForExport()
     {
@@ -1657,6 +1692,7 @@ public partial class EditorWindow : Window
             // Simpler: rebuild as Add commands so existing undo works.
             // Pop them out then push as a batch.
             var added_shapes = _doc.Shapes.TakeLast(added).ToList();
+            _autoRedactionShapes.UnionWith(added_shapes);
             for (int i = 0; i < added; i++) _doc.Shapes.RemoveAt(_doc.Shapes.Count - 1);
             foreach (var s in added_shapes) _commands.Do(_doc, new AddShapeCommand(s));
             Canvas.InvalidateVisual();

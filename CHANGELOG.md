@@ -27,6 +27,10 @@ All notable changes to Snapture will be documented in this file.
 
 - History can now export the SQLite index, projects, and referenced capture images into one `.snapture-library` archive and restore it on a fresh install. Imports validate archive paths, preserve project assignments, skip duplicate captures, and keep existing files untouched.
 
+### Added — Verified-redacted history marker
+
+- Auto-redact results are marked `Verified-redacted` only after a successful image export, can be filtered in History, and are cleared if the saved file is later exported without those active redaction shapes. Restored libraries preserve the marker.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.

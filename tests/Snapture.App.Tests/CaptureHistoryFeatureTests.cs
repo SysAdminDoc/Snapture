@@ -50,7 +50,7 @@ public sealed class CaptureHistoryFeatureTests
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA user_version;";
-            Assert.AreEqual(3L, (long)(command.ExecuteScalar() ?? 0L));
+            Assert.AreEqual(4L, (long)(command.ExecuteScalar() ?? 0L));
         }
         finally
         {
