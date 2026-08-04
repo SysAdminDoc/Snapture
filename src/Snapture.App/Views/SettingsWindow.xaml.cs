@@ -70,6 +70,8 @@ public partial class SettingsWindow : Window
         FilenameTemplateBox.Text = _draft.FilenamePattern;
         MarkdownVaultFolderBox.Text = _draft.MarkdownVaultFolder;
         MarkdownAttachmentFolderBox.Text = _draft.MarkdownAttachmentFolder;
+        WatchFolderEnabledCheck.IsChecked = _draft.WatchFolderEnabled;
+        WatchFolderPathBox.Text = _draft.WatchFolderPath;
         BindExternalCommandsStatus();
         BindDeclarativeUploadersStatus();
         BindSelfHostedDestinationsStatus();
@@ -419,6 +421,18 @@ public partial class SettingsWindow : Window
             "Pick a folder for new captures");
         if (path is not null)
             OutputFolderBox.Text = path;
+    }
+
+    private async void OnBrowseWatchFolderClicked(object sender, RoutedEventArgs e)
+    {
+        var path = await StoragePickerService.PickFolderAsync(
+            this,
+            Directory.Exists(WatchFolderPathBox.Text)
+                ? WatchFolderPathBox.Text
+                : PortableMode.DefaultOutputDirectory,
+            "Pick a folder to watch for images");
+        if (path is not null)
+            WatchFolderPathBox.Text = path;
     }
 
     private async void OnBrowseMarkdownVaultClicked(object sender, RoutedEventArgs e)
@@ -812,6 +826,8 @@ public partial class SettingsWindow : Window
         _draft.FilenamePattern        = FilenameTemplateBox.Text;
         _draft.MarkdownVaultFolder = MarkdownVaultFolderBox.Text.Trim();
         _draft.MarkdownAttachmentFolder = MarkdownAttachmentFolderBox.Text.Trim();
+        _draft.WatchFolderEnabled = WatchFolderEnabledCheck.IsChecked == true;
+        _draft.WatchFolderPath = WatchFolderPathBox.Text.Trim();
         _draft.OutputFormat           = ((ComboBoxItem)FormatCombo.SelectedItem).Tag as string ?? "PNG";
         _draft.HdrToneMapOperator     = ((ComboBoxItem)ToneMapCombo.SelectedItem).Tag as string ?? HdrToneMapOperators.DefaultKey;
         _draft.HdrColorCorrection    = HdrColorCorrectionCheck.IsChecked == true;
@@ -853,6 +869,7 @@ public partial class SettingsWindow : Window
         if (themeChanged) ThemeManager.Apply(_settings.Current.ThemeMode);
         if (engineChanged) App.Host?.SwitchEngine(newEngine);
         App.Host?.ApplyEngineSettings();
+        App.Host?.ApplyWatchFolderSettings();
         OcrService.ConfigureRapidOcr(_settings.Current.RapidOcrUseDirectMl);
         OcrService.ConfigureOneOcr(_settings.Current.OneOcrExecutablePath);
 
@@ -911,6 +928,8 @@ public partial class SettingsWindow : Window
         dst.ClipboardCopyMode = src.ClipboardCopyMode;
         dst.MarkdownVaultFolder = src.MarkdownVaultFolder;
         dst.MarkdownAttachmentFolder = src.MarkdownAttachmentFolder;
+        dst.WatchFolderEnabled = src.WatchFolderEnabled;
+        dst.WatchFolderPath = src.WatchFolderPath;
         dst.OpenEditorAfterCapture = src.OpenEditorAfterCapture;
         dst.ShowToastOnSave = src.ShowToastOnSave;
         dst.LaunchAtStartup = src.LaunchAtStartup;

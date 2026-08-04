@@ -32,6 +32,10 @@ public sealed class SnaptureSettings
     /// <summary>Relative folder under the Markdown vault where capture PNGs are copied.</summary>
     public string MarkdownAttachmentFolder { get; set; } = ClipboardIntegrationService.DefaultAttachmentFolder;
 
+    /// <summary>Opt-in folder watcher that indexes completed image files into history.</summary>
+    public bool WatchFolderEnabled { get; set; } = false;
+    public string WatchFolderPath { get; set; } = string.Empty;
+
     public bool OpenEditorAfterCapture { get; set; } = true;
 
     public bool ShowToastOnSave { get; set; } = true;

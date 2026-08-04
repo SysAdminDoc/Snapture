@@ -7,6 +7,10 @@ All notable changes to Snapture will be documented in this file.
 - `.snapture` loading now rejects malformed ZIPs, unsupported or duplicate entries, oversized payloads, oversized backgrounds, and invalid document JSON before exposing data to the editor; fuzz coverage asserts clean rejection and no path traversal.
 - Plugin loader tests cover malformed DLLs, denied capability manifests, constructor failures, cancellation of a non-returning processor, and collectible load contexts. Test loaders can use an injected plugin directory so adversarial fixtures never touch user data.
 
+### Added — Opt-in watch-folder imports
+
+- Settings → Output can watch a selected local folder and add completed PNG/JPEG/BMP/GIF/WebP/TIFF files to History. The watcher waits for stable size/timestamps, ignores unsupported files, and avoids duplicate event imports; it is disabled by default.
+
 ### Added — Resource-backed localization foundation
 
 - Added an embedded English `.resx` catalog with deterministic SHA-256 resource keys, culture selection, safe fallback for plugin-supplied copy, and a WPF load hook that localizes window titles, controls, tooltips, headers, and accessibility names.

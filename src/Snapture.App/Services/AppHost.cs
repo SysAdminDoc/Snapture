@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using Serilog;
+using SkiaSharp;
 using Snapture.App.Editor;
 using Snapture.App.Views;
 using Snapture.Capture;
@@ -15,6 +16,7 @@ public sealed class AppHost : IDisposable
     public CaptureOrchestrator Orchestrator { get; }
     public HotkeyService Hotkeys { get; } = new();
     public CaptureHistoryService History { get; }
+    public WatchFolderService WatchFolder { get; }
     public LanShareServer LanShare { get; } = new();
     public McpServer Mcp { get; }
     public PluginLoader Plugins { get; }
@@ -35,6 +37,7 @@ public sealed class AppHost : IDisposable
         ApplyEngineSettings(engine);
         Log.Information("Engine.Initialized {EngineName}", name);
         History = new CaptureHistoryService();
+        WatchFolder = new WatchFolderService(ImportWatchedImageAsync);
         var scratch = System.IO.Path.Combine(PortableMode.LocalDataDirectory, "plugin-scratch");
         PluginHost = new PluginHostBridge(scratch,
             toast: (t, m) => _tray?.ShowToast(t, m),
@@ -54,6 +57,7 @@ public sealed class AppHost : IDisposable
     public void Start()
     {
         _tray = new TrayIconHost(Orchestrator);
+        ApplyWatchFolderSettings();
         JumpListService.Apply();
         Hotkeys.Initialize();
         RewireHotkeys();
@@ -231,6 +235,34 @@ public sealed class AppHost : IDisposable
         {
             result.Bitmap.Dispose();
         }
+    }
+
+    public void ApplyWatchFolderSettings()
+    {
+        WatchFolder.Stop();
+        if (!Settings.Current.WatchFolderEnabled || string.IsNullOrWhiteSpace(Settings.Current.WatchFolderPath))
+            return;
+
+        try
+        {
+            WatchFolder.Start(Settings.Current.WatchFolderPath);
+            _tray?.ShowToast("Watch folder enabled", $"Images dropped into {WatchFolder.FolderPath} are added to history.");
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "WatchFolder.StartFailed");
+            _tray?.ShowToast("Watch folder unavailable", ex.Message);
+        }
+    }
+
+    private async Task ImportWatchedImageAsync(string path)
+    {
+        await Task.Yield();
+        using var stream = File.OpenRead(path);
+        using var bitmap = SKBitmap.Decode(stream)
+            ?? throw new InvalidDataException("The watched file is not a supported image.");
+        History.Add(path, "Watch folder", null, null, bitmap.Width, bitmap.Height, null);
+        _tray?.ShowToast("Watch folder import", Path.GetFileName(path));
     }
 
     public void OpenEditor(string imagePath)
@@ -449,6 +481,7 @@ public sealed class AppHost : IDisposable
         History.Dispose();
         LanShare.Dispose();
         Plugins.Dispose();
+        WatchFolder.Dispose();
         if (Engine is IDisposable d) d.Dispose();
         _tray?.Dispose();
     }

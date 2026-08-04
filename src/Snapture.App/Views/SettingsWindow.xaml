@@ -394,6 +394,27 @@
 
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
+                                <TextBlock Text="Watch folder" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="Index completed image files dropped into a local folder. Existing files are not imported until they are changed or copied again."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,8" />
+                                <CheckBox x:Name="WatchFolderEnabledCheck"
+                                          Content="Enable watch-folder history imports"
+                                          Margin="0,0,0,8" />
+                                <DockPanel LastChildFill="True">
+                                    <Button x:Name="BrowseWatchFolderButton"
+                                            DockPanel.Dock="Right"
+                                            Content="Browse"
+                                            Click="OnBrowseWatchFolderClicked"
+                                            Margin="8,0,0,0" />
+                                    <TextBox x:Name="WatchFolderPathBox" />
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
                                 <TextBlock Text="External commands" Style="{StaticResource SectionTitleText}" />
                                 <TextBlock Style="{StaticResource HelpText}"
                                            TextWrapping="Wrap"
