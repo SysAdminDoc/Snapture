@@ -179,6 +179,30 @@
                                     ValueChanged="OnSloppinessChanged"
                                     ToolTip="Add deterministic hand-drawn wobble to new stroke shapes." />
 
+                            <StackPanel x:Name="ArrowOptionsPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                <TextBlock Text="Arrow style" Style="{StaticResource HelpText}" Margin="0,0,0,4" />
+                                <ComboBox x:Name="ArrowStyleCombo"
+                                          SelectedIndex="0"
+                                          SelectionChanged="OnArrowStyleChanged"
+                                          ToolTip="Classic uses a filled triangle; Modern uses a rounded open chevron.">
+                                    <ComboBoxItem Content="Classic" Tag="Classic" />
+                                    <ComboBoxItem Content="Modern" Tag="Modern" />
+                                </ComboBox>
+                                <DockPanel Margin="0,10,0,4">
+                                    <TextBlock Text="Curve" Style="{StaticResource HelpText}" />
+                                    <TextBlock x:Name="ArrowCurveValue"
+                                               Text="0%"
+                                               Style="{StaticResource HelpText}"
+                                               HorizontalAlignment="Right" />
+                                </DockPanel>
+                                <Slider x:Name="ArrowCurveSlider"
+                                        Minimum="-100"
+                                        Maximum="100"
+                                        Value="0"
+                                        ValueChanged="OnArrowCurveChanged"
+                                        ToolTip="Bend the arrow left or right along a smooth quadratic curve." />
+                            </StackPanel>
+
                             <CheckBox x:Name="DashedCheck" Content="Dashed line or arrow" Margin="0,10,0,0" />
                             <CheckBox x:Name="BidirCheck" Content="Arrowheads at both ends" />
                             <CheckBox x:Name="ReversedCheck" Content="Reverse arrow direction" />

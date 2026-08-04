@@ -92,6 +92,12 @@ public abstract class Shape
             (byte)((argb >> 24) & 0xFF));
 }
 
+public enum ArrowStyle
+{
+    Classic,
+    Modern
+}
+
 public sealed class RectangleShape : Shape
 {
     public float X { get; set; }
@@ -353,50 +359,97 @@ public sealed class ArrowShape : Shape
     public bool Bidirectional { get; set; }
     public bool Reversed { get; set; }
     public bool Dashed { get; set; }
+    /// <summary>Classic filled triangle or modern rounded open chevron.</summary>
+    public ArrowStyle Style { get; set; }
+    /// <summary>Signed normalized bend amount in the range -1 to 1.</summary>
+    public float Curve { get; set; }
 
     public override void Render(SKCanvas canvas, AnnotationDocument doc)
     {
         using var stroke = MakeStrokePaint();
         if (Dashed) stroke.PathEffect = SKPathEffect.CreateDash(new[] { 8f, 8f }, 0);
+        var start = new SKPoint(X1, Y1);
+        var end = new SKPoint(X2, Y2);
+        var control = ArrowGeometry.GetControlPoint(start, end, Curve);
         if (Sloppiness > 0)
         {
-            using var rough = RoughStroke.CreateLine(new SKPoint(X1, Y1), new SKPoint(X2, Y2), Sloppiness, StrokeThickness, 503);
+            var points = Math.Abs(Curve) > 0.0001f
+                ? ArrowGeometry.SampleQuadratic(start, control, end)
+                : new[] { start, end };
+            using var rough = RoughStroke.CreatePolyline(points, Sloppiness, StrokeThickness, 503);
             canvas.DrawPath(rough, stroke);
         }
-        else canvas.DrawLine(X1, Y1, X2, Y2, stroke);
-        if (Reversed)
-            DrawArrowhead(canvas, stroke, X2, Y2, X1, Y1);
-        else
-            DrawArrowhead(canvas, stroke, X1, Y1, X2, Y2);
-        if (Bidirectional) DrawArrowhead(canvas, stroke, X2, Y2, X1, Y1);
+        else if (Math.Abs(Curve) > 0.0001f)
+        {
+            using var path = new SKPath();
+            path.MoveTo(start);
+            path.QuadTo(control, end);
+            canvas.DrawPath(path, stroke);
+        }
+        else canvas.DrawLine(start, end, stroke);
+
+        var startDirection = ArrowGeometry.Normalize(ArrowGeometry.TangentAt(start, control, end, 0));
+        var endDirection = ArrowGeometry.Normalize(ArrowGeometry.TangentAt(start, control, end, 1));
+        if (Reversed || Bidirectional)
+            DrawArrowhead(canvas, stroke, start, new SKPoint(-startDirection.X, -startDirection.Y));
+        if (!Reversed || Bidirectional)
+            DrawArrowhead(canvas, stroke, end, endDirection);
     }
 
-    private void DrawArrowhead(SKCanvas canvas, SKPaint stroke, float fromX, float fromY, float tipX, float tipY)
+    private void DrawArrowhead(SKCanvas canvas, SKPaint stroke, SKPoint tip, SKPoint direction)
     {
-        float dx = tipX - fromX, dy = tipY - fromY;
-        float angle = MathF.Atan2(dy, dx);
-        float headLen = Math.Max(12f, StrokeThickness * 4);
-        float wingAngle = MathF.PI / 6;
-        float wx1 = tipX - headLen * MathF.Cos(angle - wingAngle);
-        float wy1 = tipY - headLen * MathF.Sin(angle - wingAngle);
-        float wx2 = tipX - headLen * MathF.Cos(angle + wingAngle);
-        float wy2 = tipY - headLen * MathF.Sin(angle + wingAngle);
+        direction = ArrowGeometry.Normalize(direction);
+        if (direction == SKPoint.Empty) return;
+
+        float headLength = Style == ArrowStyle.Modern
+            ? Math.Max(15f, StrokeThickness * 5f)
+            : Math.Max(12f, StrokeThickness * 4f);
+        var normal = new SKPoint(-direction.Y, direction.X);
+        var basePoint = new SKPoint(tip.X - direction.X * headLength, tip.Y - direction.Y * headLength);
+
+        if (Style == ArrowStyle.Modern)
+        {
+            float halfWidth = Math.Max(5f, StrokeThickness * 2.1f);
+            var wing1 = new SKPoint(basePoint.X + normal.X * halfWidth, basePoint.Y + normal.Y * halfWidth);
+            var wing2 = new SKPoint(basePoint.X - normal.X * halfWidth, basePoint.Y - normal.Y * halfWidth);
+            using var head = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = stroke.Color,
+                StrokeWidth = Math.Max(2f, StrokeThickness * 1.35f),
+                StrokeCap = SKStrokeCap.Round,
+                StrokeJoin = SKStrokeJoin.Round,
+                IsAntialias = true
+            };
+            ApplyShadowIfNeeded(head);
+            using var chevron = new SKPath();
+            chevron.MoveTo(wing1);
+            chevron.LineTo(tip);
+            chevron.LineTo(wing2);
+            canvas.DrawPath(chevron, head);
+            return;
+        }
+
+        float wingWidth = MathF.Tan(MathF.PI / 6) * headLength;
+        var classicWing1 = new SKPoint(basePoint.X + normal.X * wingWidth, basePoint.Y + normal.Y * wingWidth);
+        var classicWing2 = new SKPoint(basePoint.X - normal.X * wingWidth, basePoint.Y - normal.Y * wingWidth);
         using var fill = new SKPaint { Style = SKPaintStyle.Fill, Color = stroke.Color, IsAntialias = true };
+        ApplyShadowIfNeeded(fill);
         using var path = new SKPath();
-        path.MoveTo(tipX, tipY);
-        path.LineTo(wx1, wy1);
-        path.LineTo(wx2, wy2);
+        path.MoveTo(tip);
+        path.LineTo(classicWing1);
+        path.LineTo(classicWing2);
         path.Close();
         canvas.DrawPath(path, fill);
     }
 
-    public override SKRect GetBounds() => SKRect.Create(
-        Math.Min(X1, X2) - 8, Math.Min(Y1, Y2) - 8,
-        Math.Abs(X2 - X1) + 16, Math.Abs(Y2 - Y1) + 16);
+    public override SKRect GetBounds() => ArrowGeometry.GetBounds(
+        new SKPoint(X1, Y1), new SKPoint(X2, Y2), Curve,
+        Math.Max(8f, Math.Max(12f, StrokeThickness * 5f) + StrokeThickness));
     public override bool HitTest(SKPoint p) => GetBounds().Contains(p);
     public override Shape Clone() => new ArrowShape
     {
-        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Reversed = Reversed, Dashed = Dashed,
+        X1 = X1, Y1 = Y1, X2 = X2, Y2 = Y2, Bidirectional = Bidirectional, Reversed = Reversed, Dashed = Dashed, Style = Style, Curve = Curve,
         StrokeColorArgb = StrokeColorArgb, FillColorArgb = FillColorArgb, StrokeThickness = StrokeThickness, Sloppiness = Sloppiness, DropShadow = DropShadow
     };
     public override void Offset(float dx, float dy) { X1 += dx; Y1 += dy; X2 += dx; Y2 += dy; }

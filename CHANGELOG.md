@@ -53,6 +53,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Capture, history, dropped-file, and autosave-recovery flows now reuse one tabbed editor host. Each tab retains independent undo, autosave, annotation, and export state, with accessible close actions.
 
+### Added — Modern curved arrows
+
+- Arrow annotations now support a backward-compatible Classic filled head or Modern rounded open chevron, plus signed quadratic curves with matching tangent-aware heads. The Arrow tool exposes style and curve controls, and both settings round-trip through `.snapture` projects.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

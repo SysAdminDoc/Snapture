@@ -56,6 +56,8 @@ public partial class EditorWindow : Window
     private uint _activeColor = 0xFFE74C3C;
     private float _strokeThickness = 3f;
     private float _sloppiness;
+    private ArrowStyle _arrowStyle = ArrowStyle.Classic;
+    private float _arrowCurve;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
 
@@ -273,6 +275,7 @@ public partial class EditorWindow : Window
             b.FontWeight = active ? FontWeights.SemiBold : FontWeights.Normal;
         }
         Canvas.Cursor = tool == EditorTool.Select ? Cursors.Arrow : Cursors.Cross;
+        ArrowOptionsPanel.Visibility = tool == EditorTool.Arrow ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = $"Tool: {tool}";
     }
 
@@ -977,7 +980,7 @@ public partial class EditorWindow : Window
             EditorTool.Rectangle => (Shape)new RectangleShape { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Filled = filled },
             EditorTool.Ellipse   => new EllipseShape     { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Filled = filled },
             EditorTool.Line      => new LineShape        { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed },
-            EditorTool.Arrow     => new ArrowShape       { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed, Bidirectional = bidir, Reversed = ReversedCheck.IsChecked == true },
+            EditorTool.Arrow     => new ArrowShape       { X1 = p.X, Y1 = p.Y, X2 = p.X, Y2 = p.Y, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness, Dashed = dashed, Bidirectional = bidir, Reversed = ReversedCheck.IsChecked == true, Style = _arrowStyle, Curve = _arrowCurve },
             EditorTool.Freehand  => new FreehandShape    { Points = new() { p }, StrokeColorArgb = _activeColor, StrokeThickness = _strokeThickness },
             EditorTool.Text      => new TextShape        { X = p.X, Y = p.Y, StrokeColorArgb = _activeColor, Text = PromptForText() ?? "" },
             EditorTool.Highlight => new HighlightShape   { X = p.X, Y = p.Y, StrokeColorArgb = 0xFFFFD43B },
@@ -1070,6 +1073,18 @@ public partial class EditorWindow : Window
         if (_draftShape is not null)
             _draftShape.Sloppiness = _sloppiness;
         Canvas.InvalidateVisual();
+    }
+    private void OnArrowStyleChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (ArrowStyleCombo.SelectedItem is ComboBoxItem { Tag: string tag } &&
+            Enum.TryParse<ArrowStyle>(tag, out var style))
+            _arrowStyle = style;
+    }
+    private void OnArrowCurveChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        _arrowCurve = (float)Math.Clamp(e.NewValue / 100.0, -1, 1);
+        if (ArrowCurveValue is not null)
+            ArrowCurveValue.Text = $"{e.NewValue:0}%";
     }
     private void OnOpacityChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {
