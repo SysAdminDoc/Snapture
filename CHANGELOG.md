@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Plugin SDK package build
+
+- `build/build.ps1 -NuGet` now emits and validates the multi-target `Snapture.Plugin.Abstractions` package and symbols, including the project README, MIT metadata, and `netstandard2.0` / `net10.0` assemblies. No nuget.org credentials are read by the build.
+
 ### Changed — Plugin capability consent
 
 - Plugin capability declarations are now enforced at load and install time. Network, filesystem, clipboard, process-launch, and UI-interaction requests are shown for explicit user approval and approvals are versioned with the manifest; unapproved or manually dropped capability plugins remain unloaded.

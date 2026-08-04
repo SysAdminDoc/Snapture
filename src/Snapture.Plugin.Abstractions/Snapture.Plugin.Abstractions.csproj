@@ -11,5 +11,15 @@
     <Description>Public plugin surface for Snapture. Reference this assembly to ship a Destination, Effect, or CaptureProcessor.</Description>
     <Authors>SysAdminDoc</Authors>
     <PackageId>Snapture.Plugin.Abstractions</PackageId>
+    <PackageTags>Snapture;Windows;screen-capture;plugin;capture</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/SysAdminDoc/Snapture</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/SysAdminDoc/Snapture</RepositoryUrl>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
   </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="" />
+  </ItemGroup>
 </Project>

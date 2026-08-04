@@ -9,6 +9,7 @@ param(
     [switch]$Msi,
     [switch]$Velopack,
     [switch]$Chocolatey,
+    [switch]$NuGet,
     [ValidateSet('canary', 'pilot', 'stable')]
     [string]$RolloutRing = 'stable',
     [string]$AppInstallerBaseUri = 'https://sysadmindoc.github.io/Snapture'
@@ -498,6 +499,42 @@ Checksum type: SHA256
     Write-Host "    Portable: $portablePackage" -ForegroundColor Green
 }
 
+function New-NuGetPackage {
+    $outputRoot = Join-Path $root 'publish\nuget'
+    if (Test-Path -LiteralPath $outputRoot) { [System.IO.Directory]::Delete($outputRoot, $true) }
+    New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
+    Write-Host '==> dotnet pack Snapture.Plugin.Abstractions' -ForegroundColor Cyan
+    dotnet pack "$root\src\Snapture.Plugin.Abstractions\Snapture.Plugin.Abstractions.csproj" `
+        -c $Configuration `
+        --no-restore `
+        -o $outputRoot `
+        --nologo
+    if ($LASTEXITCODE -ne 0) { throw 'NuGet package build failed.' }
+
+    $version = Get-ProjectVersion
+    foreach ($artifact in @(
+        (Join-Path $outputRoot "Snapture.Plugin.Abstractions.$version.nupkg"),
+        (Join-Path $outputRoot "Snapture.Plugin.Abstractions.$version.snupkg"))) {
+        if (-not (Test-Path -LiteralPath $artifact)) { throw "NuGet build is missing '$artifact'." }
+        if ((Get-Item -LiteralPath $artifact).Length -le 0) { throw "NuGet build produced an empty '$artifact'." }
+    }
+
+    $package = [System.IO.Compression.ZipFile]::OpenRead(
+        (Join-Path $outputRoot "Snapture.Plugin.Abstractions.$version.nupkg"))
+    try {
+        if ($null -eq $package.GetEntry('README.md')) { throw 'NuGet package is missing README.md.' }
+        if ($null -eq $package.GetEntry("lib/netstandard2.0/Snapture.Plugin.Abstractions.dll")) {
+            throw 'NuGet package is missing the netstandard2.0 assembly.'
+        }
+        if ($null -eq $package.GetEntry("lib/net10.0/Snapture.Plugin.Abstractions.dll")) {
+            throw 'NuGet package is missing the net10.0 assembly.'
+        }
+    }
+    finally { $package.Dispose() }
+    Write-Host "==> Wrote local NuGet package artifacts to $outputRoot" -ForegroundColor Green
+    Write-Host '    Publication intentionally remains operator-controlled; no API key is used by this build.' -ForegroundColor Yellow
+}
+
 if ($Clean) {
     Write-Host "==> Cleaning bin/obj/publish" -ForegroundColor Cyan
     Get-ChildItem -Path $root -Recurse -Directory -Force `
@@ -538,5 +575,6 @@ if ($Msix) { New-MsixPackage }
 if ($Msi) { New-MsiPackage }
 if ($Velopack -and -not $Chocolatey) { New-VelopackPackage }
 if ($Chocolatey) { New-ChocolateyPackages }
+if ($NuGet) { New-NuGetPackage }
 
 Write-Host "==> Done." -ForegroundColor Green
