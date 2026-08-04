@@ -36,11 +36,21 @@ public sealed class CaptureHistoryFeatureTests
             Assert.AreEqual(secondId, duplicateIds.First(id => id == secondId));
             Assert.DoesNotContain(distinctId, duplicateIds);
 
+            var projectId = history.CreateProject("Release guide");
+            history.AssignToProject(new[] { firstId, secondId }, projectId);
+            var assigned = history.Recent(10).Where(entry => entry.ProjectId == projectId).ToArray();
+            Assert.HasCount(2, assigned);
+            Assert.AreEqual(2, assigned.Count(entry => entry.ProjectName == "Release guide"));
+            history.AssignToProject(new[] { firstId }, projectId: null);
+            Assert.IsNull(history.Recent(10).Single(entry => entry.Id == firstId).ProjectId);
+            history.DeleteProject(projectId);
+            Assert.IsEmpty(history.Projects());
+
             using var connection = new SqliteConnection($"Data Source={dbPath};Pooling=False");
             connection.Open();
             using var command = connection.CreateCommand();
             command.CommandText = "PRAGMA user_version;";
-            Assert.AreEqual(2L, (long)(command.ExecuteScalar() ?? 0L));
+            Assert.AreEqual(3L, (long)(command.ExecuteScalar() ?? 0L));
         }
         finally
         {

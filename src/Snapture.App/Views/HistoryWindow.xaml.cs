@@ -15,6 +15,11 @@ public partial class HistoryWindow : Window
     private string? _dominantColorFilter;
     private bool _nearDuplicatesOnly;
 
+    public sealed record ProjectChoice(long? Id, string Name)
+    {
+        public override string ToString() => Name;
+    }
+
     public sealed class Row
     {
         public long Id { get; init; }
@@ -22,6 +27,7 @@ public partial class HistoryWindow : Window
         public BitmapSource? Thumbnail { get; init; }
         public string TitleLine { get; init; } = "";
         public string SubLine { get; init; } = "";
+        public string ProjectLine { get; init; } = "";
         public string TimeLine { get; init; } = "";
         public string FeatureLine { get; init; } = "";
         public Brush? DominantColorBrush { get; init; }
@@ -34,6 +40,7 @@ public partial class HistoryWindow : Window
         _history = history;
         DbPathText.Text = $"Index: {CaptureHistoryService.DbPath}";
         PopulateFilters();
+        PopulateProjects();
         LoadRecent();
     }
 
@@ -53,6 +60,98 @@ public partial class HistoryWindow : Window
     }
 
     private void OnFilterChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => ApplyFilters();
+
+    private void PopulateProjects(long? selectedProjectId = null)
+    {
+        ProjectFilter.Items.Clear();
+        ProjectFilter.Items.Add(new ProjectChoice(null, "All projects"));
+        foreach (var project in _history.Projects())
+            ProjectFilter.Items.Add(new ProjectChoice(project.Id, project.Name));
+
+        int selectedIndex = 0;
+        if (selectedProjectId is not null)
+        {
+            for (int i = 0; i < ProjectFilter.Items.Count; i++)
+            {
+                if (ProjectFilter.Items[i] is ProjectChoice choice && choice.Id == selectedProjectId)
+                {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+        }
+
+        ProjectFilter.SelectedIndex = selectedIndex;
+    }
+
+    private void OnProjectFilterChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e) => ApplyFilters();
+
+    private void OnNewProjectClicked(object sender, RoutedEventArgs e)
+    {
+        var dialog = new HistoryProjectDialog { Owner = this };
+        if (dialog.ShowDialog() != true)
+            return;
+
+        try
+        {
+            var projectId = _history.CreateProject(dialog.ProjectName);
+            PopulateProjects(projectId);
+            ApplyFilters();
+            StatusText.Text = $"Project created: {dialog.ProjectName}";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not create project: {ex.Message}";
+        }
+    }
+
+    private void OnMoveSelectedClicked(object sender, RoutedEventArgs e)
+    {
+        var selected = HistoryList.SelectedItems.Cast<Row>().ToArray();
+        if (selected.Length == 0)
+        {
+            StatusText.Text = "Select one or more captures first.";
+            return;
+        }
+
+        if (ProjectFilter.SelectedItem is not ProjectChoice { Id: { } projectId })
+        {
+            StatusText.Text = "Choose a project before moving captures.";
+            return;
+        }
+
+        try
+        {
+            _history.AssignToProject(selected.Select(row => row.Id), projectId);
+            ApplyFilters();
+            StatusText.Text = $"Moved {selected.Length} capture{(selected.Length == 1 ? "" : "s")}.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not move captures: {ex.Message}";
+        }
+    }
+
+    private void OnUnassignSelectedClicked(object sender, RoutedEventArgs e)
+    {
+        var selected = HistoryList.SelectedItems.Cast<Row>().ToArray();
+        if (selected.Length == 0)
+        {
+            StatusText.Text = "Select one or more captures first.";
+            return;
+        }
+
+        try
+        {
+            _history.AssignToProject(selected.Select(row => row.Id), projectId: null);
+            ApplyFilters();
+            StatusText.Text = $"Returned {selected.Length} capture{(selected.Length == 1 ? "" : "s")} to Inbox.";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Could not unassign captures: {ex.Message}";
+        }
+    }
 
     private void ApplyFilters()
     {
@@ -77,7 +176,10 @@ public partial class HistoryWindow : Window
         };
         var filtered = all.Where(e =>
             (appFilter is null || e.SourceApp == appFilter) &&
-            (dateCutoff is null || e.CapturedAtUtc >= dateCutoff)).ToList();
+            (dateCutoff is null || e.CapturedAtUtc >= dateCutoff) &&
+            (ProjectFilter.SelectedItem is not ProjectChoice project
+                || project.Id is null
+                || e.ProjectId == project.Id)).ToList();
         if (_nearDuplicatesOnly)
         {
             var duplicateIds = _history.FindNearDuplicateIds(filtered);
@@ -101,6 +203,7 @@ public partial class HistoryWindow : Window
                 Thumbnail = LoadThumbnail(e.FilePath),
                 TitleLine = string.IsNullOrWhiteSpace(e.WindowTitle) ? Path.GetFileName(e.FilePath) : e.WindowTitle!,
                 SubLine = $"{e.Source} · {(e.SourceApp ?? "—")} · {e.Width}×{e.Height}",
+                ProjectLine = e.ProjectName is null ? "Inbox · unassigned" : $"Project · {e.ProjectName}",
                 TimeLine = e.CapturedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm"),
                 FeatureLine = BuildFeatureLine(e, duplicateIds.Contains(e.Id)),
                 DominantColorBrush = CreateColorBrush(e.DominantColorHex),

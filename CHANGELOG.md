@@ -19,6 +19,10 @@ All notable changes to Snapture will be documented in this file.
 
 - History now stores a local dominant-color signature and 64-bit perceptual hash for each capture, supports color-similarity and near-duplicate filters, and shows the feature metadata in the thumbnail wall.
 
+### Added — History projects
+
+- History now supports named local projects, project filtering, and extended multi-select assignment without moving the original image files. Existing captures remain in the unassigned Inbox until organized.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.

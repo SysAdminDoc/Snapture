@@ -17,7 +17,14 @@ public sealed record HistoryEntry(
     int Height,
     string? OcrText,
     string? DominantColorHex,
-    string? PerceptualHash);
+    string? PerceptualHash,
+    long? ProjectId,
+    string? ProjectName);
+
+public sealed record HistoryProject(
+    long Id,
+    string Name,
+    DateTime CreatedAtUtc);
 
 /// <summary>
 /// SQLite-backed history index at <c>%LOCALAPPDATA%\Snapture\history\index.db</c>. Exposes a
@@ -57,7 +64,7 @@ public sealed class CaptureHistoryService : IDisposable
         }
     }
 
-    private const int CurrentSchemaVersion = 2;
+    private const int CurrentSchemaVersion = 3;
 
     private void Migrate()
     {
@@ -78,9 +85,16 @@ CREATE TABLE IF NOT EXISTS captures (
     height        INTEGER NOT NULL,
     ocr_text      TEXT,
     dominant_color TEXT,
-    perceptual_hash TEXT
+    perceptual_hash TEXT,
+    project_id    INTEGER
+);
+CREATE TABLE IF NOT EXISTS projects (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_captures_at ON captures(captured_at DESC);
+CREATE INDEX IF NOT EXISTS idx_captures_project ON captures(project_id);
 CREATE VIRTUAL TABLE IF NOT EXISTS captures_fts USING fts5(
     source_app, window_title, ocr_text,
     content='captures', content_rowid='id'
@@ -108,6 +122,22 @@ END;
             EnsureColumn("dominant_color", "TEXT");
             EnsureColumn("perceptual_hash", "TEXT");
             BackfillFeatures();
+        }
+
+        if (version < 3)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.CommandText = @"
+CREATE TABLE IF NOT EXISTS projects (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    created_at    TEXT NOT NULL
+);";
+            cmd.ExecuteNonQuery();
+            EnsureColumn("project_id", "INTEGER");
+            using var index = _conn.CreateCommand();
+            index.CommandText = "CREATE INDEX IF NOT EXISTS idx_captures_project ON captures(project_id);";
+            index.ExecuteNonQuery();
         }
 
         SetUserVersion(CurrentSchemaVersion);
@@ -205,8 +235,10 @@ END;
     public IReadOnlyList<HistoryEntry> Recent(int limit = 60)
     {
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"SELECT id, file_path, captured_at, source, source_app, window_title, width, height, ocr_text, dominant_color, perceptual_hash
-                            FROM captures ORDER BY captured_at DESC LIMIT $limit";
+        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash, c.project_id, p.name
+                            FROM captures c
+                            LEFT JOIN projects p ON p.id = c.project_id
+                            ORDER BY c.captured_at DESC LIMIT $limit";
         cmd.Parameters.AddWithValue("$limit", limit);
         return Read(cmd);
     }
@@ -215,9 +247,10 @@ END;
     {
         if (string.IsNullOrWhiteSpace(query)) return Recent(limit);
         using var cmd = _conn.CreateCommand();
-        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash
+        cmd.CommandText = @"SELECT c.id, c.file_path, c.captured_at, c.source, c.source_app, c.window_title, c.width, c.height, c.ocr_text, c.dominant_color, c.perceptual_hash, c.project_id, p.name
                             FROM captures c
                             JOIN captures_fts f ON f.rowid = c.id
+                            LEFT JOIN projects p ON p.id = c.project_id
                             WHERE captures_fts MATCH $q
                             ORDER BY c.captured_at DESC
                             LIMIT $limit";
@@ -240,7 +273,101 @@ END;
             .ThenByDescending(candidate => candidate.Entry.CapturedAtUtc)
             .Take(boundedLimit)
             .Select(candidate => candidate.Entry)
-            .ToList();
+                .ToList();
+    }
+
+    public IReadOnlyList<HistoryProject> Projects()
+    {
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "SELECT id, name, created_at FROM projects ORDER BY name COLLATE NOCASE";
+        var projects = new List<HistoryProject>();
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            projects.Add(new HistoryProject(
+                reader.GetInt64(0),
+                reader.GetString(1),
+                DateTime.Parse(reader.GetString(2))));
+        }
+
+        return projects;
+    }
+
+    public long CreateProject(string name)
+    {
+        var normalized = NormalizeProjectName(name);
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = @"INSERT INTO projects(name, created_at)
+                            VALUES($name, $created_at)
+                            ON CONFLICT(name) DO NOTHING;
+                            SELECT id FROM projects WHERE name = $name;";
+        cmd.Parameters.AddWithValue("$name", normalized);
+        cmd.Parameters.AddWithValue("$created_at", DateTime.UtcNow.ToString("O"));
+        return (long)(cmd.ExecuteScalar() ?? throw new InvalidOperationException("Could not create history project."));
+    }
+
+    public void RenameProject(long id, string name)
+    {
+        var normalized = NormalizeProjectName(name);
+        using var cmd = _conn.CreateCommand();
+        cmd.CommandText = "UPDATE projects SET name = $name WHERE id = $id";
+        cmd.Parameters.AddWithValue("$name", normalized);
+        cmd.Parameters.AddWithValue("$id", id);
+        if (cmd.ExecuteNonQuery() == 0)
+            throw new KeyNotFoundException($"History project {id} was not found.");
+    }
+
+    public void DeleteProject(long id)
+    {
+        using var transaction = _conn.BeginTransaction();
+        using (var unassign = _conn.CreateCommand())
+        {
+            unassign.Transaction = transaction;
+            unassign.CommandText = "UPDATE captures SET project_id = NULL WHERE project_id = $id";
+            unassign.Parameters.AddWithValue("$id", id);
+            unassign.ExecuteNonQuery();
+        }
+
+        using (var delete = _conn.CreateCommand())
+        {
+            delete.Transaction = transaction;
+            delete.CommandText = "DELETE FROM projects WHERE id = $id";
+            delete.Parameters.AddWithValue("$id", id);
+            if (delete.ExecuteNonQuery() == 0)
+                throw new KeyNotFoundException($"History project {id} was not found.");
+        }
+
+        transaction.Commit();
+    }
+
+    public void AssignToProject(IEnumerable<long> captureIds, long? projectId)
+    {
+        var ids = captureIds.Distinct().ToArray();
+        if (ids.Length == 0)
+            return;
+        if (projectId is not null && !Projects().Any(project => project.Id == projectId.Value))
+            throw new KeyNotFoundException($"History project {projectId} was not found.");
+
+        using var transaction = _conn.BeginTransaction();
+        foreach (var captureId in ids)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.Transaction = transaction;
+            cmd.CommandText = "UPDATE captures SET project_id = $project_id WHERE id = $capture_id";
+            cmd.Parameters.AddWithValue("$project_id", (object?)projectId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("$capture_id", captureId);
+            cmd.ExecuteNonQuery();
+        }
+
+        transaction.Commit();
+    }
+
+    private static string NormalizeProjectName(string name)
+    {
+        var normalized = name?.Trim() ?? string.Empty;
+        if (normalized.Length is < 1 or > 80)
+            throw new ArgumentException("Project names must be between 1 and 80 characters.", nameof(name));
+        return normalized;
     }
 
     public IReadOnlySet<long> FindNearDuplicateIds(
@@ -325,7 +452,9 @@ END;
                 r.GetInt32(7),
                 r.IsDBNull(8) ? null : r.GetString(8),
                 r.IsDBNull(9) ? null : r.GetString(9),
-                r.IsDBNull(10) ? null : r.GetString(10)));
+                r.IsDBNull(10) ? null : r.GetString(10),
+                r.IsDBNull(11) ? null : r.GetInt64(11),
+                r.IsDBNull(12) ? null : r.GetString(12)));
         }
         return list;
     }

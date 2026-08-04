@@ -22,6 +22,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0"
                             Orientation="Horizontal">
@@ -86,6 +87,29 @@
                                    Margin="14,0,8,0" />
                     </StackPanel>
                 </Grid>
+                <StackPanel Grid.Row="2"
+                            Orientation="Horizontal"
+                            Margin="0,10,0,0"
+                            VerticalAlignment="Center">
+                    <TextBlock Text="Project"
+                               Foreground="{DynamicResource AppMutedForeground}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,8,0" />
+                    <ComboBox x:Name="ProjectFilter"
+                              Width="180"
+                              DisplayMemberPath="Name"
+                              SelectionChanged="OnProjectFilterChanged"
+                              ToolTip="Filter the history wall by project." />
+                    <Button Content="New project"
+                            Click="OnNewProjectClicked"
+                            ToolTip="Create a local project for organizing selected captures." />
+                    <Button Content="Move selected"
+                            Click="OnMoveSelectedClicked"
+                            ToolTip="Assign selected history cards to the chosen project." />
+                    <Button Content="Unassign"
+                            Click="OnUnassignSelectedClicked"
+                            ToolTip="Move selected captures back to the unassigned inbox." />
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -94,6 +118,7 @@
                       Background="Transparent"
                       BorderThickness="0"
                       Margin="8"
+                      SelectionMode="Extended"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                       MouseDoubleClick="OnRowDoubleClick">
                 <ListView.ItemsPanel>
@@ -155,6 +180,11 @@
                                            Foreground="{DynamicResource AppMutedForeground}"
                                            FontSize="11"
                                            Margin="0,3,0,0"
+                                           TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding ProjectLine}"
+                                           Foreground="{DynamicResource AppAccent}"
+                                           FontSize="11"
+                                           Margin="0,2,0,0"
                                            TextTrimming="CharacterEllipsis" />
                                 <TextBlock Text="{Binding TimeLine}"
                                            Foreground="{DynamicResource AppSubtleForeground}"
