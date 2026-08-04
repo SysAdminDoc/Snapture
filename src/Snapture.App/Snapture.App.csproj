@@ -29,6 +29,7 @@
     <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.27.1" />
     <PackageReference Include="RapidOcrNet" Version="3.0.0" />
+    <PackageReference Include="ZXing.Net" Version="0.16.11" />
     <PackageReference Include="SkiaSharp" Version="3.119.2" />
     <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.2" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />

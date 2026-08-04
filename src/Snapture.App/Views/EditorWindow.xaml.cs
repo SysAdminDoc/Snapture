@@ -1707,6 +1707,30 @@ public partial class EditorWindow : Window
         }
     }
 
+    private async void OnBarcodeClicked(object sender, RoutedEventArgs e)
+    {
+        BarcodeButton.IsEnabled = false;
+        StatusText.Text = "Scanning for QR codes and barcodes…";
+        try
+        {
+            using var flat = _doc.RenderToBitmap();
+            var detections = await Task.Run(() => BarcodeExtractor.Extract(flat));
+            StatusText.Text = detections.Count == 0
+                ? "No QR codes or barcodes found."
+                : $"Found {detections.Count} code{(detections.Count == 1 ? "" : "s")}.";
+            var resultWindow = new BarcodeResultWindow(detections) { Owner = DialogOwner };
+            resultWindow.Show();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Code scan failed: {ex.Message}";
+        }
+        finally
+        {
+            BarcodeButton.IsEnabled = true;
+        }
+    }
+
     // ---- BitmapSource <-> SKBitmap converters --------------------------------
 
     private static SKBitmap BitmapSourceToSKBitmap(BitmapSource bs)

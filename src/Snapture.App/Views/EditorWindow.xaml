@@ -68,6 +68,11 @@
                     <Button x:Name="RetakeButton" Content="Retake" Click="OnRetakeClicked"
                             ToolTip="Retake the capture. Hold Shift while clicking to refresh the background and keep annotations." Visibility="Collapsed" />
                     <Separator x:Name="RetakeSep" Margin="6,0" Background="{DynamicResource AppBorder}" Visibility="Collapsed" />
+                    <Button x:Name="BarcodeButton"
+                            Content="Codes"
+                            AutomationProperties.Name="QR and barcode extraction"
+                            Click="OnBarcodeClicked"
+                            ToolTip="Scan the capture locally for QR codes and barcodes." />
                     <Button x:Name="AutoRedactButton"
                             Content="Auto-redact"
                             Click="OnAutoRedactClicked"
