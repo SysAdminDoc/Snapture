@@ -24,8 +24,8 @@
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
-                <StackPanel Grid.Row="0"
-                            Orientation="Horizontal">
+                <WrapPanel Grid.Row="0"
+                           Orientation="Horizontal">
                     <TextBlock Text="Capture History"
                                Style="{StaticResource WindowTitleText}"
                                Foreground="{DynamicResource AppAccent}"
@@ -45,16 +45,10 @@
                               Margin="8,0,0,0"
                               SelectionChanged="OnFilterChanged"
                               ToolTip="Filter by date range" />
-                </StackPanel>
-                <Grid Grid.Row="1" Margin="0,10,0,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center">
+                </WrapPanel>
+                <WrapPanel Grid.Row="1"
+                           Margin="0,10,0,0"
+                           Orientation="Horizontal">
                         <TextBlock Text="Color similarity"
                                    Foreground="{DynamicResource AppMutedForeground}"
                                    VerticalAlignment="Center"
@@ -72,10 +66,6 @@
                         <Button Content="Clear feature filters"
                                 Click="OnClearFeatureFiltersClicked"
                                 ToolTip="Clear color and near-duplicate filters." />
-                    </StackPanel>
-                    <StackPanel Grid.Column="2"
-                                Orientation="Horizontal"
-                                VerticalAlignment="Center">
                         <Button x:Name="OcrAllButton"
                                 Content="OCR all"
                                 Click="OnOcrAllClicked"
@@ -85,12 +75,10 @@
                                    VerticalAlignment="Center"
                                    HorizontalAlignment="Right"
                                    Margin="14,0,8,0" />
-                    </StackPanel>
-                </Grid>
-                <StackPanel Grid.Row="2"
-                            Orientation="Horizontal"
-                            Margin="0,10,0,0"
-                            VerticalAlignment="Center">
+                </WrapPanel>
+                <WrapPanel Grid.Row="2"
+                           Orientation="Horizontal"
+                           Margin="0,10,0,0">
                     <TextBlock Text="Project"
                                Foreground="{DynamicResource AppMutedForeground}"
                                VerticalAlignment="Center"
@@ -109,7 +97,13 @@
                     <Button Content="Unassign"
                             Click="OnUnassignSelectedClicked"
                             ToolTip="Move selected captures back to the unassigned inbox." />
-                </StackPanel>
+                    <Button Content="Backup library"
+                            Click="OnBackupLibraryClicked"
+                            ToolTip="Export the history database, projects, and image files to one .snapture-library archive." />
+                    <Button Content="Restore library"
+                            Click="OnRestoreLibraryClicked"
+                            ToolTip="Import a .snapture-library archive into this history without moving existing files." />
+                </WrapPanel>
             </Grid>
         </Border>
 

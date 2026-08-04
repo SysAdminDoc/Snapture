@@ -23,6 +23,10 @@ All notable changes to Snapture will be documented in this file.
 
 - History now supports named local projects, project filtering, and extended multi-select assignment without moving the original image files. Existing captures remain in the unassigned Inbox until organized.
 
+### Added — History library backup
+
+- History can now export the SQLite index, projects, and referenced capture images into one `.snapture-library` archive and restore it on a fresh install. Imports validate archive paths, preserve project assignments, skip duplicate captures, and keep existing files untouched.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.

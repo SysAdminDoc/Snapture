@@ -30,7 +30,7 @@ public sealed record HistoryProject(
 /// SQLite-backed history index at <c>%LOCALAPPDATA%\Snapture\history\index.db</c>. Exposes a
 /// FTS5 virtual table over OCR text + window title + source app for fast full-text search.
 /// </summary>
-public sealed class CaptureHistoryService : IDisposable
+public sealed partial class CaptureHistoryService : IDisposable
 {
     public static string Dir { get; } = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
@@ -38,6 +38,7 @@ public sealed class CaptureHistoryService : IDisposable
     public static string DbPath { get; } = Path.Combine(Dir, "index.db");
 
     private readonly SqliteConnection _conn;
+    private readonly string _dbPath;
     private bool _disposed;
 
     public CaptureHistoryService() : this(DbPath)
@@ -47,9 +48,10 @@ public sealed class CaptureHistoryService : IDisposable
     internal CaptureHistoryService(string dbPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(dbPath);
-        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(dbPath))!);
+        _dbPath = Path.GetFullPath(dbPath);
+        Directory.CreateDirectory(Path.GetDirectoryName(_dbPath)!);
         Batteries.EnsureInitialized();
-        _conn = new SqliteConnection($"Data Source={dbPath};Pooling=False");
+        _conn = new SqliteConnection($"Data Source={_dbPath};Pooling=False");
         _conn.Open();
         Migrate();
     }
