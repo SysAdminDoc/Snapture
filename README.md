@@ -67,6 +67,7 @@ The existing landscape on Windows in 2026:
 **Capture parity pass — OCR, full-text searchable history, scrolling capture (alpha)**
 
 - **Built-in OCR** — Windows AI `TextRecognizer` when its local model is ready, `Windows.Media.Ocr` as the Windows fallback, and bundled local RapidOCR PP-OCRv5 Latin models when neither Windows engine can return text. An optional user-supplied `sponeocr.exe` sidecar can use the Windows Snipping Tool's local OneOCR model without cloud traffic. Tray → Tools → "OCR region…" picks a region, recognised text lands in the clipboard, result window opens. The History window's "OCR all" button bulk-indexes everything past captures into FTS5.
+- **OCR text overlays** — Editor → **OCR overlay** turns positioned OCR lines into editable, contrast-aware text annotations anchored to their image regions. The operation is one undoable batch and text-only engines decline cleanly when no geometry is available.
 - **Capture history** with **SQLite + FTS5** at `%LOCALAPPDATA%\Snapture\history\index.db`. Every capture auto-tagged with foreground process + window title. The History window lets you search across OCR text, process name, and window title with FTS5 syntax. Right-click → Open in editor / Pin / Run OCR / Reveal / Delete.
 - **Scrolling capture (alpha)** via UIA `IScrollProvider`. Native scroll panes (Office side-panes, Explorer, WPF/WinForms apps) work; browsers fall through to a clear "this window doesn't expose UIA scroll" message. Image-stitching for browsers ships in v0.4.
 
@@ -198,6 +199,7 @@ Snapture.sln
 │     │  ├─ BorderlessConsent          ← Win11 22H2+ first-run prompt
 │     │  ├─ PrintScreenHijackDetector  ← 24H2 registry probe + reclaim
 │     │  ├─ OcrService                 ← Windows AI / Windows OCR / RapidOCR / optional OneOCR wrapper
+│     │  ├─ OcrOverlayBuilder           ← OCR line boxes → editable anchored text shapes
 │     │  ├─ CaptureHistoryService      ← SQLite + FTS5 history index
 │     │  ├─ ScrollingCaptureService    ← UIA IScrollProvider driver (alpha)
 │     │  ├─ LanShareServer             ← Kestrel + token registry

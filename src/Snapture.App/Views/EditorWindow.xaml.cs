@@ -1670,6 +1670,43 @@ public partial class EditorWindow : Window
         finally { AutoRedactButton.IsEnabled = true; }
     }
 
+    private async void OnOcrOverlayClicked(object sender, RoutedEventArgs e)
+    {
+        OcrOverlayButton.IsEnabled = false;
+        StatusText.Text = "Reading positioned text…";
+        try
+        {
+            using var flat = _doc.RenderToBitmap();
+            var result = await OcrService.RecognizeAsync(flat);
+            if (result is null || string.IsNullOrWhiteSpace(result.Text))
+            {
+                StatusText.Text = "No text recognized.";
+                return;
+            }
+
+            var overlays = OcrOverlayBuilder.CreateShapes(result, flat);
+            if (overlays.Count == 0)
+            {
+                StatusText.Text = $"{result.Engine} returned text without image positions.";
+                return;
+            }
+
+            var commands = overlays.Select(shape => (AnnotationCommand)new AddShapeCommand(shape)).ToList();
+            _commands.Do(_doc, commands.Count == 1 ? commands[0] : new CompositeCommand(commands));
+            _selectedShapes.Clear();
+            Canvas.InvalidateVisual();
+            StatusText.Text = $"Added {overlays.Count} OCR text overlays ({result.Engine}).";
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"OCR overlay failed: {ex.Message}";
+        }
+        finally
+        {
+            OcrOverlayButton.IsEnabled = true;
+        }
+    }
+
     // ---- BitmapSource <-> SKBitmap converters --------------------------------
 
     private static SKBitmap BitmapSourceToSKBitmap(BitmapSource bs)
