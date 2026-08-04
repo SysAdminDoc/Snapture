@@ -1,35 +1,55 @@
 # Local AI — the no-cloud anchor
 
-Snapture supports local AI providers as an opt-in feature. Cloud LLM endpoints are explicitly rejected.
+Snapture's AI surface is opt-in and local-only. Cloud LLM endpoints are explicitly rejected and are never presented as a provider choice.
 
 ## The rule
 
-If the byte path is `Snapture.exe → localhost`, it's allowed. If it's `Snapture.exe → external host`, it's not.
+The allowed data path is:
 
-## Supported providers (planned, v0.8.6)
+`Snapture.exe → loopback runtime → local model`
 
-| Provider | Discovery | Model examples |
-|----------|-----------|----------------|
-| **Ollama** | Probes `http://localhost:11434/api/tags` | LLaVA, Phi-3.5-vision |
-| **Foundry Local** | Probes Windows AI Foundry runtime | Phi-3.5-vision ONNX |
-| **LM Studio** | Probes `http://localhost:1234/v1/models` | Any local GGUF model |
+The local runtime may be installed and managed separately by the user, but Snapture accepts only loopback HTTP/HTTPS endpoints. It does not accept an arbitrary URL, API key, cloud provider, or remote model endpoint.
 
-Provider syntax follows Peekaboo v3.2.0: `ollama/<model>` or `lmstudio/<model>`.
+## Supported providers
 
-## What this enables
+Settings → **AI tools** probes the following local runtimes. The tab is always available so a user can start a runtime and refresh without restarting Snapture.
 
-- "Send to local LLM" button in the editor sends the flattened capture as base64 PNG to the chosen local model.
-- Auto-redact can use RapidOCR's bundled DBNet text-region detector (one ONNX model serves both OCR and redaction).
-- Settings → AI tools tab appears only when a local provider is detected on localhost.
+| Provider | Discovery | OpenAI-compatible send endpoint | Provider prefix |
+|----------|-----------|----------------------------------|-----------------|
+| **Ollama** | `http://127.0.0.1:11434/api/tags` | `http://127.0.0.1:11434/v1/chat/completions` | `ollama/<model>` |
+| **Foundry Local** | `foundry service status`, then the reported loopback `/openai/status` | the reported loopback `/v1/chat/completions` | `foundry/<model>` |
+| **LM Studio** | `http://127.0.0.1:1234/v1/models` | `http://127.0.0.1:1234/v1/chat/completions` | `lmstudio/<model>` |
+
+Foundry Local dynamically assigns its service port. Snapture parses the CLI output and validates the service's own endpoint list before using it. Non-loopback URLs are discarded.
+
+## Send to local LLM
+
+The editor's **Local AI** button:
+
+1. Re-discovers available local models.
+2. Shows only discovered local `provider/model` choices. Cloud providers are absent from the list.
+3. Prefers `ollama/llava...` and `foundry/phi-3.5-vision...` when those models are available; otherwise the first discovered model is selected.
+4. Flattens the current capture through the same export path used for PNG output, including annotations, adjustments, and frame wrappers.
+5. Sends the flattened PNG as a `data:image/png;base64,...` image part in an OpenAI-compatible chat-completions request.
+6. Displays the model response in a local result window.
+
+The request is created only after the user chooses a model and clicks **Send PNG**. Snapture sends no `Authorization` header and does not store the image or response as an AI service transcript.
 
 ## What this does NOT enable
 
-- No cloud LLM endpoints: OpenAI, Anthropic, Gemini, OpenRouter, Azure OpenAI — all absent from the dropdown.
-- No "Ask Copilot" or "Analyze with AI" features that route through Microsoft's cloud.
-- No model downloads that phone home to a CDN (models are managed by Ollama / Foundry / LM Studio, not Snapture).
+- No cloud LLM endpoints: OpenAI, Anthropic, Gemini, OpenRouter, Azure OpenAI, or any other external host.
+- No "Ask Copilot" or "Analyze with AI" feature that routes through Microsoft's cloud.
+- No model downloads from Snapture. Models are installed and managed by the selected local runtime.
+- No telemetry, model usage analytics, prompt logging, or capture upload.
 
-## Why
+## Privacy claim chain
 
-The Lightshot scandal showed what happens when a screenshot tool's data path includes a cloud server. Snapture's privacy anchor is simple: your pixels never leave your machine unless you explicitly share them. Local LLM providers honor this because the model runs on your hardware.
+The local-AI contract fits the broader privacy audit:
 
-See also: [PRIVACY.md](PRIVACY.md) for the full network-call audit.
+- [What never happens](PRIVACY.md#what-never-happens) covers the no-launch/no-capture/no-save phone-home anchor.
+- [Local AI providers](PRIVACY.md#local-ai-providers-loopback-only) documents the loopback probes and the user-triggered image request.
+- [LAN share](PRIVACY.md#lan-share-server-off-by-default) is the separate opt-in path that can expose a file to another device on the user's network.
+- [Manual update checks](PRIVACY.md#update-check-manual-only) are the only Snapture-owned external HTTP request.
+- [Plugins](PRIVACY.md#plugins-third-party-code-optional) are third-party code and can leave the privacy boundary if the user installs one that declares or performs network access.
+
+See [PRIVACY.md](PRIVACY.md) for the full network-call audit.

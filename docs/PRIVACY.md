@@ -21,6 +21,16 @@ This document lists every place Snapture *could* talk to the network, who contro
 
 The features below contact the network. Each one is off by default. You enable each one explicitly; Snapture remembers your choice in `settings.json` and you can switch any of them off at any time.
 
+### Local AI providers (loopback only)
+
+Settings → AI tools probes local runtimes and does not accept arbitrary endpoints:
+
+- Ollama is checked at `http://127.0.0.1:11434/api/tags`.
+- LM Studio is checked at `http://127.0.0.1:1234/v1/models`.
+- Foundry Local is checked by running `foundry service status`, validating the reported loopback endpoint with `/openai/status`, and reading its local model list.
+
+The editor's Local AI button is explicitly user-triggered. After the user selects a discovered model, Snapture sends the current flattened capture as a base64 PNG image part to that runtime's loopback `/v1/chat/completions` endpoint and shows the response locally. Snapture does not send an API key, accepts no cloud endpoint, and does not retain an AI transcript. If the local runtime itself downloads models, that activity is controlled by the runtime and is outside Snapture's network path.
+
 ### LAN share server (off by default)
 
 Settings → LAN share lets you start a Kestrel HTTP server bound to a single network adapter you choose. When started:
@@ -102,7 +112,7 @@ If you find a network call this document doesn't list — including a third-part
 Snapture is open source under the MIT license. To verify any claim in this document:
 
 1. Read the source. The whole codebase is at https://github.com/SysAdminDoc/Snapture.
-2. Grep for `HttpClient`, `WebRequest`, `Socket`, `TcpClient`, `WebSocket` — every match should be either inside `LanShareServer.cs` (LAN-bound, opt-in) or `BorderlessConsent.cs` (a system call to the Windows runtime).
+2. Grep for `HttpClient`, `WebRequest`, `Socket`, `TcpClient`, `WebSocket` — `LocalAiProviderService.cs` and `LocalAiInferenceService.cs` must remain loopback-only; `LanShareServer.cs` is LAN-bound and opt-in; `UpdateChecker.cs` is the manual GitHub check; `BorderlessConsent.cs` is a system call to the Windows runtime.
 3. Run a network sniffer (Wireshark, Process Monitor, Fiddler) while using Snapture. There should be no outbound HTTP / HTTPS / DNS traffic from the Snapture process unless a plugin you installed initiated it.
 
 We mean what we say.
