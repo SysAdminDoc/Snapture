@@ -560,13 +560,13 @@ if ($Publish) {
 
     if ($Zip) {
         $version = (Select-String -Path "$root\src\Snapture.App\Snapture.App.csproj" -Pattern '<Version>([^<]+)</Version>').Matches[0].Groups[1].Value
-        $zip = Join-Path $root "publish\Snapture-v$version-$Runtime.zip"
-        if (Test-Path $zip) { Remove-Item $zip -Force }
-        Compress-Archive -Path "$out\*" -DestinationPath $zip -Force
-        Add-PortableMarkerToArchive $zip
-        $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-        Set-Content -Path "$zip.sha256" -Value "$sha  $(Split-Path -Leaf $zip)"
-        Write-Host "==> Wrote $zip" -ForegroundColor Green
+        $zipPath = Join-Path $root "publish\Snapture-v$version-$Runtime.zip"
+        if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
+        Compress-Archive -Path "$out\*" -DestinationPath $zipPath -Force
+        Add-PortableMarkerToArchive $zipPath
+        $sha = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLower()
+        Set-Content -Path "$zipPath.sha256" -Value "$sha  $(Split-Path -Leaf $zipPath)"
+        Write-Host "==> Wrote $zipPath" -ForegroundColor Green
         Write-Host "    SHA256 $sha" -ForegroundColor Green
     }
 }

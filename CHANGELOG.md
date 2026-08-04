@@ -2,6 +2,20 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [v0.7.0] — 2026-08-03
+
+### Changed
+
+- The release wave adds bounded local image utilities, comparison workflows, edge measurement, pinned boards, and horizontal/two-axis scrolling while preserving the existing vertical capture path.
+
+### Fixed
+
+- Clean release builds now resolve the bundled SQLite native library from SQLitePCLRaw 3.0.5 / SQLite 3.53.4, above the roadmap security floor.
+
+### Security
+
+- The dependency floor audit tracks SQLite advisories CVE-2025-6965 and CVE-2025-29088; the shipped native SQLite 3.53.4 runtime is above the vulnerable floor.
+
 ### Added — Omnidirectional scrolling capture
 
 - Tray capture now exposes horizontal and omnidirectional UIA scrolling modes. Captured tiles are placed from both scroll axes into a bounded canvas, with the existing vertical mode unchanged.
