@@ -16,6 +16,7 @@ public sealed class AppHost : IDisposable
     public HotkeyService Hotkeys { get; } = new();
     public CaptureHistoryService History { get; }
     public LanShareServer LanShare { get; } = new();
+    public McpServer Mcp { get; }
     public PluginLoader Plugins { get; }
     public PluginHostBridge PluginHost { get; }
     private TrayIconHost? _tray;
@@ -42,6 +43,12 @@ public sealed class AppHost : IDisposable
             log: msg => System.Diagnostics.Debug.WriteLine($"[plugin] {msg}"));
         Plugins = new PluginLoader(PluginHost);
         Orchestrator = new CaptureOrchestrator(Settings, Engine, History);
+        Mcp = new McpServer(
+            Settings,
+            () => Engine,
+            Orchestrator,
+            History,
+            tool => _tray?.ShowToast("MCP tool invoked", tool));
     }
 
     public void Start()
@@ -71,6 +78,10 @@ public sealed class AppHost : IDisposable
         // LAN share auto-start if user previously enabled it.
         if (Settings.Current.LanShareEnabled)
             TryStartLanShare();
+
+        // MCP auto-start is opt-in and always binds to loopback.
+        if (Settings.Current.McpEnabled)
+            TryStartMcp();
 
         // Run history retention cleanup
         if (Settings.Current.HistoryRetentionDays > 0)
@@ -325,6 +336,22 @@ public sealed class AppHost : IDisposable
 
     public void StopLanShare() => LanShare.Stop();
 
+    public bool TryStartMcp()
+    {
+        try
+        {
+            Mcp.Start(Settings.Current.McpPort);
+            return Mcp.IsRunning;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "Mcp.Start.Failed {Port}", Settings.Current.McpPort);
+            return false;
+        }
+    }
+
+    public void StopMcp() => Mcp.Stop();
+
     public void SwitchEngine(string name)
     {
         var (engine, actual) = CaptureEngineFactory.Create(name);
@@ -418,6 +445,7 @@ public sealed class AppHost : IDisposable
     public void Dispose()
     {
         Hotkeys.Dispose();
+        Mcp.Dispose();
         History.Dispose();
         LanShare.Dispose();
         Plugins.Dispose();

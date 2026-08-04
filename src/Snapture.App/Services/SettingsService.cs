@@ -65,6 +65,10 @@ public sealed class SnaptureSettings
     /// <summary>Default TTL for shared files in minutes.</summary>
     public int LanShareTtlMinutes { get; set; } = 15;
 
+    /// <summary>MCP server: opt-in, localhost-only agent integration.</summary>
+    public bool McpEnabled { get; set; } = false;
+    public int McpPort { get; set; } = 9287;
+
     /// <summary>
     /// Auto-redact: rule IDs that are disabled. Empty list = all rules enabled (the default).
     /// We persist disabled rather than enabled so a future rule pack expansion ships enabled

@@ -150,6 +150,8 @@ To produce Chocolatey packages for both architectures, run `pwsh -File build/bui
 
 The Scoop extras-bucket manifest is [packaging/scoop/snapture.json](packaging/scoop/snapture.json). It installs the same architecture-specific Velopack portable archives through Scoop, pins their SHA-256 hashes, exposes the `snapture` shim and Start Menu shortcut, and lets Scoop manage upgrades. Copy the manifest into the extras bucket after publishing the matching GitHub Release assets; update its version, URLs, and hashes for each release.
 
+**MCP integration:** Settings → Integrations can enable the optional Model Context Protocol server. It exposes loopback-only `http://127.0.0.1:<port>/mcp` tools for monitor/window/region/element/scrolling capture, local OCR, history search, and Auto-redact. The server is off by default, never binds the LAN-share adapter, and returns metadata plus a saved local path unless a tool call explicitly sets `include_image=true`.
+
 ## Usage
 
 After launching, Snapture lives in the system tray.
@@ -196,7 +198,9 @@ Captures are saved to `%USERPROFILE%\Pictures\Snapture\` by default and copied t
   "openEditorAfterCapture": true,
   "showToastOnSave": true,
   "launchAtStartup": false,
-  "hideDesktopIcons": false
+  "hideDesktopIcons": false,
+  "mcpEnabled": false,
+  "mcpPort": 9287
 }
 ```
 
@@ -237,6 +241,7 @@ Snapture.sln
 │     │  ├─ CaptureHistoryService      ← SQLite + FTS5 + image-feature history index
 │     │  ├─ ScrollingCaptureService    ← UIA IScrollProvider driver (alpha)
 │     │  ├─ LanShareServer             ← Kestrel + token registry
+│     │  ├─ McpServer                  ← Loopback-only Streamable HTTP MCP endpoint
 │     │  ├─ PluginLoader               ← AssemblyLoadContext-based plugin host
 │     │  ├─ PluginHostBridge           ← IPluginHost implementation
 │     │  ├─ StepCaptureSession         ← Click-recorder + Markdown exporter
@@ -251,7 +256,7 @@ Snapture.sln
 │        ├─ WindowPickerWindow         ← Hover-highlight + PgUp/PgDn ancestor walk
 │        ├─ EditorWindow               ← Skia canvas + tool palette + adjustments + frame wrappers
 │        ├─ PinWindow                  ← Always-on-top + opacity / shadow / click-through / solo / hide-all
-│        ├─ SettingsWindow             ← Tabbed dialog (General/Capture/Hotkeys/Output/Advanced)
+│        ├─ SettingsWindow             ← Tabbed dialog (General/Capture/Hotkeys/Output/Integrations/Advanced)
 │        ├─ ColorPickerWindow          ← HEX / RGB / HSL / APCA-Lc + global click capture
 │        ├─ PixelRulerWindow           ← Δx / Δy / length / angle across the virtual screen
 │        ├─ SmartCaptureWindow         ← UIA element-level live highlight + click capture

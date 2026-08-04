@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Opt-in local MCP server
+
+- Added a loopback-only Streamable HTTP MCP endpoint at `/mcp` with metadata-first tools for region, window, monitor, UI Automation element, scrolling capture, local OCR, history search, window/monitor discovery, and Auto-redact.
+- Added Settings → Integrations controls with MCP disabled by default, a configurable localhost port, explicit start/stop, strict Origin validation, path boundaries, concurrency limits, and opt-in full PNG responses.
+
 ### Added — Enterprise MSI packaging
 
 - `build/build.ps1 -Msi` now emits unsigned per-machine x64 and ARM64 MSIs with Add/Remove Programs registration, a machine-wide Start Menu shortcut, major-upgrade handling, and silent `msiexec` deployment support.

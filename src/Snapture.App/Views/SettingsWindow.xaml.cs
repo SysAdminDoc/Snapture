@@ -108,6 +108,11 @@ public partial class SettingsWindow : Window
             LanAdapterCombo.SelectedIndex = 0;
         UpdateLanStatus();
 
+        // MCP integration tab bindings
+        McpEnableCheck.IsChecked = _draft.McpEnabled;
+        McpPortBox.Text = _draft.McpPort.ToString();
+        UpdateMcpStatus();
+
         BuildRedactRulesList();
 
         bool hijacked = PrintScreenHijackDetector.IsHijacked();
@@ -573,6 +578,43 @@ public partial class SettingsWindow : Window
             $"Test: open {lan.BaseUrl}/ in any LAN browser";
     }
 
+    private void OnMcpStartClicked(object sender, RoutedEventArgs e)
+    {
+        SaveMcpFieldsToDraft();
+        if (App.Host is null) return;
+        try
+        {
+            App.Host.Mcp.Stop();
+            App.Host.Mcp.Start(_draft.McpPort);
+            UpdateMcpStatus();
+        }
+        catch (Exception ex)
+        {
+            McpStatusText.Text = $"Failed to start: {ex.Message}";
+        }
+    }
+
+    private void OnMcpStopClicked(object sender, RoutedEventArgs e)
+    {
+        App.Host?.Mcp.Stop();
+        UpdateMcpStatus();
+    }
+
+    private void SaveMcpFieldsToDraft()
+    {
+        _draft.McpEnabled = McpEnableCheck.IsChecked == true;
+        if (int.TryParse(McpPortBox.Text, out var port) && port is >= 1024 and <= 65535)
+            _draft.McpPort = port;
+    }
+
+    private void UpdateMcpStatus()
+    {
+        var mcp = App.Host?.Mcp;
+        McpStatusText.Text = mcp?.IsRunning == true
+            ? $"Running on {mcp.BaseUrl}\nLoopback-only; image bytes are opt-in per tool call."
+            : "Server is stopped.";
+    }
+
     private async void OnImportClicked(object sender, RoutedEventArgs e)
     {
         var path = await StoragePickerService.PickOpenFileAsync(
@@ -707,6 +749,8 @@ public partial class SettingsWindow : Window
 
         SaveLanFieldsToDraft();
         bool lanWasEnabled = _settings.Current.LanShareEnabled;
+        SaveMcpFieldsToDraft();
+        bool mcpWasEnabled = _settings.Current.McpEnabled;
 
         CopyInto(_draft, _settings.Current);
         _settings.Current.CaptureEngine = newEngine;
@@ -735,6 +779,21 @@ public partial class SettingsWindow : Window
                     App.Host.LanShare.Stop();
                     App.Host.TryStartLanShare();
                 }
+            }
+        }
+
+        // MCP lifecycle reacts to the opt-in toggle and port changes.
+        if (App.Host is not null)
+        {
+            if (_settings.Current.McpEnabled && !App.Host.Mcp.IsRunning)
+                App.Host.TryStartMcp();
+            else if (!_settings.Current.McpEnabled && App.Host.Mcp.IsRunning)
+                App.Host.Mcp.Stop();
+            else if (mcpWasEnabled && App.Host.Mcp.IsRunning &&
+                     App.Host.Mcp.Port != _settings.Current.McpPort)
+            {
+                App.Host.Mcp.Stop();
+                App.Host.TryStartMcp();
             }
         }
 
@@ -784,6 +843,8 @@ public partial class SettingsWindow : Window
         dst.LanShareBindIp = src.LanShareBindIp;
         dst.LanSharePort = src.LanSharePort;
         dst.LanShareTtlMinutes = src.LanShareTtlMinutes;
+        dst.McpEnabled = src.McpEnabled;
+        dst.McpPort = src.McpPort;
         dst.DisabledRedactRules = new List<string>(src.DisabledRedactRules);
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;
