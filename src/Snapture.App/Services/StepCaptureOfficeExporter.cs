@@ -45,6 +45,7 @@ public static class StepCaptureOfficeExporter
         {
             body.Append(CreateWordParagraph($"Step {entry.Number}", "28", bold: true));
             AppendWordCaption(body, entry.Caption);
+            AppendWordInputTrack(body, entry);
             var dimensions = ReadImageDimensions(entry.FilePath);
             if (dimensions is null) continue;
 
@@ -119,7 +120,7 @@ public static class StepCaptureOfficeExporter
                 layoutPart,
                 presentation.SlideIdList!,
                 $"Step {entry.Number}",
-                entry.Caption,
+                BuildOfficeCaption(entry),
                 entry.FilePath,
                 slideNumber++);
         }
@@ -176,6 +177,23 @@ public static class StepCaptureOfficeExporter
         if (string.IsNullOrWhiteSpace(caption)) return;
         foreach (var line in caption.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n'))
             body.Append(CreateWordParagraph(line, "22", bold: false));
+    }
+
+    private static void AppendWordInputTrack(W.Body body, StepCaptureExporter.StepEntry entry)
+    {
+        var track = StepCaptureInputFormatter.FormatOfficeCaption(entry.Keystrokes, entry.Clicks);
+        if (track is not null)
+            body.Append(CreateWordParagraph(track, "18", bold: false));
+    }
+
+    private static string? BuildOfficeCaption(StepCaptureExporter.StepEntry entry)
+    {
+        var track = StepCaptureInputFormatter.FormatOfficeCaption(entry.Keystrokes, entry.Clicks);
+        if (string.IsNullOrWhiteSpace(entry.Caption))
+            return track;
+        if (track is null)
+            return entry.Caption;
+        return $"{entry.Caption.Trim()}\n{track}";
     }
 
     private static W.Drawing CreateWordImageDrawing(

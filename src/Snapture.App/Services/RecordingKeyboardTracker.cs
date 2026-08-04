@@ -14,6 +14,10 @@ internal readonly record struct RecordingKeystrokeFrame(
     public bool HasVisualActivity => Keystrokes.Count > 0;
 }
 
+internal readonly record struct RecordingKeyPress(
+    string Text,
+    DateTime TimestampUtc);
+
 internal sealed class RecordingKeyboardTracker : IDisposable
 {
     private const int MaxRecentKeystrokes = 6;
@@ -26,6 +30,8 @@ internal sealed class RecordingKeyboardTracker : IDisposable
     private nint _hookHandle;
     private LowLevelKeyboardProc? _proc;
     private bool _disposed;
+
+    public event Action<RecordingKeyPress>? KeyPressed;
 
     public bool IsRunning => _hookHandle != 0;
 
@@ -116,6 +122,7 @@ internal sealed class RecordingKeyboardTracker : IDisposable
 
     private void OnKeyDown(int virtualKey)
     {
+        RecordingKeyPress? keyPress = null;
         lock (_lock)
         {
             bool wasAlreadyDown = !_pressedKeys.Add(virtualKey);
@@ -137,14 +144,23 @@ internal sealed class RecordingKeyboardTracker : IDisposable
                         RepeatCount = last.RepeatCount + 1,
                         TimestampUtc = now
                     };
-                    return;
+                }
+                else
+                {
+                    _recentKeystrokes.Add(new TrackedKeystroke(text, 1, now));
                 }
             }
+            else
+            {
+                _recentKeystrokes.Add(new TrackedKeystroke(text, 1, now));
+            }
 
-            _recentKeystrokes.Add(new TrackedKeystroke(text, 1, now));
             while (_recentKeystrokes.Count > MaxRecentKeystrokes)
                 _recentKeystrokes.RemoveAt(0);
+            keyPress = new RecordingKeyPress(text, now);
         }
+
+        KeyPressed?.Invoke(keyPress.Value);
     }
 
     private void OnKeyUp(int virtualKey)

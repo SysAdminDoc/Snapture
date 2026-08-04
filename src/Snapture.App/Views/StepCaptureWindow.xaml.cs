@@ -18,7 +18,7 @@ public partial class StepCaptureWindow : Window
     {
         InitializeComponent();
         FooterText.Text = "Click Start, then click your way through the workflow you want to document. " +
-                          "Snapture grabs the foreground window after every left-click.";
+                          "Snapture grabs the foreground window after every left-click and keeps the input track with it.";
     }
 
     private void OnStartStopClicked(object sender, RoutedEventArgs e)
@@ -54,9 +54,12 @@ public partial class StepCaptureWindow : Window
         StepsList.Children.Clear();
         _captionBoxes.Clear();
         UpdateEmptyState(true, "Recording is active",
-            "Click through the workflow. Each left-click captures the foreground window after a short settle delay.");
+            "Click through the workflow. Each left-click captures the foreground window after a short settle delay, " +
+            "while key chords and cursor clicks are tracked for the step.");
         StartStopButton.Content = "Stop recording";
-        StatusText.Text = "Recording — click anywhere to capture a step.";
+        StatusText.Text = _session.KeyboardTrackingAvailable
+            ? "Recording — key and click tracks active."
+            : "Recording — click track active; keyboard track unavailable.";
         FooterText.Text = $"Session folder: {_session.SessionFolder}";
     }
 
@@ -122,6 +125,19 @@ public partial class StepCaptureWindow : Window
             sourceText.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
             stack.Children.Add(sourceText);
         }
+        var inputTrack = StepCaptureInputFormatter.FormatTrack(frame.Keystrokes, frame.Clicks);
+        if (inputTrack is not null)
+        {
+            var trackText = new TextBlock
+            {
+                FontSize = 12,
+                Text = inputTrack,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            trackText.SetResourceReference(TextBlock.ForegroundProperty, "AppAccent");
+            stack.Children.Add(trackText);
+        }
         var captionBox = new TextBox
         {
             AcceptsReturn = true,
@@ -129,7 +145,7 @@ public partial class StepCaptureWindow : Window
             MinHeight = 80,
             MaxHeight = 200,
             Margin = new Thickness(0, 8, 0, 0),
-            ToolTip = "Caption rendered above the screenshot in the exported Markdown."
+            ToolTip = "Caption rendered with this step in every exported format."
         };
         captionBox.SetResourceReference(Control.BackgroundProperty, "AppCanvas");
         captionBox.SetResourceReference(Control.ForegroundProperty, "AppForeground");
@@ -187,7 +203,9 @@ public partial class StepCaptureWindow : Window
         var entries = _session.Frames
             .Select(f => new StepCaptureExporter.StepEntry(
                 f.Number, f.FilePath,
-                _captionBoxes.TryGetValue(f.Number, out var box) ? box.Text : ""))
+                _captionBoxes.TryGetValue(f.Number, out var box) ? box.Text : "",
+                f.Keystrokes,
+                f.Clicks))
             .ToList();
 
         try
@@ -258,7 +276,9 @@ public partial class StepCaptureWindow : Window
             .Select(f => new StepCaptureExporter.StepEntry(
                 f.Number,
                 f.FilePath,
-                _captionBoxes.TryGetValue(f.Number, out var box) ? box.Text : string.Empty))
+                _captionBoxes.TryGetValue(f.Number, out var box) ? box.Text : string.Empty,
+                f.Keystrokes,
+                f.Clicks))
             .ToList();
 
     private static string SafeFileName(string? value)

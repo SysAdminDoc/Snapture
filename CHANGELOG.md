@@ -11,6 +11,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Step Capture now exports editable Word documents and PowerPoint presentations with a title slide, editable captions, and embedded step images alongside the existing Markdown bundle.
 
+### Added — Step Capture input tracks
+
+- Step Capture now records key chords and cursor click coordinates/buttons with each screenshot, shows the track during review, and includes it in Markdown, DOCX, and PPTX exports.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.

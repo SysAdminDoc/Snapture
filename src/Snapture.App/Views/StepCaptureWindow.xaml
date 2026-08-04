@@ -28,7 +28,7 @@
                     <TextBlock Text="Step Capture"
                                Style="{StaticResource WindowTitleText}"
                                Foreground="{DynamicResource AppAccent}" />
-                    <TextBlock Text="Record a workflow, caption each step, then export Markdown, Word, or PowerPoint."
+                    <TextBlock Text="Record a workflow, see key and click tracks, then export Markdown, Word, or PowerPoint."
                                Style="{StaticResource HelpText}"
                                Margin="0,4,0,0" />
                     <StackPanel Orientation="Horizontal" Margin="0,6,0,0">

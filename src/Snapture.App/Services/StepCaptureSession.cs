@@ -6,7 +6,21 @@ using Snapture.Capture;
 
 namespace Snapture.App.Services;
 
-public sealed record StepCaptureFrame(int Number, string FilePath, DateTime CapturedAtUtc, string? WindowTitle, string? ProcessName);
+public sealed record StepCaptureFrame(
+    int Number,
+    string FilePath,
+    DateTime CapturedAtUtc,
+    string? WindowTitle,
+    string? ProcessName,
+    IReadOnlyList<StepCaptureKeyStroke>? KeyEvents = null,
+    IReadOnlyList<StepCaptureClick>? ClickEvents = null)
+{
+    public IReadOnlyList<StepCaptureKeyStroke> Keystrokes { get; } =
+        KeyEvents ?? Array.Empty<StepCaptureKeyStroke>();
+
+    public IReadOnlyList<StepCaptureClick> Clicks { get; } =
+        ClickEvents ?? Array.Empty<StepCaptureClick>();
+}
 
 /// <summary>
 /// Records every left-click anywhere on screen and snapshots the foreground window. Frames
@@ -18,14 +32,19 @@ public sealed class StepCaptureSession : IDisposable
     public string SessionFolder { get; }
     public IReadOnlyList<StepCaptureFrame> Frames => _frames;
     public bool IsRunning { get; private set; }
+    public bool KeyboardTrackingAvailable => _keyboardTracker?.IsRunning == true;
+    public bool PointerTrackingAvailable => _pointerTracker?.IsRunning == true;
     public event Action<StepCaptureFrame>? FrameAdded;
 
     private readonly ICaptureEngine _engine;
     private readonly List<StepCaptureFrame> _frames = new();
-    private nint _hookHandle;
-    private LowLevelMouseProc? _proc;
-    private DateTime _lastClick = DateTime.MinValue;
-    private bool _capturing;
+    private readonly object _inputLock = new();
+    private readonly List<StepCaptureKeyStroke> _pendingKeystrokes = new();
+    private readonly List<StepCaptureClick> _pendingClicks = new();
+    private RecordingPointerTracker? _pointerTracker;
+    private RecordingKeyboardTracker? _keyboardTracker;
+    private DateTime _lastCaptureClick = DateTime.MinValue;
+    private int _capturing;
 
     public StepCaptureSession(ICaptureEngine engine)
     {
@@ -40,38 +59,95 @@ public sealed class StepCaptureSession : IDisposable
     public void Start()
     {
         if (IsRunning) return;
-        _proc = HookCallback;
-        _hookHandle = SetWindowsHookEx(WH_MOUSE_LL, _proc, GetModuleHandle(null), 0);
-        IsRunning = _hookHandle != 0;
+
+        lock (_inputLock)
+        {
+            _pendingKeystrokes.Clear();
+            _pendingClicks.Clear();
+        }
+
+        _pointerTracker = new RecordingPointerTracker();
+        _pointerTracker.PointerClicked += OnPointerClicked;
+        _pointerTracker.Start();
+
+        _keyboardTracker = new RecordingKeyboardTracker();
+        _keyboardTracker.KeyPressed += OnKeyPressed;
+        _keyboardTracker.Start();
+
+        IsRunning = PointerTrackingAvailable;
+        if (!IsRunning)
+            Stop();
     }
 
     public void Stop()
     {
-        if (_hookHandle != 0) UnhookWindowsHookEx(_hookHandle);
-        _hookHandle = 0;
+        if (_pointerTracker is not null)
+        {
+            _pointerTracker.PointerClicked -= OnPointerClicked;
+            _pointerTracker.Dispose();
+            _pointerTracker = null;
+        }
+
+        if (_keyboardTracker is not null)
+        {
+            _keyboardTracker.KeyPressed -= OnKeyPressed;
+            _keyboardTracker.Dispose();
+            _keyboardTracker = null;
+        }
+
         IsRunning = false;
     }
 
-    private nint HookCallback(int nCode, nint wParam, nint lParam)
+    private void OnKeyPressed(RecordingKeyPress keyPress)
     {
-        if (nCode >= 0 && wParam.ToInt32() == WM_LBUTTONDOWN)
+        if (!IsRunning)
+            return;
+
+        lock (_inputLock)
         {
-            // Debounce: ignore clicks within 250ms (rapid double-click would otherwise add two
-            // identical frames).
-            var now = DateTime.UtcNow;
-            if ((now - _lastClick).TotalMilliseconds > 250)
-            {
-                _lastClick = now;
-                _ = CaptureFrameAsync();
-            }
+            _pendingKeystrokes.Add(new StepCaptureKeyStroke(keyPress.Text, keyPress.TimestampUtc));
+            while (_pendingKeystrokes.Count > 256)
+                _pendingKeystrokes.RemoveAt(0);
         }
-        return CallNextHookEx(_hookHandle, nCode, wParam, lParam);
+    }
+
+    private void OnPointerClicked(RecordingPointerClick click)
+    {
+        if (!IsRunning)
+            return;
+
+        // Debounce only the screenshot trigger. Non-left clicks remain in the track so the
+        // exported workflow preserves the complete pointer story between captured steps.
+        if (click.Button == RecordingPointerButton.Left
+            && (click.TimestampUtc - _lastCaptureClick).TotalMilliseconds <= 250)
+            return;
+
+        lock (_inputLock)
+        {
+            _pendingClicks.Add(new StepCaptureClick(
+                click.ScreenPoint.X,
+                click.ScreenPoint.Y,
+                click.Button switch
+                {
+                    RecordingPointerButton.Right => StepCaptureClickButton.Right,
+                    RecordingPointerButton.Middle => StepCaptureClickButton.Middle,
+                    _ => StepCaptureClickButton.Left
+                },
+                click.TimestampUtc));
+            while (_pendingClicks.Count > 256)
+                _pendingClicks.RemoveAt(0);
+        }
+
+        if (click.Button != RecordingPointerButton.Left)
+            return;
+
+        _lastCaptureClick = click.TimestampUtc;
+        if (Interlocked.CompareExchange(ref _capturing, 1, 0) == 0)
+            _ = CaptureFrameAsync();
     }
 
     private async Task CaptureFrameAsync()
     {
-        if (_capturing) return;
-        _capturing = true;
         try
         {
             var hwnd = GetForegroundWindow();
@@ -88,33 +164,44 @@ public sealed class StepCaptureSession : IDisposable
                 int next = _frames.Count + 1;
                 var path = Path.Combine(SessionFolder, $"step_{next:D3}.png");
                 result.Bitmap.Save(path, ImageFormat.Png);
-                var frame = new StepCaptureFrame(next, path, DateTime.UtcNow, title, proc);
+                var (keystrokes, clicks) = TakePendingInput();
+                var frame = new StepCaptureFrame(next, path, DateTime.UtcNow, title, proc, keystrokes, clicks);
                 _frames.Add(frame);
                 FrameAdded?.Invoke(frame);
             }
             finally { result.Bitmap.Dispose(); }
         }
         catch { /* swallow — step-capture must never crash the app */ }
-        finally { _capturing = false; }
+        finally { Interlocked.Exchange(ref _capturing, 0); }
+    }
+
+    private (IReadOnlyList<StepCaptureKeyStroke> Keystrokes, IReadOnlyList<StepCaptureClick> Clicks)
+        TakePendingInput()
+    {
+        lock (_inputLock)
+        {
+            var keystrokes = _pendingKeystrokes.ToArray();
+            var clicks = _pendingClicks.ToArray();
+            _pendingKeystrokes.Clear();
+            _pendingClicks.Clear();
+            return (keystrokes, clicks);
+        }
     }
 
     public void Dispose() => Stop();
 
-    private const int WH_MOUSE_LL = 14;
-    private const int WM_LBUTTONDOWN = 0x0201;
-    private delegate nint LowLevelMouseProc(int nCode, nint wParam, nint lParam);
-
-    [DllImport("user32.dll", SetLastError = true)] private static extern nint SetWindowsHookEx(int idHook, LowLevelMouseProc lpfn, nint hMod, uint dwThreadId);
-    [DllImport("user32.dll", SetLastError = true)] private static extern bool UnhookWindowsHookEx(nint hhk);
-    [DllImport("user32.dll")] private static extern nint CallNextHookEx(nint hhk, int nCode, nint wParam, nint lParam);
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern nint GetModuleHandle(string? lpModuleName);
     [DllImport("user32.dll")] private static extern nint GetForegroundWindow();
 }
 
 /// <summary>Markdown / HTML exporter for a finished session.</summary>
 public static class StepCaptureExporter
 {
-    public sealed record StepEntry(int Number, string FilePath, string Caption);
+    public sealed record StepEntry(
+        int Number,
+        string FilePath,
+        string Caption,
+        IReadOnlyList<StepCaptureKeyStroke>? Keystrokes = null,
+        IReadOnlyList<StepCaptureClick>? Clicks = null);
 
     public static string ExportMarkdown(string outDir, string title, IEnumerable<StepEntry> entries)
     {
@@ -138,6 +225,12 @@ public static class StepCaptureExporter
             if (!string.IsNullOrWhiteSpace(e.Caption))
             {
                 sw.AppendLine(e.Caption.Trim());
+                sw.AppendLine();
+            }
+            var inputTrack = StepCaptureInputFormatter.FormatMarkdown(e.Keystrokes, e.Clicks);
+            if (inputTrack is not null)
+            {
+                sw.AppendLine(inputTrack);
                 sw.AppendLine();
             }
             sw.AppendLine($"![Step {idx}](images/{imgName})");

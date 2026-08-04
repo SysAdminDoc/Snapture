@@ -68,7 +68,7 @@ The existing landscape on Windows in 2026:
 - **Built-in OCR** — Windows AI `TextRecognizer` when its local model is ready, `Windows.Media.Ocr` as the Windows fallback, and bundled local RapidOCR PP-OCRv5 Latin models when neither Windows engine can return text. An optional user-supplied `sponeocr.exe` sidecar can use the Windows Snipping Tool's local OneOCR model without cloud traffic. Tray → Tools → "OCR region…" picks a region, recognised text lands in the clipboard, result window opens. The History window's "OCR all" button bulk-indexes everything past captures into FTS5.
 - **OCR text overlays** — Editor → **OCR overlay** turns positioned OCR lines into editable, contrast-aware text annotations anchored to their image regions. The operation is one undoable batch and text-only engines decline cleanly when no geometry is available.
 - **OCR table mode** — Editor → **Table** reconstructs rows and columns from positioned OCR word boxes and copies the result as tab-separated values. Text-only engines decline cleanly instead of guessing columns.
-- **Step Capture mode** — Records every click, snapshots the foreground window, presents a review window with per-step caption fields, and exports Markdown, editable DOCX, or title-plus-step PPTX bundles. The Snagit single-vendor feature with no OSS equivalent.
+- **Step Capture mode** — Records key chords and cursor clicks, snapshots the foreground window, presents a review window with per-step input tracks and captions, and exports Markdown, editable DOCX, or title-plus-step PPTX bundles. The Snagit single-vendor feature with no OSS equivalent.
 - **QR and barcode extraction** — Editor → **Codes** runs a local ZXing.Net pass across QR, Data Matrix, Aztec, PDF417, Code 128, EAN/UPC, and other common formats, then lists payloads and image regions for copying.
 - **Capture history** with **SQLite + FTS5** at `%LOCALAPPDATA%\Snapture\history\index.db`. Every capture auto-tagged with foreground process + window title. The History window lets you search across OCR text, process name, and window title with FTS5 syntax. Right-click → Open in editor / Pin / Run OCR / Reveal / Delete.
 - **Scrolling capture (alpha)** via UIA `IScrollProvider`. Native scroll panes (Office side-panes, Explorer, WPF/WinForms apps) work; browsers fall through to a clear "this window doesn't expose UIA scroll" message. Image-stitching for browsers ships in v0.4.
@@ -117,7 +117,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, DOCX / PPTX from Step Capture, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, and auto-update via Velopack
+- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, and auto-update via Velopack
 
 ## Install
 
@@ -226,7 +226,7 @@ Snapture.sln
 │        ├─ HistoryWindow              ← Thumbnail wall + FTS5 search
 │        ├─ OcrResultWindow            ← Recognised-text reviewer
 │        ├─ PluginsWindow              ← Plugin inventory + reload
-│        ├─ StepCaptureWindow          ← Step Capture review + Markdown export
+│        ├─ StepCaptureWindow          ← Step Capture review + Markdown/DOCX/PPTX export
 │        └─ GifRecordingWindow         ← REC indicator + Stop & save
 └─ Resources/Themes/
    ├─ CatppuccinMocha.xaml

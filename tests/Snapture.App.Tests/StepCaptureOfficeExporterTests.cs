@@ -24,7 +24,12 @@ public sealed class StepCaptureOfficeExporterTests
             var output = Path.Combine(root, "guide.docx");
             var entries = new[]
             {
-                new StepCaptureExporter.StepEntry(1, imagePath, "Click Settings"),
+                new StepCaptureExporter.StepEntry(
+                    1,
+                    imagePath,
+                    "Click Settings",
+                    new[] { new StepCaptureKeyStroke("CTRL+S", DateTime.UtcNow) },
+                    new[] { new StepCaptureClick(120, 240, StepCaptureClickButton.Left, DateTime.UtcNow) }),
                 new StepCaptureExporter.StepEntry(2, imagePath, "Choose the capture mode")
             };
 
@@ -35,6 +40,8 @@ public sealed class StepCaptureOfficeExporterTests
             var body = mainPart.Document?.Body ?? throw new AssertFailedException("DOCX body missing.");
             Assert.IsTrue(body.Descendants<WordText>().Any(text => text.Text == "Capture guide"));
             Assert.IsTrue(body.Descendants<WordText>().Any(text => text.Text == "Click Settings"));
+            Assert.IsTrue(body.Descendants<WordText>().Any(text =>
+                text.Text == "Input track: Keys: CTRL+S · Clicks: left (120, 240)"));
             Assert.HasCount(2, body.Descendants<Drawing>());
             Assert.HasCount(2, mainPart.ImageParts);
             var validationErrors = new OpenXmlValidator(FileFormatVersions.Office2019).Validate(document).ToArray();
@@ -59,7 +66,12 @@ public sealed class StepCaptureOfficeExporterTests
             var output = Path.Combine(root, "guide.pptx");
             var entries = new[]
             {
-                new StepCaptureExporter.StepEntry(1, imagePath, "Open Settings"),
+                new StepCaptureExporter.StepEntry(
+                    1,
+                    imagePath,
+                    "Open Settings",
+                    new[] { new StepCaptureKeyStroke("ENTER", DateTime.UtcNow) },
+                    new[] { new StepCaptureClick(40, 80, StepCaptureClickButton.Right, DateTime.UtcNow) }),
                 new StepCaptureExporter.StepEntry(2, imagePath, "Save the change")
             };
 
@@ -78,6 +90,8 @@ public sealed class StepCaptureOfficeExporterTests
             var firstStepSlide = slideParts[1].Slide ?? throw new AssertFailedException("PPTX step slide missing.");
             Assert.IsTrue(titleSlide.Descendants<DrawingText>().Any(text => text.Text == "Capture guide"));
             Assert.IsTrue(firstStepSlide.Descendants<DrawingText>().Any(text => text.Text == "Open Settings"));
+            Assert.IsTrue(firstStepSlide.Descendants<DrawingText>().Any(text =>
+                text.Text == "Input track: Keys: ENTER · Clicks: right (40, 80)"));
             Assert.HasCount(0, slideParts[0].ImageParts);
             Assert.HasCount(1, slideParts[1].ImageParts);
             Assert.HasCount(1, slideParts[2].ImageParts);
