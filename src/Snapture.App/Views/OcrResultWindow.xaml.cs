@@ -7,13 +7,24 @@ public partial class OcrResultWindow : Window
 {
     private readonly string _recognizedText;
 
-    public OcrResultWindow(string text, string? language = null)
+    public OcrResultWindow(string text, string? language = null, OcrEngineKind? engine = null)
     {
         InitializeComponent();
         _recognizedText = text ?? string.Empty;
         ResultBox.Text = _recognizedText;
-        if (!string.IsNullOrEmpty(language))
-            LangText.Text = $"Language: {language}";
+        var engineLabel = engine switch
+        {
+            OcrEngineKind.WindowsAiTextRecognizer => "Windows AI",
+            OcrEngineKind.WindowsMediaOcr => "Windows OCR",
+            _ => null
+        };
+        LangText.Text = (language, engineLabel) switch
+        {
+            ({ Length: > 0 }, { Length: > 0 }) => $"Language: {language} · Engine: {engineLabel}",
+            ({ Length: > 0 }, _) => $"Language: {language}",
+            (_, { Length: > 0 }) => $"Engine: {engineLabel}",
+            _ => ""
+        };
 
         int chars = _recognizedText.Length;
         int words = _recognizedText.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;

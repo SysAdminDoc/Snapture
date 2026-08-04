@@ -196,7 +196,7 @@ public sealed class TrayIconHost : IDisposable
                 string text = result?.Text ?? string.Empty;
                 if (!string.IsNullOrEmpty(text))
                     try { System.Windows.Clipboard.SetText(text); } catch { }
-                new Views.OcrResultWindow(text).Show();
+                new Views.OcrResultWindow(text, engine: result?.Engine).Show();
             }
             catch (Exception ex) { MessageBox.Show($"OCR failed:\n{ex.Message}", "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning); }
         };

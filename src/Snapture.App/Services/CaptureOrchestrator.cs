@@ -221,7 +221,7 @@ public sealed class CaptureOrchestrator
                 var result = await OcrService.RecognizeAsync(bs).ConfigureAwait(true);
                 string text = result?.Text ?? string.Empty;
                 try { if (!string.IsNullOrEmpty(text)) Clipboard.SetText(text); } catch { }
-                var win = new OcrResultWindow(text, OcrService.AvailableLanguages().FirstOrDefault());
+                var win = new OcrResultWindow(text, OcrService.AvailableLanguages().FirstOrDefault(), result?.Engine);
                 win.Show();
                 win.Activate();
             }

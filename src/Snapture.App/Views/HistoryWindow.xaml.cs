@@ -152,7 +152,7 @@ public partial class HistoryWindow : Window
             var result = await OcrService.RecognizeAsync(bi);
             string text = result?.Text ?? "";
             _history.UpdateOcrText(row.Id, text);
-            new OcrResultWindow(text).Show();
+            new OcrResultWindow(text, engine: result?.Engine).Show();
             StatusText.Text = "OCR indexed.";
         }
         catch (Exception ex)

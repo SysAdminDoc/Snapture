@@ -85,6 +85,11 @@ All notable changes to Snapture will be documented in this file.
 
 - The editor now has a Code line marker tool with Added, Removed, Focus, Blur, and Fade states. Markers persist in `.snapture` projects, render over captured code lines, and carry through Carbon code-window and beautifier exports.
 
+### Added — Windows AI OCR with normalized fallback
+
+- OCR now attempts the Windows AI Foundry `TextRecognizer` on Windows 11 24H2+ when its local model and runtime are ready, exposing engine identity, per-word confidence, quadrilateral polygons, and rectangular bounds.
+- Devices without the Windows AI COM surface, NPU model, or required runtime transparently fall back to `Windows.Media.Ocr`; Auto-redact consumes the same normalized result contract from either engine.
+
 ### Added — Mermaid and PlantUML diagrams
 
 - The editor now accepts Mermaid `flowchart`/`graph` and PlantUML `@startuml` snippets from the clipboard or a multiline paste dialog via the toolbar or Ctrl+Shift+V.

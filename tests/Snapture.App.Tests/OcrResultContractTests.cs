@@ -1,0 +1,52 @@
+using SkiaSharp;
+using Snapture.App.Services;
+
+namespace Snapture.App.Tests;
+
+[TestClass]
+public sealed class OcrResultContractTests
+{
+    [TestMethod]
+    public void WordResultPreservesConfidenceAndQuadrilateralGeometry()
+    {
+        var polygon = new[]
+        {
+            new SKPoint(10, 12), new SKPoint(82, 12),
+            new SKPoint(78, 38), new SKPoint(8, 38)
+        };
+        var word = new OcrWordResult("secret", new SKRect(8, 12, 82, 38), 0.87f, polygon);
+        var result = new OcrRecognitionResult(
+            "secret",
+            new[] { new OcrLineResult("secret", new[] { word }, word.BoundingBox) },
+            OcrEngineKind.WindowsAiTextRecognizer);
+
+        Assert.AreEqual(OcrEngineKind.WindowsAiTextRecognizer, result.Engine);
+        Assert.AreEqual(0.87f, result.Lines.Single().Words.Single().Confidence, 0.001f);
+        Assert.HasCount(4, result.Lines.Single().Words.Single().Polygon);
+        Assert.AreEqual(82, result.Lines.Single().Words.Single().Polygon[1].X);
+        Assert.AreEqual(38, result.Lines.Single().Words.Single().BoundingBox.Bottom);
+    }
+
+    [TestMethod]
+    public void LegacyEngineHasTheSameNormalizedShapeContract()
+    {
+        var word = new OcrWordResult(
+            "fallback",
+            new SKRect(4, 5, 60, 24),
+            1f,
+            new[]
+            {
+                new SKPoint(4, 5), new SKPoint(60, 5),
+                new SKPoint(60, 24), new SKPoint(4, 24)
+            });
+        var result = new OcrRecognitionResult(
+            "fallback",
+            new[] { new OcrLineResult("fallback", new[] { word }, word.BoundingBox) },
+            OcrEngineKind.WindowsMediaOcr);
+
+        Assert.AreEqual(OcrEngineKind.WindowsMediaOcr, result.Engine);
+        Assert.AreEqual("fallback", result.Lines.Single().Text);
+        Assert.AreEqual(1f, result.Lines.Single().Words.Single().Confidence, 0.001f);
+        Assert.AreEqual(60, result.Lines.Single().BoundingBox.Right);
+    }
+}
