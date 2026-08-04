@@ -1,0 +1,41 @@
+{
+    "version": "0.6.0",
+    "description": "Local-first screenshot capture and annotation utility for Windows.",
+    "homepage": "https://github.com/SysAdminDoc/Snapture",
+    "license": "MIT",
+    "notes": [
+        "This manifest installs the portable archive without an installer or elevation.",
+        "Scoop owns upgrades for this portable copy; Snapture stores user data outside the app directory."
+    ],
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v0.6.0/SysAdminDoc.Snapture-win-x64-stable-Portable.zip",
+            "hash": "7694e6d1b45d67738ca49318dddba8f78abbe010f5d5bb476ef316db67c1a9f9"
+        },
+        "arm64": {
+            "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v0.6.0/SysAdminDoc.Snapture-win-arm64-stable-Portable.zip",
+            "hash": "e0afa7e3fcfac7dad074ab93bcae48307f2ef3b9b08eeee21fbec161d0926a6c"
+        }
+    },
+    "extract_dir": "current",
+    "bin": "Snapture.App.exe",
+    "shortcuts": [
+        [
+            "Snapture.App.exe",
+            "Snapture"
+        ]
+    ],
+    "checkver": {
+        "github": "https://github.com/SysAdminDoc/Snapture"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v$version/SysAdminDoc.Snapture-win-x64-stable-Portable.zip"
+            },
+            "arm64": {
+                "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v$version/SysAdminDoc.Snapture-win-arm64-stable-Portable.zip"
+            }
+        }
+    }
+}

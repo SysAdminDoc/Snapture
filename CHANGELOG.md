@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Scoop manifest
+
+- Added an extras-bucket-ready `packaging/scoop/snapture.json` manifest for the x64 and ARM64 portable archives, including pinned SHA-256 hashes, Scoop shims, a Start Menu shortcut, GitHub version checking, and architecture-aware autoupdate URLs.
+
 ### Added — Chocolatey packages
 
 - `build/build.ps1 -Chocolatey` now builds both x64 and ARM64 Velopack release assets and emits `snapture` and `snapture.portable` packages with architecture-aware GitHub download URLs, SHA-256 verification, silent installer handling, portable extraction, shims, and uninstall scripts.

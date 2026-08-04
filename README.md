@@ -121,7 +121,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR and Scoop. The unsigned MSIX, Velopack, and Chocolatey packaging paths are available for operator-controlled release signing and distribution.
+- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR. The unsigned MSIX, Velopack, Chocolatey, and Scoop packaging paths are available for operator-controlled release signing and distribution.
 
 ## Install
 
@@ -145,6 +145,8 @@ To produce an unsigned MSIX and a staged App Installer feed locally, run `pwsh -
 To produce unsigned Velopack release assets, run `dotnet tool restore`, then `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Velopack` (repeat with `win-arm64` for the ARM64 package). The assets under `publish/velopack/<runtime>/` include architecture-specific stable feeds (`win-x64-stable` or `win-arm64-stable`), full packages, setup executables, and portable archives; publish both directories' files to the same GitHub Release download root. Installed Velopack builds can check, download, and apply updates from the tray; unpackaged source builds retain the GitHub release-page fallback. Release signing is intentionally operator-controlled and is never performed by the build.
 
 To produce Chocolatey packages for both architectures, run `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Chocolatey`. The command builds the matching Velopack assets, then writes `publish/chocolatey/snapture.<version>.nupkg` and `publish/chocolatey/snapture.portable.<version>.nupkg`. `snapture` downloads the silent Velopack setup executable; `snapture.portable` downloads and extracts the portable archive. Both package scripts select x64 or ARM64 and verify SHA-256 before installing. Publish the generated packages to the Chocolatey feed only after the corresponding versioned GitHub Release assets are available.
+
+The Scoop extras-bucket manifest is [packaging/scoop/snapture.json](packaging/scoop/snapture.json). It installs the same architecture-specific Velopack portable archives through Scoop, pins their SHA-256 hashes, exposes the `snapture` shim and Start Menu shortcut, and lets Scoop manage upgrades. Copy the manifest into the extras bucket after publishing the matching GitHub Release assets; update its version, URLs, and hashes for each release.
 
 ## Usage
 
