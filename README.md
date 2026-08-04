@@ -159,6 +159,8 @@ All four hotkeys are rebindable from **Settings → Hotkeys**.
 
 **Headless CLI capture:** `Snapture.App.exe --region x,y,width,height --out file.png` captures a fixed rectangle without starting the tray or editor. Add `--fullscreen`, `--engine auto|winrt|gdi`, `--copy`/`--clipboard`, `--profile <name>`, `--lan-share`, `--hold`, or `--block <seconds>` as needed. `--lan-share` keeps its local single-fetch server alive; use `--block` for a bounded hold.
 
+**Explorer image verbs:** Tray → Tools → Image shell integration → Install for this user adds an HKCU-only Snapture menu for image files. It can open an image in the editor, convert it to PNG/JPEG, or resize it to a preset percentage. The same actions are available headlessly as `--open <image>`, or `--convert <image> [--format png|jpg|bmp|webp] [--resize percent] [--out file]`. No administrator rights are required; use Remove for this user to undo the registration.
+
 Captures are saved to `%USERPROFILE%\Pictures\Snapture\` by default and copied to the clipboard. The editor window opens after every capture (configurable in `settings.json`).
 
 ## Configuration

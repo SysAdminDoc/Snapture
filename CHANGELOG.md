@@ -5,6 +5,11 @@ All notable changes to Snapture will be documented in this file.
 ### Added — Headless CLI capture
 
 - `Snapture.App.exe` now accepts fixed-region or fullscreen capture commands with explicit output paths, local capture profiles, optional clipboard copy, bounded holds, and LAN-share registration without starting the tray or editor.
+- The CLI also supports `--open` for editor handoff and local `--convert` / `--resize` commands for Explorer integration.
+
+### Added — Explorer image integration
+
+- Tray → Tools can install or remove a current-user-only image context menu with “Open in Snapture editor”, PNG/JPEG conversion, and 50/75/125/200% resize presets. Registration is stored below `HKCU\Software\Classes\SystemFileAssociations\image` and never requires elevation.
 
 ### Added — Multi-pin selection and group controls
 

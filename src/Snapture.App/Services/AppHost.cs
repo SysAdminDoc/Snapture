@@ -221,6 +221,16 @@ public sealed class AppHost : IDisposable
         }
     }
 
+    public void OpenEditor(string imagePath)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
+        string path = Path.GetFullPath(imagePath);
+        if (!File.Exists(path))
+            throw new FileNotFoundException("The image file does not exist.", path);
+
+        EditorTabHostWindow.Open(new EditorWindow(path));
+    }
+
     private void CheckForAutosaveRecovery()
     {
         try

@@ -62,6 +62,43 @@ public sealed class CliCommandLineTests
     }
 
     [TestMethod]
+    public void ParsesOpenAndConvertCommands()
+    {
+        Assert.IsTrue(CliCommandLine.TryParse(
+            new[] { "--open", @"C:\Screenshots\note.png" },
+            out var open,
+            out var openError), openError);
+        Assert.AreEqual(CliCommandKind.Open, open.Kind);
+        Assert.AreEqual(@"C:\Screenshots\note.png", open.Open!.Path);
+
+        Assert.IsTrue(CliCommandLine.TryParse(
+            new[] { "--convert", @"C:\Screenshots\note.png", "--format", "jpeg", "--resize", "50", "--out", "converted.jpg" },
+            out var convert,
+            out var convertError), convertError);
+        Assert.AreEqual(CliCommandKind.Convert, convert.Kind);
+        Assert.AreEqual(@"C:\Screenshots\note.png", convert.Convert!.InputPath);
+        Assert.AreEqual("jpg", convert.Convert.Format);
+        Assert.AreEqual(50, convert.Convert.ResizePercent);
+        Assert.AreEqual("converted.jpg", convert.Convert.OutputPath);
+    }
+
+    [TestMethod]
+    public void RejectsMixedOpenAndConversionOptions()
+    {
+        Assert.IsFalse(CliCommandLine.TryParse(
+            new[] { "--open", "capture.png", "--convert", "other.png" },
+            out _,
+            out var conflictError));
+        StringAssert.Contains(conflictError, "either --open or --convert");
+
+        Assert.IsFalse(CliCommandLine.TryParse(
+            new[] { "--convert", "capture.png", "--resize", "0" },
+            out _,
+            out var resizeError));
+        StringAssert.Contains(resizeError, "1 to 1000");
+    }
+
+    [TestMethod]
     public void RejectsMissingOrInvalidCaptureSource()
     {
         Assert.IsFalse(CliCommandLine.TryParse(Array.Empty<string>(), out _, out var emptyError));

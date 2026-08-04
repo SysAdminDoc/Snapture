@@ -223,6 +223,41 @@ public sealed class TrayIconHost : IDisposable
         var captureText = new MenuItem { Header = "Capture text to clipboard" };
         captureText.Click += async (_, _) => await SafeRun(_orchestrator.CaptureTextAsync);
         tools.Items.Add(captureText);
+
+        var shellIntegration = new MenuItem { Header = "Image shell integration" };
+        var installShell = new MenuItem { Header = "Install for this user" };
+        installShell.Click += (_, _) =>
+        {
+            try
+            {
+                ShellIntegrationService.Install();
+                ShowToast("Shell integration installed", "Right-click an image to open, resize, or convert it with Snapture.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not install shell integration:\n{ex.Message}",
+                    "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        shellIntegration.Items.Add(installShell);
+
+        var removeShell = new MenuItem { Header = "Remove for this user" };
+        removeShell.Click += (_, _) =>
+        {
+            try
+            {
+                ShellIntegrationService.Uninstall();
+                ShowToast("Shell integration removed", "Snapture image verbs are no longer in Explorer.");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not remove shell integration:\n{ex.Message}",
+                    "Snapture", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        shellIntegration.Items.Add(removeShell);
+        tools.Items.Add(shellIntegration);
+
         var ocrFromFile = new MenuItem { Header = "OCR from file…" };
         ocrFromFile.Click += async (_, _) =>
         {

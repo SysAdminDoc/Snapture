@@ -8,6 +8,8 @@ namespace Snapture.App.Services;
 public enum CliCommandKind
 {
     Capture,
+    Open,
+    Convert,
     Help,
     Version
 }
@@ -23,12 +25,28 @@ public sealed record CliCaptureOptions(
     string? Profile,
     string? Engine);
 
-public sealed record CliCommand(CliCommandKind Kind, CliCaptureOptions? Capture = null);
+public sealed record CliOpenOptions(string Path);
+
+public sealed record CliConvertOptions(
+    string InputPath,
+    string? Format,
+    int ResizePercent,
+    string? OutputPath);
+
+public sealed record CliCommand(
+    CliCommandKind Kind,
+    CliCaptureOptions? Capture = null,
+    CliOpenOptions? Open = null,
+    CliConvertOptions? Convert = null);
 
 /// <summary>Strict parser for the non-interactive command-line capture surface.</summary>
 public static class CliCommandLine
 {
-    public const string Usage = "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name]";
+    public const string Usage =
+        "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name]\n" +
+        "snapture --fullscreen [--out file.png] [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share]\n" +
+        "snapture --open image.png\n" +
+        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file]";
 
     public static void AttachParentConsole()
     {
@@ -58,11 +76,15 @@ public static class CliCommandLine
             || arg.Equals("--clipboard", StringComparison.OrdinalIgnoreCase)
             || arg.Equals("--hold", StringComparison.OrdinalIgnoreCase)
             || arg.Equals("--lan-share", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--open", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--convert", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--region", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--out", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--engine", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--block", StringComparison.OrdinalIgnoreCase)
-            || arg.StartsWith("--profile", StringComparison.OrdinalIgnoreCase));
+            || arg.StartsWith("--profile", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--format", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--resize", StringComparison.OrdinalIgnoreCase));
 
     public static bool TryParse(IReadOnlyList<string> args, out CliCommand command, out string error)
     {
@@ -97,10 +119,62 @@ public static class CliCommandLine
         bool lanShare = false;
         string? profile = null;
         string? engine = null;
+        string? openPath = null;
+        string? convertPath = null;
+        string? format = null;
+        int resizePercent = 0;
+        bool resizeSpecified = false;
 
         for (int i = 0; i < args.Count; i++)
         {
             string arg = args[i];
+            if (TryReadOptionValue(args, ref i, arg, "--open", out var openValue))
+            {
+                if (openPath is not null || string.IsNullOrWhiteSpace(openValue))
+                {
+                    error = "--open requires one non-empty image path and may only be specified once.";
+                    return false;
+                }
+                openPath = openValue;
+                continue;
+            }
+
+            if (TryReadOptionValue(args, ref i, arg, "--convert", out var convertValue))
+            {
+                if (convertPath is not null || string.IsNullOrWhiteSpace(convertValue))
+                {
+                    error = "--convert requires one non-empty image path and may only be specified once.";
+                    return false;
+                }
+                convertPath = convertValue;
+                continue;
+            }
+
+            if (TryReadOptionValue(args, ref i, arg, "--format", out var formatValue))
+            {
+                if (format is not null
+                    || !ImageConversionService.TryNormalizeFormat(formatValue, out format))
+                {
+                    error = "--format must be png, jpg, bmp, or webp and may only be specified once.";
+                    return false;
+                }
+                continue;
+            }
+
+            if (TryReadOptionValue(args, ref i, arg, "--resize", out var resizeValue))
+            {
+                if (resizeSpecified
+                    || !int.TryParse(resizeValue, NumberStyles.None, CultureInfo.InvariantCulture, out resizePercent)
+                    || resizePercent < 1
+                    || resizePercent > 1000)
+                {
+                    error = "--resize requires a percentage from 1 to 1000 and may only be specified once.";
+                    return false;
+                }
+                resizeSpecified = true;
+                continue;
+            }
+
             if (TryReadOptionValue(args, ref i, arg, "--region", out var regionValue))
             {
                 if (region is not null || fullscreen || !TryParseRegion(regionValue, out var parsedRegion))
@@ -194,6 +268,46 @@ public static class CliCommandLine
 
             error = $"Unknown CLI option: {arg}\n\n{Usage}";
             return false;
+        }
+
+        if (openPath is not null || convertPath is not null || format is not null || resizeSpecified)
+        {
+            if (openPath is not null && convertPath is not null)
+            {
+                error = "Choose either --open or --convert, not both.";
+                return false;
+            }
+
+            if (openPath is not null)
+            {
+                if (region is not null || fullscreen || outputPath is not null || copy || hold || blockSeconds != 0
+                    || lanShare || profile is not null || engine is not null || format is not null || resizeSpecified)
+                {
+                    error = "--open cannot be combined with capture, conversion, or delivery options.";
+                    return false;
+                }
+
+                command = new CliCommand(CliCommandKind.Open, Open: new CliOpenOptions(openPath));
+                return true;
+            }
+
+            if (convertPath is null)
+            {
+                error = "--format and --resize require --convert image.png.";
+                return false;
+            }
+
+            if (region is not null || fullscreen || copy || hold || blockSeconds != 0 || lanShare
+                || profile is not null || engine is not null)
+            {
+                error = "--convert cannot be combined with capture or delivery options.";
+                return false;
+            }
+
+            command = new CliCommand(
+                CliCommandKind.Convert,
+                Convert: new CliConvertOptions(convertPath, format, resizePercent, outputPath));
+            return true;
         }
 
         if (region is null && !fullscreen)

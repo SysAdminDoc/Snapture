@@ -50,6 +50,52 @@ public partial class App : Application
             }
 
             ConfigureLogging(e.Args);
+
+            if (command.Kind == CliCommandKind.Convert)
+            {
+                try
+                {
+                    var options = command.Convert
+                        ?? throw new InvalidOperationException("Conversion options are missing.");
+                    var conversion = ImageConversionService.Convert(
+                        options.InputPath,
+                        options.Format,
+                        options.ResizePercent,
+                        options.OutputPath);
+                    Console.WriteLine($"Saved: {conversion.OutputPath}");
+                    Environment.ExitCode = 0;
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Conversion failed: {ex.Message}");
+                    Environment.ExitCode = 1;
+                }
+                finally
+                {
+                    Shutdown();
+                }
+                return;
+            }
+
+            if (command.Kind == CliCommandKind.Open)
+            {
+                ShutdownMode = ShutdownMode.OnLastWindowClose;
+                try
+                {
+                    Host = new AppHost();
+                    Host.Start();
+                    Host.OpenEditor(command.Open?.Path
+                        ?? throw new InvalidOperationException("Open options are missing."));
+                }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine($"Could not open image: {ex.Message}");
+                    Environment.ExitCode = 1;
+                    Shutdown();
+                }
+                return;
+            }
+
             try
             {
                 Host = new AppHost();
