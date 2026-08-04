@@ -344,7 +344,7 @@ public sealed class PluginLoader : IDisposable
 }
 
 /// <summary>Concrete <see cref="IPluginHost"/> exposed to plugins.</summary>
-public sealed class PluginHostBridge : IPluginHost, IPluginSecretStore, IDisposable
+public sealed class PluginHostBridge : IPluginHost, IPluginSecretStore, IPluginDependencyStore, IDisposable
 {
     public string ScratchDirectory { get; }
 
@@ -352,17 +352,20 @@ public sealed class PluginHostBridge : IPluginHost, IPluginSecretStore, IDisposa
     private readonly Action<string> _log;
 
     private readonly PluginSecretStore? _secretStore;
+    private readonly PluginDependencyStore? _dependencyStore;
 
     public PluginHostBridge(
         string scratchDir,
         Action<string, string> toast,
         Action<string> log,
-        PluginSecretStore? secretStore = null)
+        PluginSecretStore? secretStore = null,
+        PluginDependencyStore? dependencyStore = null)
     {
         ScratchDirectory = scratchDir;
         _toast = toast;
         _log = log;
         _secretStore = secretStore;
+        _dependencyStore = dependencyStore;
         Directory.CreateDirectory(scratchDir);
     }
 
@@ -376,7 +379,8 @@ public sealed class PluginHostBridge : IPluginHost, IPluginSecretStore, IDisposa
             Path.Combine(ScratchDirectory, safeName),
             _toast,
             _log,
-            new PluginSecretStore(PortableMode.LocalDataDirectory, pluginName));
+            new PluginSecretStore(PortableMode.LocalDataDirectory, pluginName),
+            new PluginDependencyStore(PortableMode.LocalDataDirectory, pluginName));
     }
 
     public void ShowToast(string title, string message) => _toast(title, message);
@@ -399,6 +403,13 @@ public sealed class PluginHostBridge : IPluginHost, IPluginSecretStore, IDisposa
 
     public bool RemoveSecret(string key) =>
         _secretStore?.RemoveSecret(key) == true;
+
+    public Task<string> EnsureAsync(PluginDependency dependency, CancellationToken ct = default) =>
+        (_dependencyStore ?? throw new InvalidOperationException("Dependency storage is unavailable for this host."))
+        .EnsureAsync(dependency, ct);
+
+    public bool Remove(PluginDependency dependency) =>
+        _dependencyStore?.Remove(dependency) == true;
 
     public void Dispose() => _secretStore?.Dispose();
 }

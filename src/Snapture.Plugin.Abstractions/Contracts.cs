@@ -142,10 +142,42 @@ public interface IPluginSecretStore
     bool RemoveSecret(string key);
 }
 
+/// <summary>
+/// A pinned binary an optional plugin may fetch on first use. The host verifies the HTTPS
+/// response and SHA-256 before making the immutable local path available to the plugin.
+/// </summary>
+public sealed class PluginDependency
+{
+    public string Id { get; }
+    public string Version { get; }
+    public string DownloadUrl { get; }
+    public string Sha256 { get; }
+    public string FileName { get; }
+
+    public PluginDependency(string id, string version, string downloadUrl, string sha256, string fileName)
+    {
+        Id = id;
+        Version = version;
+        DownloadUrl = downloadUrl;
+        Sha256 = sha256;
+        FileName = fileName;
+    }
+}
+
+/// <summary>Optional on-demand dependency cache for plugin tools such as ffmpeg or Tesseract.</summary>
+public interface IPluginDependencyStore
+{
+    Task<string> EnsureAsync(PluginDependency dependency, CancellationToken ct = default);
+    bool Remove(PluginDependency dependency);
+}
+
 public static class PluginHostExtensions
 {
     public static IPluginSecretStore? GetSecretStore(this IPluginHost host) =>
         host as IPluginSecretStore;
+
+    public static IPluginDependencyStore? GetDependencyStore(this IPluginHost host) =>
+        host as IPluginDependencyStore;
 }
 
 /// <summary>

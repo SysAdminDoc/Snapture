@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — On-demand plugin dependency cache
+
+- Added `IPluginDependencyStore` / `PluginDependency` to the SDK. Plugins can request pinned HTTPS tools such as ffmpeg or Tesseract only when a feature is used; the host downloads into a per-plugin cache, enforces a 500 MB cap, verifies SHA-256, and atomically exposes the path.
+- Dependency downloads are never performed during plugin discovery, and malformed URLs, file names, versions, or hashes are rejected before network access.
+
 ### Added — Opt-in self-hosted destinations
 
 - Added built-in Nextcloud WebDAV and Immich asset/album destinations. Both are disabled by default, require an explicit upload action, and are verified through mocked HTTP contracts.
