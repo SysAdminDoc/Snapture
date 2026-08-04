@@ -47,6 +47,7 @@ public sealed class AppHost : IDisposable
     public void Start()
     {
         _tray = new TrayIconHost(Orchestrator);
+        JumpListService.Apply();
         Hotkeys.Initialize();
         RewireHotkeys();
 

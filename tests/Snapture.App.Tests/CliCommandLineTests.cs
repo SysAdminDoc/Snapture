@@ -115,6 +115,21 @@ public sealed class CliCommandLineTests
     }
 
     [TestMethod]
+    public void ParsesJumpListInteractiveVerbs()
+    {
+        Assert.IsTrue(CliCommandLine.TryParse(new[] { "--new-region" }, out var region, out var regionError), regionError);
+        Assert.AreEqual(CliCommandKind.Interactive, region.Kind);
+        Assert.AreEqual(InteractiveCaptureKind.Region, region.Interactive!.CaptureKind);
+
+        Assert.IsTrue(CliCommandLine.TryParse(new[] { "--new-window" }, out var window, out var windowError), windowError);
+        Assert.AreEqual(InteractiveCaptureKind.Window, window.Interactive!.CaptureKind);
+
+        Assert.IsFalse(CliCommandLine.TryParse(
+            new[] { "--new-fullscreen", "--copy" }, out _, out var mixedError));
+        StringAssert.Contains(mixedError, "cannot be combined");
+    }
+
+    [TestMethod]
     public void RejectsMissingOrInvalidCaptureSource()
     {
         Assert.IsFalse(CliCommandLine.TryParse(Array.Empty<string>(), out _, out var emptyError));

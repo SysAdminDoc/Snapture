@@ -114,6 +114,36 @@ public partial class App : Application
                 return;
             }
 
+            if (command.Kind == CliCommandKind.Interactive)
+            {
+                try
+                {
+                    Host = new AppHost();
+                    Host.Start();
+                    switch (command.Interactive?.CaptureKind)
+                    {
+                        case InteractiveCaptureKind.Region:
+                            await Host.Orchestrator.CaptureRegionAsync().ConfigureAwait(true);
+                            break;
+                        case InteractiveCaptureKind.Window:
+                            await Host.Orchestrator.CaptureForegroundWindowAsync().ConfigureAwait(true);
+                            break;
+                        case InteractiveCaptureKind.Fullscreen:
+                            await Host.Orchestrator.CaptureFullscreenAsync().ConfigureAwait(true);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Interactive capture options are missing.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log.Error(ex, "InteractiveCapture.Failed");
+                    Environment.ExitCode = 1;
+                    Shutdown();
+                }
+                return;
+            }
+
             try
             {
                 Host = new AppHost();

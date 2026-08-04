@@ -153,6 +153,8 @@ After launching, Snapture lives in the system tray.
 | Ctrl+Alt+V | Pin the most recent capture as a Markdown link |
 | Tray right-click | Full menu (per-monitor, settings, tools, engine, output folder) |
 
+The Windows 11 taskbar jump list also provides **New region**, **New window**, and **New fullscreen** capture verbs.
+
 All four hotkeys are rebindable from **Settings → Hotkeys**.
 
 **Markdown clipboard integration:** Settings → Output → Clipboard integration can switch automatic clipboard copies from an image to a relative Markdown link. Snapture writes a PNG into the configured vault/export folder and copies a relative image link under the attachment folder. Obsidian vaults are discovered from the active window when possible; Joplin uses the explicitly selected Markdown export or attachment folder because its live resources are managed internally. Ctrl+Alt+V always pins the most recent capture through this flow.

@@ -11,6 +11,7 @@ public enum CliCommandKind
     Open,
     Convert,
     Uri,
+    Interactive,
     Help,
     Version
 }
@@ -36,12 +37,22 @@ public sealed record CliConvertOptions(
 
 public sealed record CliUriOptions(CaptureUriRequest Request);
 
+public enum InteractiveCaptureKind
+{
+    Region,
+    Window,
+    Fullscreen
+}
+
+public sealed record CliInteractiveOptions(InteractiveCaptureKind CaptureKind);
+
 public sealed record CliCommand(
     CliCommandKind Kind,
     CliCaptureOptions? Capture = null,
     CliOpenOptions? Open = null,
     CliConvertOptions? Convert = null,
-    CliUriOptions? Uri = null);
+    CliUriOptions? Uri = null,
+    CliInteractiveOptions? Interactive = null);
 
 /// <summary>Strict parser for the non-interactive command-line capture surface.</summary>
 public static class CliCommandLine
@@ -84,6 +95,9 @@ public static class CliCommandLine
             || arg.StartsWith("--open", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--convert", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--uri", StringComparison.OrdinalIgnoreCase)
+            || arg.Equals("--new-region", StringComparison.OrdinalIgnoreCase)
+            || arg.Equals("--new-window", StringComparison.OrdinalIgnoreCase)
+            || arg.Equals("--new-fullscreen", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--region", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--out", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--engine", StringComparison.OrdinalIgnoreCase)
@@ -131,10 +145,28 @@ public static class CliCommandLine
         int resizePercent = 0;
         bool resizeSpecified = false;
         string? rawUri = null;
+        InteractiveCaptureKind? interactive = null;
 
         for (int i = 0; i < args.Count; i++)
         {
             string arg = args[i];
+            if (arg.Equals("--new-region", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--new-window", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--new-fullscreen", StringComparison.OrdinalIgnoreCase))
+            {
+                if (interactive is not null)
+                {
+                    error = "Only one interactive capture verb may be specified.";
+                    return false;
+                }
+                interactive = arg.Equals("--new-region", StringComparison.OrdinalIgnoreCase)
+                    ? InteractiveCaptureKind.Region
+                    : arg.Equals("--new-window", StringComparison.OrdinalIgnoreCase)
+                        ? InteractiveCaptureKind.Window
+                        : InteractiveCaptureKind.Fullscreen;
+                continue;
+            }
+
             if (TryReadOptionValue(args, ref i, arg, "--uri", out var uriValue))
             {
                 if (rawUri is not null || string.IsNullOrWhiteSpace(uriValue))
@@ -286,6 +318,22 @@ public static class CliCommandLine
 
             error = $"Unknown CLI option: {arg}\n\n{Usage}";
             return false;
+        }
+
+        if (interactive is not null)
+        {
+            if (rawUri is not null || openPath is not null || convertPath is not null || format is not null || resizeSpecified
+                || region is not null || fullscreen || outputPath is not null || copy || hold || blockSeconds != 0
+                || lanShare || profile is not null || engine is not null)
+            {
+                error = "Interactive capture verbs cannot be combined with other options.";
+                return false;
+            }
+
+            command = new CliCommand(
+                CliCommandKind.Interactive,
+                Interactive: new CliInteractiveOptions(interactive.Value));
+            return true;
         }
 
         if (rawUri is not null)

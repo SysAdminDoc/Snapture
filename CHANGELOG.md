@@ -16,6 +16,10 @@ All notable changes to Snapture will be documented in this file.
 - Tray → Tools can opt in to a current-user `snapture://` protocol registration. Region, window, fullscreen, scrolling, and last-region commands dispatch through the existing capture pipeline with clipboard/editor destination overrides.
 - The parser rejects UNC, SMB, external `file://`, traversal, outside-profile paths, credentials, ports, fragments, duplicates, and unknown parameters before any capture work, with explicit reject-test coverage for the CVE-2026-33829 failure class.
 
+### Added — Windows 11 Jump List capture verbs
+
+- Snapture registers taskbar entries for New region, New window, and New fullscreen. Each verb routes through the normal app host and capture delivery pipeline.
+
 ### Added — Multi-pin selection and group controls
 
 - Pin overlays support Ctrl+click selection, Ctrl+A select-all, group dragging, group opacity changes through the wheel or context menu, and Delete/context-menu bulk close. Selected pins use an accent border and the menu reports the active group.
