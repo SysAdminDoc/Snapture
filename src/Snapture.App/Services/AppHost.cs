@@ -39,7 +39,9 @@ public sealed class AppHost : IDisposable
         PluginHost = new PluginHostBridge(scratch,
             toast: (t, m) => _tray?.ShowToast(t, m),
             log: msg => System.Diagnostics.Debug.WriteLine($"[plugin] {msg}"));
-        Plugins = new PluginLoader(PluginHost);
+        Plugins = new PluginLoader(
+            PluginHost,
+            manifest => PluginCapabilityPolicy.IsApproved(Settings.Current, manifest));
         Orchestrator = new CaptureOrchestrator(Settings, Engine, History);
         Mcp = new McpServer(
             Settings,

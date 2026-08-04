@@ -24,14 +24,27 @@ public sealed class PluginLoader : IDisposable
         IPluginHost Host,
         IReadOnlyList<IPluginConfigurable> Configurables);
 
+    public sealed record PluginManifestInfo(
+        string Name,
+        string Author,
+        string Version,
+        string Description,
+        PluginCapability Capabilities,
+        string? MinHostVersion,
+        string? MaxHostVersion);
+
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly IPluginHost _host;
+    private readonly Func<PluginManifestInfo, bool>? _isCapabilityApproved;
 
     public IReadOnlyList<LoadedPlugin> All => _plugins;
 
-    public PluginLoader(IPluginHost host)
+    public PluginLoader(
+        IPluginHost host,
+        Func<PluginManifestInfo, bool>? isCapabilityApproved = null)
     {
         _host = host;
+        _isCapabilityApproved = isCapabilityApproved;
         Directory.CreateDirectory(PluginsDirectory);
     }
 
@@ -109,6 +122,14 @@ public sealed class PluginLoader : IDisposable
         }
 
         var attr = entry.GetCustomAttribute<SnapturePluginAttribute>()!;
+        var manifest = new PluginManifestInfo(
+            attr.Name,
+            attr.Author,
+            attr.Version,
+            attr.Description,
+            attr.Capabilities,
+            attr.MinHostVersion,
+            attr.MaxHostVersion);
 
         var hostVersion = typeof(PluginLoader).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
         if (!PluginCompatibility.TryValidate(
@@ -122,6 +143,16 @@ public sealed class PluginLoader : IDisposable
             _host.Log(message);
             Log.Warning("Plugin.SkippedIncompatible {PluginName} {Minimum} {Maximum} {Reason}",
                 attr.Name, attr.MinHostVersion, attr.MaxHostVersion, compatibilityReason);
+            return null;
+        }
+        if (manifest.Capabilities != PluginCapability.None
+            && (_isCapabilityApproved is null || !_isCapabilityApproved(manifest)))
+        {
+            ctx.Unload();
+            string message = $"Plugin skipped (capabilities require approval): {attr.Name} — {attr.Capabilities}";
+            _host.Log(message);
+            Log.Warning("Plugin.SkippedUnapprovedCapabilities {PluginName} {Capabilities}",
+                attr.Name, attr.Capabilities);
             return null;
         }
 
@@ -158,6 +189,9 @@ public sealed class PluginLoader : IDisposable
         var hostVersion = typeof(PluginLoader).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
         if (!PluginCompatibility.TryValidate(manifest.MinHostVersion, manifest.MaxHostVersion, hostVersion, out var reason))
             throw new InvalidDataException($"Plugin '{manifest.Name}' is incompatible: {reason}");
+        if (manifest.Capabilities != PluginCapability.None
+            && (_isCapabilityApproved is null || !_isCapabilityApproved(manifest)))
+            throw new InvalidOperationException($"Plugin '{manifest.Name}' requires capability approval before installation.");
 
         var existing = _plugins.FirstOrDefault(plugin =>
             string.Equals(plugin.Info.Name, manifest.Name, StringComparison.OrdinalIgnoreCase));
@@ -241,7 +275,16 @@ public sealed class PluginLoader : IDisposable
         }
     }
 
-    private static PluginManifest ReadManifest(string dllPath)
+    public static PluginManifestInfo InspectManifest(string dllPath)
+    {
+        string path = Path.GetFullPath(dllPath);
+        if (!File.Exists(path)) throw new FileNotFoundException("The selected plugin DLL does not exist.", path);
+        if (!string.Equals(Path.GetExtension(path), ".dll", StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException("Plugins must be DLL files.", nameof(dllPath));
+        return ReadManifest(path);
+    }
+
+    private static PluginManifestInfo ReadManifest(string dllPath)
     {
         var context = new AssemblyLoadContext($"snapture-plugin-manifest:{Guid.NewGuid():N}", isCollectible: true);
         context.Resolving += (_, name) =>
@@ -256,12 +299,17 @@ public sealed class PluginLoader : IDisposable
                 .FirstOrDefault(type => type.GetCustomAttribute<SnapturePluginAttribute>() is not null);
             if (entry?.GetCustomAttribute<SnapturePluginAttribute>() is not { } attr)
                 throw new InvalidDataException("The DLL has no [SnapturePlugin] entry point.");
-            return new PluginManifest(attr.Name, attr.MinHostVersion, attr.MaxHostVersion);
+            return new PluginManifestInfo(
+                attr.Name,
+                attr.Author,
+                attr.Version,
+                attr.Description,
+                attr.Capabilities,
+                attr.MinHostVersion,
+                attr.MaxHostVersion);
         }
         finally { context.Unload(); }
     }
-
-    private sealed record PluginManifest(string Name, string? MinHostVersion, string? MaxHostVersion);
 
     private static IReadOnlyList<T> InstantiateAll<T>(Assembly asm, List<string> contractsTrace)
     {

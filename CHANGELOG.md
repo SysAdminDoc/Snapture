@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Changed — Plugin capability consent
+
+- Plugin capability declarations are now enforced at load and install time. Network, filesystem, clipboard, process-launch, and UI-interaction requests are shown for explicit user approval and approvals are versioned with the manifest; unapproved or manually dropped capability plugins remain unloaded.
+
 ### Added — Encrypted plugin secrets
 
 - Added the optional `IPluginSecretStore` extension for uploader and destination plugins. Each plugin gets an identity-scoped atomic store protected with Windows DPAPI (current-user scope), including portable-mode data roots, with no plaintext credential fallback.

@@ -845,6 +845,7 @@ public partial class SettingsWindow : Window
         dst.LanShareTtlMinutes = src.LanShareTtlMinutes;
         dst.McpEnabled = src.McpEnabled;
         dst.McpPort = src.McpPort;
+        dst.ApprovedPluginManifests = new List<string>(src.ApprovedPluginManifests);
         dst.DisabledRedactRules = new List<string>(src.DisabledRedactRules);
         dst.RegionHotkey = src.RegionHotkey;
         dst.WindowHotkey = src.WindowHotkey;

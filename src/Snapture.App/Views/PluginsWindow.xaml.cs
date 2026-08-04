@@ -191,6 +191,25 @@ public partial class PluginsWindow : Window
         if (path is null || App.Host is null) return;
         try
         {
+            var manifest = PluginLoader.InspectManifest(path);
+            if (manifest.Capabilities != Snapture.Plugin.PluginCapability.None
+                && !PluginCapabilityPolicy.IsApproved(App.Host.Settings.Current, manifest))
+            {
+                var answer = MessageBox.Show(
+                    $"{manifest.Name} v{manifest.Version} requests:\n\n" +
+                    $"{manifest.Capabilities}\n\n" +
+                    "Approve these declared capabilities for this plugin version and install it?",
+                    "Review plugin capabilities",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (answer != MessageBoxResult.Yes)
+                {
+                    StatusText.Text = "Plugin installation cancelled; no capabilities were approved.";
+                    return;
+                }
+                PluginCapabilityPolicy.Approve(App.Host.Settings.Current, manifest);
+                App.Host.Settings.Save();
+            }
             var installed = App.Host.Plugins.InstallOrUpdate(path);
             Refresh();
             StatusText.Text = $"Installed {installed.Info.Name} v{installed.Info.Version}.";

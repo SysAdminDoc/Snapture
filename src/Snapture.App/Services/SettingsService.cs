@@ -68,6 +68,9 @@ public sealed class SnaptureSettings
     public bool McpEnabled { get; set; } = false;
     public int McpPort { get; set; } = 9287;
 
+    /// <summary>Capability-manifest approvals keyed to plugin name, version, and capability set.</summary>
+    public List<string> ApprovedPluginManifests { get; set; } = new();
+
     /// <summary>
     /// Auto-redact: rule IDs that are disabled. Empty list = all rules enabled (the default).
     /// We persist disabled rather than enabled so a future rule pack expansion ships enabled
@@ -162,6 +165,7 @@ public sealed class SettingsService
             var json = File.ReadAllText(path);
             Current = JsonSerializer.Deserialize<SnaptureSettings>(json, JsonOpts) ?? new SnaptureSettings();
             Current.PerAppCaptureProfiles ??= new();
+            Current.ApprovedPluginManifests ??= new();
         }
         catch { Current = new SnaptureSettings(); }
     }
