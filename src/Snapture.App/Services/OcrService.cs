@@ -4,8 +4,10 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using System.Runtime.Versioning;
 using System.Windows.Media.Imaging;
 using Microsoft.Graphics.Imaging;
+using Microsoft.ML.OnnxRuntime;
 using Microsoft.Windows.AI;
 using Microsoft.Windows.AI.Imaging;
+using RapidOcrNet;
 using SkiaSharp;
 using Windows.Foundation;
 using Windows.Globalization;
@@ -15,10 +17,13 @@ using Windows.Storage.Streams;
 
 namespace Snapture.App.Services;
 
+using WindowsAiTextRecognizer = Microsoft.Windows.AI.Imaging.TextRecognizer;
+
 public enum OcrEngineKind
 {
     WindowsAiTextRecognizer,
-    WindowsMediaOcr
+    WindowsMediaOcr,
+    RapidOcr
 }
 
 /// <summary>A normalized OCR word with rectangular and polygonal geometry.</summary>
@@ -42,24 +47,58 @@ public sealed record OcrRecognitionResult(
 
 /// <summary>
 /// Uses the Windows AI Foundry TextRecognizer when its model/runtime is ready, then falls back
-/// to Windows.Media.Ocr. Both paths return the same word confidence and geometry contract.
+/// to Windows.Media.Ocr and RapidOCR. Every path returns the same word confidence and geometry contract.
 /// </summary>
 [SupportedOSPlatform("windows10.0.17763.0")]
 public static class OcrService
 {
+    private static readonly SemaphoreSlim RapidGate = new(1, 1);
+    private static RapidOcr? _rapidOcr;
+    private static bool _rapidUseDirectMl;
+    private static string _rapidProviderStatus = "CPU (default)";
+
+    /// <summary>Whether the experimental DirectML provider is requested for RapidOCR.</summary>
+    public static bool RapidOcrUseDirectMl => _rapidUseDirectMl;
+
+    /// <summary>Current RapidOCR provider state for Settings and diagnostics.</summary>
+    public static string RapidOcrProviderStatus => _rapidProviderStatus;
+
+    /// <summary>
+    /// Apply the RapidOCR provider preference and discard an already initialized model when it changes.
+    /// DirectML is optional; model initialization falls back to CPU if the provider DLL is not installed
+    /// or the selected device cannot load the models.
+    /// </summary>
+    public static void ConfigureRapidOcr(bool useDirectMl)
+    {
+        RapidGate.Wait();
+        try
+        {
+            if (_rapidUseDirectMl != useDirectMl && _rapidOcr is not null)
+            {
+                _rapidOcr.Dispose();
+                _rapidOcr = null;
+            }
+
+            _rapidUseDirectMl = useDirectMl;
+            _rapidProviderStatus = useDirectMl
+                ? "DirectML requested (CPU fallback if unavailable)"
+                : "CPU (default)";
+        }
+        finally
+        {
+            RapidGate.Release();
+        }
+    }
+
     /// <summary>OCR a WPF <see cref="BitmapSource"/> with the preferred local engine.</summary>
     public static async Task<OcrRecognitionResult?> RecognizeAsync(BitmapSource source, string? languageTag = null)
     {
         ArgumentNullException.ThrowIfNull(source);
-        var softwareBitmap = await ConvertToSoftwareBitmapAsync(source);
-        try
-        {
-            return await RecognizeSoftwareBitmapAsync(softwareBitmap, languageTag);
-        }
-        finally
-        {
-            softwareBitmap.Dispose();
-        }
+        using var stream = new MemoryStream();
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
+        encoder.Save(stream);
+        return await RecognizeEncodedImageAsync(stream.ToArray(), languageTag);
     }
 
     /// <summary>OCR an Skia bitmap without forcing callers to create a WPF image source.</summary>
@@ -71,15 +110,29 @@ public static class OcrService
         using var stream = new MemoryStream();
         data.SaveTo(stream);
 
-        var softwareBitmap = await DecodeSoftwareBitmapAsync(stream.ToArray());
-        try
-        {
-            return await RecognizeSoftwareBitmapAsync(softwareBitmap, languageTag);
-        }
-        finally
-        {
-            softwareBitmap.Dispose();
-        }
+        return await RecognizeEncodedImageAsync(stream.ToArray(), languageTag);
+    }
+
+    /// <summary>
+    /// Run the cross-platform RapidOCR path directly. This is used by diagnostics and tests to verify
+    /// the fallback independently of whichever Windows OCR engine is installed on the host.
+    /// </summary>
+    internal static Task<OcrRecognitionResult?> RecognizeWithRapidOcrAsync(
+        SKBitmap source,
+        bool useDirectMl = false)
+    {
+        ArgumentNullException.ThrowIfNull(source);
+        ConfigureRapidOcr(useDirectMl);
+        return TryRecognizeWithRapidOcrAsync(source);
+    }
+
+    private static async Task<OcrRecognitionResult?> RecognizeEncodedImageAsync(
+        byte[] encodedImage,
+        string? languageTag)
+    {
+        using var softwareBitmap = await DecodeSoftwareBitmapAsync(encodedImage);
+        using var skBitmap = SKBitmap.Decode(encodedImage);
+        return await RecognizeSoftwareBitmapAsync(softwareBitmap, languageTag, skBitmap);
     }
 
     /// <summary>List languages installed on this system for the legacy fallback engine.</summary>
@@ -111,15 +164,139 @@ public static class OcrService
 
     private static async Task<OcrRecognitionResult?> RecognizeSoftwareBitmapAsync(
         SoftwareBitmap bitmap,
-        string? languageTag)
+        string? languageTag,
+        SKBitmap? skBitmap)
     {
         var aiResult = await TryRecognizeWithWindowsAiAsync(bitmap);
         if (aiResult is not null) return aiResult;
 
-        var legacyEngine = ResolveLegacyEngine(languageTag);
-        if (legacyEngine is null) return null;
-        var result = await legacyEngine.RecognizeAsync(bitmap);
-        return NormalizeLegacyResult(result);
+        try
+        {
+            var legacyEngine = ResolveLegacyEngine(languageTag);
+            if (legacyEngine is not null)
+            {
+                var result = await legacyEngine.RecognizeAsync(bitmap);
+                if (!string.IsNullOrWhiteSpace(result.Text))
+                    return NormalizeLegacyResult(result);
+            }
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"Windows.Media.Ocr unavailable; using RapidOCR: {ex.Message}");
+        }
+
+        return skBitmap is null ? null : await TryRecognizeWithRapidOcrAsync(skBitmap);
+    }
+
+    private static async Task<OcrRecognitionResult?> TryRecognizeWithRapidOcrAsync(SKBitmap bitmap)
+    {
+        await RapidGate.WaitAsync().ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() =>
+            {
+                _rapidOcr ??= CreateRapidOcr();
+                var result = _rapidOcr.Detect(bitmap, RapidOcrOptions.Default with
+                {
+                    ReturnWordBox = true
+                });
+                return NormalizeRapidResult(result);
+            }).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            _rapidProviderStatus = "Unavailable";
+            Debug.WriteLine($"RapidOCR unavailable: {ex.Message}");
+            return null;
+        }
+        finally
+        {
+            RapidGate.Release();
+        }
+    }
+
+    private static RapidOcr CreateRapidOcr()
+    {
+        if (_rapidUseDirectMl)
+        {
+            try
+            {
+                var directMl = CreateRapidOcr(useDirectMl: true);
+                _rapidProviderStatus = "DirectML (device 0)";
+                return directMl;
+            }
+            catch (Exception ex)
+            {
+                _rapidProviderStatus = "CPU fallback (DirectML unavailable)";
+                Debug.WriteLine($"RapidOCR DirectML unavailable; using CPU: {ex.Message}");
+            }
+        }
+
+        var cpu = CreateRapidOcr(useDirectMl: false);
+        _rapidProviderStatus = "CPU";
+        return cpu;
+    }
+
+    private static RapidOcr CreateRapidOcr(bool useDirectMl)
+    {
+        using var sessionOptions = RapidOcr.GetDefaultSessionOptions();
+        if (useDirectMl)
+            sessionOptions.AppendExecutionProvider_DML(0);
+
+        var ocr = new RapidOcr();
+        try
+        {
+            ocr.InitModels(sessionOptions);
+            return ocr;
+        }
+        catch
+        {
+            ocr.Dispose();
+            throw;
+        }
+    }
+
+    private static OcrRecognitionResult NormalizeRapidResult(RapidOcrNet.OcrResult result)
+    {
+        var lines = (result.TextBlocks ?? Array.Empty<RapidOcrNet.TextBlock>())
+            .Select(block =>
+            {
+                var linePolygon = ToPolygon(block.BoxPoints);
+                var words = (block.WordResults ?? Array.Empty<RapidOcrNet.WordBox>())
+                    .Select(word => NormalizeRapidWord(word))
+                    .ToList();
+
+                if (words.Count == 0 && !string.IsNullOrWhiteSpace(block.Text))
+                {
+                    var lineBounds = Bounds(linePolygon);
+                    words.Add(new OcrWordResult(
+                        block.Text,
+                        lineBounds,
+                        Math.Clamp(block.BoxScore, 0, 1),
+                        linePolygon));
+                }
+
+                var bounds = words.Count > 0
+                    ? Bounds(words.SelectMany(word => word.Polygon).ToList())
+                    : Bounds(linePolygon);
+                return new OcrLineResult(block.Text, words, bounds);
+            })
+            .ToList();
+
+        var text = string.IsNullOrWhiteSpace(result.StrRes)
+            ? string.Join(Environment.NewLine, lines.Select(line => line.Text))
+            : result.StrRes;
+        return new OcrRecognitionResult(text, lines, OcrEngineKind.RapidOcr);
+    }
+
+    private static OcrWordResult NormalizeRapidWord(RapidOcrNet.WordBox word)
+    {
+        var polygon = ToPolygon(word.BoxPoints);
+        return new OcrWordResult(
+            word.Text,
+            Bounds(polygon),
+            Math.Clamp(word.Score, 0, 1),
+            polygon);
     }
 
     private static async Task<OcrRecognitionResult?> TryRecognizeWithWindowsAiAsync(SoftwareBitmap bitmap)
@@ -131,13 +308,13 @@ public static class OcrService
 
         try
         {
-            if (TextRecognizer.GetReadyState() == AIFeatureReadyState.NotReady)
+            if (WindowsAiTextRecognizer.GetReadyState() == AIFeatureReadyState.NotReady)
             {
-                var ready = await TextRecognizer.EnsureReadyAsync();
+                var ready = await WindowsAiTextRecognizer.EnsureReadyAsync();
                 if (ready.Status != AIFeatureReadyResultState.Success) return null;
             }
 
-            using var recognizer = await TextRecognizer.CreateAsync();
+            using var recognizer = await WindowsAiTextRecognizer.CreateAsync();
             using var imageBuffer = ImageBuffer.CreateForSoftwareBitmap(bitmap);
             var result = recognizer.RecognizeTextFromImage(imageBuffer);
             return NormalizeWindowsAiResult(result);
@@ -209,15 +386,6 @@ public static class OcrService
         }
     }
 
-    private static async Task<SoftwareBitmap> ConvertToSoftwareBitmapAsync(BitmapSource source)
-    {
-        using var stream = new MemoryStream();
-        var encoder = new PngBitmapEncoder();
-        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(source));
-        encoder.Save(stream);
-        return await DecodeSoftwareBitmapAsync(stream.ToArray());
-    }
-
     private static async Task<SoftwareBitmap> DecodeSoftwareBitmapAsync(byte[] encodedImage)
     {
         using var randomAccessStream = new InMemoryRandomAccessStream();
@@ -239,6 +407,11 @@ public static class OcrService
             ToSkPoint(box.TopLeft), ToSkPoint(box.TopRight),
             ToSkPoint(box.BottomRight), ToSkPoint(box.BottomLeft)
         };
+
+    private static IReadOnlyList<SKPoint> ToPolygon(SKPointI[]? points) =>
+        points is null
+            ? Array.Empty<SKPoint>()
+            : points.Select(point => new SKPoint(point.X, point.Y)).ToArray();
 
     private static SKPoint ToSkPoint(Point point) => new((float)point.X, (float)point.Y);
 

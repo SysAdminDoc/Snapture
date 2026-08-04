@@ -55,8 +55,10 @@ public sealed class DiagramShape : Shape
             DrawArrowhead(canvas, end, start, edgePaint.Color);
             if (!string.IsNullOrWhiteSpace(edge.Label))
             {
-                using var labelPaint = MakeTextPaint(12, new SKColor(198, 198, 210));
-                canvas.DrawText(edge.Label, (start.X + end.X) / 2, (start.Y + end.Y) / 2 - 6, labelPaint);
+                using var labelFont = MakeTextFont(12);
+                using var labelPaint = MakeTextPaint(new SKColor(198, 198, 210));
+                canvas.DrawText(edge.Label, (start.X + end.X) / 2, (start.Y + end.Y) / 2 - 6,
+                    SKTextAlign.Center, labelFont, labelPaint);
             }
         }
 
@@ -94,9 +96,11 @@ public sealed class DiagramShape : Shape
             canvas.DrawRoundRect(rect, 8, 8, stroke);
         }
 
-        using var text = MakeTextPaint(14, new SKColor(239, 241, 245));
-        string label = FitLabel(node.Label, text, node.Width - 22);
-        canvas.DrawText(label, node.X + node.Width / 2, node.Y + node.Height / 2 + 5, text);
+        using var textFont = MakeTextFont(14);
+        using var text = MakeTextPaint(new SKColor(239, 241, 245));
+        string label = FitLabel(node.Label, textFont, text, node.Width - 22);
+        canvas.DrawText(label, node.X + node.Width / 2, node.Y + node.Height / 2 + 5,
+            SKTextAlign.Center, textFont, text);
     }
 
     private void DrawLine(SKCanvas canvas, SKPaint paint, SKPoint start, SKPoint end, int seed)
@@ -126,21 +130,26 @@ public sealed class DiagramShape : Shape
         canvas.DrawPath(path, head);
     }
 
-    private static SKPaint MakeTextPaint(float size, SKColor color) => new()
+    private static SKFont MakeTextFont(float size) => new(
+        SKTypeface.FromFamilyName("Cascadia Code, Segoe UI", SKFontStyleWeight.Normal, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright),
+        size,
+        1,
+        0)
     {
-        Color = color,
-        TextSize = size,
-        TextAlign = SKTextAlign.Center,
-        Typeface = SKTypeface.FromFamilyName("Cascadia Code, Segoe UI", SKFontStyleWeight.Normal, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright),
-        IsAntialias = true,
-        SubpixelText = true
+        Subpixel = true
     };
 
-    private static string FitLabel(string label, SKPaint paint, float width)
+    private static SKPaint MakeTextPaint(SKColor color) => new()
     {
-        if (paint.MeasureText(label) <= width) return label;
+        Color = color,
+        IsAntialias = true
+    };
+
+    private static string FitLabel(string label, SKFont font, SKPaint paint, float width)
+    {
+        if (font.MeasureText(label, paint) <= width) return label;
         const string suffix = "…";
-        while (label.Length > 1 && paint.MeasureText(label + suffix) > width)
+        while (label.Length > 1 && font.MeasureText(label + suffix, paint) > width)
             label = label[..^1];
         return label + suffix;
     }

@@ -66,7 +66,7 @@ The existing landscape on Windows in 2026:
 
 **Capture parity pass — OCR, full-text searchable history, scrolling capture (alpha)**
 
-- **Built-in OCR** — `Windows.Media.Ocr`, zero install. Tray → Tools → "OCR region…" picks a region, recognised text lands in the clipboard, result window opens. The History window's "OCR all" button bulk-indexes everything past captures into FTS5.
+- **Built-in OCR** — Windows AI `TextRecognizer` when its local model is ready, `Windows.Media.Ocr` as the Windows fallback, and bundled local RapidOCR PP-OCRv5 Latin models when neither Windows engine can return text. Tray → Tools → "OCR region…" picks a region, recognised text lands in the clipboard, result window opens. The History window's "OCR all" button bulk-indexes everything past captures into FTS5.
 - **Capture history** with **SQLite + FTS5** at `%LOCALAPPDATA%\Snapture\history\index.db`. Every capture auto-tagged with foreground process + window title. The History window lets you search across OCR text, process name, and window title with FTS5 syntax. Right-click → Open in editor / Pin / Run OCR / Reveal / Delete.
 - **Scrolling capture (alpha)** via UIA `IScrollProvider`. Native scroll panes (Office side-panes, Explorer, WPF/WinForms apps) work; browsers fall through to a clear "this window doesn't expose UIA scroll" message. Image-stitching for browsers ships in v0.4.
 
@@ -114,7 +114,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, RapidOCR bundle, DOCX / PPTX from Step Capture, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, and auto-update via Velopack
+- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR, DOCX / PPTX from Step Capture, MSIX + Chocolatey + Scoop, code-signing via SignPath OSS, and auto-update via Velopack
 
 ## Install
 
@@ -197,7 +197,7 @@ Snapture.sln
 │     │  ├─ AppIdentity                ← Sets AUMID for borderless-consent persistence
 │     │  ├─ BorderlessConsent          ← Win11 22H2+ first-run prompt
 │     │  ├─ PrintScreenHijackDetector  ← 24H2 registry probe + reclaim
-│     │  ├─ OcrService                 ← Windows.Media.Ocr wrapper
+│     │  ├─ OcrService                 ← Windows AI / Windows OCR / RapidOCR wrapper
 │     │  ├─ CaptureHistoryService      ← SQLite + FTS5 history index
 │     │  ├─ ScrollingCaptureService    ← UIA IScrollProvider driver (alpha)
 │     │  ├─ LanShareServer             ← Kestrel + token registry

@@ -108,16 +108,15 @@ public abstract class Shape
         using var border = new SKPaint { Style = SKPaintStyle.Stroke, Color = new SKColor(17, 17, 27, 230), StrokeWidth = 2, IsAntialias = true };
         canvas.DrawCircle(cx, cy, radius, fill);
         canvas.DrawCircle(cx, cy, radius, border);
+        using var typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+        using var font = new SKFont(typeface, 9, 1, 0);
         using var text = new SKPaint
         {
             Style = SKPaintStyle.Fill,
             Color = new SKColor(17, 17, 27),
-            TextSize = 9,
-            TextAlign = SKTextAlign.Center,
-            IsAntialias = true,
-            Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright)
+            IsAntialias = true
         };
-        canvas.DrawText(CategoryGlyph(Category), cx, cy + 3, text);
+        canvas.DrawText(CategoryGlyph(Category), cx, cy + 3, SKTextAlign.Center, font, text);
     }
 
     internal static SKColor CategoryColor(AnnotationCategory category) => category switch
@@ -318,16 +317,15 @@ public sealed class RulerShape : Shape
         string label = $"{length:F0}px · {angle:F1}°";
 
         float mx = (X1 + X2) / 2, my = (Y1 + Y2) / 2;
+        using var typeface = SKTypeface.FromFamilyName("Segoe UI");
+        using var font = new SKFont(typeface, 12, 1, 0);
         using var textPaint = new SKPaint
         {
             Color = ToColor(StrokeColorArgb),
-            IsAntialias = true,
-            TextSize = 12,
-            Typeface = SKTypeface.FromFamilyName("Segoe UI"),
-            TextAlign = SKTextAlign.Center
+            IsAntialias = true
         };
         var labelJitter = RoughStroke.GetJitter(Sloppiness, 1.5f, 229, 1);
-        canvas.DrawText(label, mx + labelJitter.X, my - 6 + labelJitter.Y, textPaint);
+        canvas.DrawText(label, mx + labelJitter.X, my - 6 + labelJitter.Y, SKTextAlign.Center, font, textPaint);
 
         float endLen = 6;
         using var endPaint = MakeStrokePaint();
@@ -720,14 +718,11 @@ public sealed class TextShape : Shape
         var weight = Bold ? SKFontStyleWeight.Bold : SKFontStyleWeight.Normal;
         var slant = Italic ? SKFontStyleSlant.Italic : SKFontStyleSlant.Upright;
         using var typeface = SKTypeface.FromFamilyName(FontFamily, weight, SKFontStyleWidth.Normal, slant);
+        using var font = new SKFont(typeface, FontSize, 1, 0) { Subpixel = true };
         using var paint = new SKPaint
         {
             Color = ToColor(StrokeColorArgb),
-            IsAntialias = true,
-            TextSize = FontSize,
-            Typeface = typeface,
-            TextAlign = SKTextAlign.Left,
-            SubpixelText = true
+            IsAntialias = true
         };
         var jitter = RoughStroke.GetJitter(Sloppiness, Math.Max(1f, FontSize * 0.08f), 719, Text.Length);
         if (Orientation == TextOrientation.Vertical)
@@ -736,7 +731,7 @@ public sealed class TextShape : Shape
             canvas.Save();
             canvas.Translate(X + lineHeight + jitter.X, Y + jitter.Y);
             canvas.RotateDegrees(90 + jitter.X * 0.25f);
-            canvas.DrawText(Text, 0, FontSize, paint);
+            canvas.DrawText(Text, 0, FontSize, SKTextAlign.Left, font, paint);
             canvas.Restore();
         }
         else
@@ -744,7 +739,7 @@ public sealed class TextShape : Shape
             canvas.Save();
             canvas.Translate(jitter.X, jitter.Y);
             canvas.RotateDegrees(jitter.X * 0.25f, X, Y + FontSize);
-            canvas.DrawText(Text, X, Y + FontSize, paint);
+            canvas.DrawText(Text, X, Y + FontSize, SKTextAlign.Left, font, paint);
             canvas.Restore();
         }
     }
@@ -854,16 +849,16 @@ public sealed class LineStateMarkerShape : Shape
 
         if (rect.Height >= 16)
         {
+            using var typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+            float glyphSize = Math.Clamp(rect.Height * 0.58f, 10, 22);
+            using var font = new SKFont(typeface, glyphSize, 1, 0);
             using var glyph = new SKPaint
             {
                 Style = SKPaintStyle.Fill,
                 Color = new SKColor(255, 255, 255, 225),
-                TextSize = Math.Clamp(rect.Height * 0.58f, 10, 22),
-                TextAlign = SKTextAlign.Center,
-                IsAntialias = true,
-                Typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright)
+                IsAntialias = true
             };
-            canvas.DrawText(StateGlyph(State), rect.Left + 13, rect.MidY + glyph.TextSize * 0.34f, glyph);
+            canvas.DrawText(StateGlyph(State), rect.Left + 13, rect.MidY + glyphSize * 0.34f, SKTextAlign.Center, font, glyph);
         }
     }
 
@@ -930,8 +925,7 @@ public sealed class BlurShape : Shape
             int block = Math.Max(6, (int)BlurRadius);
             int sw = Math.Max(1, snap.Width / block);
             int sh = Math.Max(1, snap.Height / block);
-            using var small = snap.Resize(new SKImageInfo(sw, sh), SKFilterQuality.None);
-            paint.FilterQuality = SKFilterQuality.None;
+            using var small = snap.Resize(new SKImageInfo(sw, sh), new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None));
             canvas.DrawBitmap(small,
                 new SKRect(0, 0, sw, sh),
                 new SKRect(rectI.Left, rectI.Top, rectI.Right, rectI.Bottom),
@@ -1035,15 +1029,13 @@ public sealed class StepShape : Shape
             canvas.DrawCircle(X, Y, Radius, border);
         }
         using var typeface = SKTypeface.FromFamilyName("Segoe UI", SKFontStyleWeight.Bold, SKFontStyleWidth.Normal, SKFontStyleSlant.Upright);
+        using var font = new SKFont(typeface, Radius * 1.1f, 1, 0);
         using var text = new SKPaint
         {
             Color = SKColors.White,
-            IsAntialias = true,
-            TextSize = Radius * 1.1f,
-            Typeface = typeface,
-            TextAlign = SKTextAlign.Center
+            IsAntialias = true
         };
-        canvas.DrawText(Label, X, Y + Radius * 0.4f, text);
+        canvas.DrawText(Label, X, Y + Radius * 0.4f, SKTextAlign.Center, font, text);
     }
     public override SKRect GetBounds() => new(X - Radius, Y - Radius, X + Radius, Y + Radius);
     public override bool HitTest(SKPoint p)

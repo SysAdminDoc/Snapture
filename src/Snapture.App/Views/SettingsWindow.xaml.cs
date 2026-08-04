@@ -43,6 +43,8 @@ public partial class SettingsWindow : Window
             HdrToneMapOperators.Parse(_draft.HdrToneMapOperator)));
         HdrColorCorrectionCheck.IsChecked = _draft.HdrColorCorrection;
         HdrWriteJxrCheck.IsChecked = _draft.HdrWriteJxr;
+        RapidOcrDirectMlCheck.IsChecked = _draft.RapidOcrUseDirectMl;
+        RapidOcrStatusText.Text = $"Provider: {OcrService.RapidOcrProviderStatus}";
         BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
 
@@ -414,6 +416,7 @@ public partial class SettingsWindow : Window
         _draft.HdrToneMapOperator     = ((ComboBoxItem)ToneMapCombo.SelectedItem).Tag as string ?? HdrToneMapOperators.DefaultKey;
         _draft.HdrColorCorrection    = HdrColorCorrectionCheck.IsChecked == true;
         _draft.HdrWriteJxr            = HdrWriteJxrCheck.IsChecked == true;
+        _draft.RapidOcrUseDirectMl    = RapidOcrDirectMlCheck.IsChecked == true;
         var newTheme                  = ((ComboBoxItem)ThemeCombo.SelectedItem).Tag as string ?? ThemeManager.SystemMode;
         var newEngine                 = ((ComboBoxItem)EngineCombo.SelectedItem).Tag as string ?? "auto";
 
@@ -430,6 +433,7 @@ public partial class SettingsWindow : Window
 
         if (themeChanged) ThemeManager.Apply(_settings.Current.ThemeMode);
         if (engineChanged) App.Host?.SwitchEngine(newEngine);
+        OcrService.ConfigureRapidOcr(_settings.Current.RapidOcrUseDirectMl);
 
         // LAN share lifecycle reacts to the toggle.
         if (App.Host is not null)
@@ -475,6 +479,7 @@ public partial class SettingsWindow : Window
             HdrToneMapOperators.Parse(src.HdrToneMapOperator));
         dst.HdrColorCorrection = src.HdrColorCorrection;
         dst.HdrWriteJxr = src.HdrWriteJxr;
+        dst.RapidOcrUseDirectMl = src.RapidOcrUseDirectMl;
         dst.BorderlessConsentGiven = src.BorderlessConsentGiven;
         dst.PrintScreenHijackToastShown = src.PrintScreenHijackToastShown;
         dst.LastRegion = src.LastRegion;

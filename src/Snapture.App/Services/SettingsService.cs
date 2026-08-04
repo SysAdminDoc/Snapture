@@ -81,6 +81,9 @@ public sealed class SnaptureSettings
     /// <summary>Also write an optional SDR-clamped JXR copy for Game Bar compatibility.</summary>
     public bool HdrWriteJxr { get; set; } = false;
 
+    /// <summary>Request the optional DirectML execution provider for the RapidOCR fallback.</summary>
+    public bool RapidOcrUseDirectMl { get; set; } = false;
+
     /// <summary>Play a shutter sound on capture.</summary>
     public bool PlayShutterSound { get; set; } = false;
 

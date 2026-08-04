@@ -90,6 +90,12 @@ All notable changes to Snapture will be documented in this file.
 - OCR now attempts the Windows AI Foundry `TextRecognizer` on Windows 11 24H2+ when its local model and runtime are ready, exposing engine identity, per-word confidence, quadrilateral polygons, and rectangular bounds.
 - Devices without the Windows AI COM surface, NPU model, or required runtime transparently fall back to `Windows.Media.Ocr`; Auto-redact consumes the same normalized result contract from either engine.
 
+### Added — RapidOCR fallback and provider controls
+
+- OCR now falls through to bundled RapidOcrNet PP-OCRv5 Latin models when neither Windows OCR engine can return text, preserving the shared line, word-confidence, rectangle, and polygon contract for Auto-redact and result views.
+- ONNX Runtime is explicitly pinned to 1.27.1 and SkiaSharp is upgraded to 3.119.2 for the maintained RapidOcrNet 3.0.0 package; the editor's text rendering now uses the SkiaSharp 3 font/sampling APIs with a clean build.
+- Settings exposes an opt-in DirectML device-0 toggle for RapidOCR. If the optional native provider is absent or cannot initialize the models, OCR reports the CPU fallback and continues locally without failing the capture flow.
+
 ### Added — Mermaid and PlantUML diagrams
 
 - The editor now accepts Mermaid `flowchart`/`graph` and PlantUML `@startuml` snippets from the clipboard or a multiline paste dialog via the toolbar or Ctrl+Shift+V.

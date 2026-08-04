@@ -49,4 +49,26 @@ public sealed class OcrResultContractTests
         Assert.AreEqual(1f, result.Lines.Single().Words.Single().Confidence, 0.001f);
         Assert.AreEqual(60, result.Lines.Single().BoundingBox.Right);
     }
+
+    [TestMethod]
+    public void RapidEngineUsesTheSharedNormalizedContract()
+    {
+        var word = new OcrWordResult(
+            "rapid",
+            new SKRect(8, 10, 72, 34),
+            0.94f,
+            new[]
+            {
+                new SKPoint(8, 10), new SKPoint(72, 10),
+                new SKPoint(72, 34), new SKPoint(8, 34)
+            });
+        var result = new OcrRecognitionResult(
+            "rapid",
+            new[] { new OcrLineResult("rapid", new[] { word }, word.BoundingBox) },
+            OcrEngineKind.RapidOcr);
+
+        Assert.AreEqual(OcrEngineKind.RapidOcr, result.Engine);
+        Assert.AreEqual(0.94f, result.Lines.Single().Words.Single().Confidence, 0.001f);
+        Assert.HasCount(4, result.Lines.Single().Words.Single().Polygon);
+    }
 }

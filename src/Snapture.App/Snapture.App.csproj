@@ -26,7 +26,11 @@
     <PackageReference Include="Microsoft.WindowsAppSDK.AI" Version="1.8.76" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Foundation" Version="1.8.260505001" />
     <PackageReference Include="Microsoft.WindowsAppSDK.Runtime" Version="1.8.260508005" />
-    <PackageReference Include="SkiaSharp.Views.WPF" Version="2.88.9" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.27.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.27.1" />
+    <PackageReference Include="RapidOcrNet" Version="3.0.0" />
+    <PackageReference Include="SkiaSharp" Version="3.119.2" />
+    <PackageReference Include="SkiaSharp.Views.WPF" Version="3.119.2" />
     <PackageReference Include="SkiaSharp.Svg" Version="1.60.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.9" />
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.3" />

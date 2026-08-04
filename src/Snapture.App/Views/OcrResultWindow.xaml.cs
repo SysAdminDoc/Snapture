@@ -16,6 +16,7 @@ public partial class OcrResultWindow : Window
         {
             OcrEngineKind.WindowsAiTextRecognizer => "Windows AI",
             OcrEngineKind.WindowsMediaOcr => "Windows OCR",
+            OcrEngineKind.RapidOcr => "RapidOCR",
             _ => null
         };
         LangText.Text = (language, engineLabel) switch
