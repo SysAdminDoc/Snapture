@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Plugin capture source contract
+
+- Added `ICaptureSource` for camera, scanner, file-watch, virtual-device, and other local plugin sources, plus a shared invocation boundary that returns metadata by default and copies pixels only when requested.
+
 ### Added — Plugin SDK package build
 
 - `build/build.ps1 -NuGet` now emits and validates the multi-target `Snapture.Plugin.Abstractions` package and symbols, including the project README, MIT metadata, and `netstandard2.0` / `net10.0` assemblies. No nuget.org credentials are read by the build.

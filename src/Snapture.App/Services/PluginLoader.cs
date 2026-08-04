@@ -17,6 +17,7 @@ public sealed class PluginLoader : IDisposable
 
     public sealed record LoadedPlugin(
         LoadedPluginInfo Info,
+        IReadOnlyList<ICaptureSource> CaptureSources,
         IReadOnlyList<IDestination> Destinations,
         IReadOnlyList<ICaptureProcessor> CaptureProcessors,
         IReadOnlyList<IEditorEffect> EditorEffects,
@@ -157,6 +158,7 @@ public sealed class PluginLoader : IDisposable
         }
 
         var contracts = new List<string>();
+        var sources = InstantiateAll<ICaptureSource>(asm, contracts);
         var destinations = InstantiateAll<IDestination>(asm, contracts);
         var processors = InstantiateAll<ICaptureProcessor>(asm, contracts);
         var effects = InstantiateAll<IEditorEffect>(asm, contracts);
@@ -169,7 +171,7 @@ public sealed class PluginLoader : IDisposable
         var pluginHost = _host is PluginHostBridge bridge
             ? bridge.ForPlugin(attr.Name)
             : _host;
-        var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx, pluginHost, configurables);
+        var loaded = new LoadedPlugin(info, sources, destinations, processors, effects, ctx, pluginHost, configurables);
         _plugins.Add(loaded);
         Log.Information("Plugin.Loaded {PluginName} {PluginVersion}", info.Name, info.Version);
         _host.Log($"Plugin loaded: {info.Name} v{info.Version} by {info.Author} " +

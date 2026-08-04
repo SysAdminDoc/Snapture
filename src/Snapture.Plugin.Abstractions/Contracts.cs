@@ -149,6 +149,18 @@ public static class PluginHostExtensions
 }
 
 /// <summary>
+/// Produces one local capture for the host. Implementations can wrap a camera, scanner,
+/// file-watch, virtual device, or another user-approved source.
+/// </summary>
+public interface ICaptureSource
+{
+    string Id { get; }
+    string DisplayName { get; }
+    string Description { get; }
+    Task<PluginCapture?> CaptureAsync(IPluginHost host, CancellationToken ct = default);
+}
+
+/// <summary>
 /// Where a capture can be sent. First-party destinations: clipboard, file, LAN-share.
 /// Plugins typically add: HTTP upload, Slack webhook, Jira attachment, paste-into-app.
 /// </summary>
