@@ -1,0 +1,58 @@
+$ErrorActionPreference = 'Stop'
+
+$packageName = 'snapture.portable'
+$architecture = if ($env:PROCESSOR_ARCHITEW6432 -eq 'ARM64' -or $env:PROCESSOR_ARCHITECTURE -eq 'ARM64') {
+    'arm64'
+}
+else {
+    'x64'
+}
+
+$releaseAssets = @{
+    x64 = @{
+        Url = '__X64_URL__'
+        Checksum = '__X64_CHECKSUM__'
+    }
+    arm64 = @{
+        Url = '__ARM64_URL__'
+        Checksum = '__ARM64_CHECKSUM__'
+    }
+}
+$asset = $releaseAssets[$architecture]
+$toolsRoot = $env:ChocolateyToolsLocation
+if ([string]::IsNullOrWhiteSpace($toolsRoot)) {
+    $toolsRoot = Join-Path $env:ChocolateyInstall 'tools'
+}
+$installRoot = Join-Path $toolsRoot 'snapture'
+$stagingRoot = Join-Path $toolsRoot 'snapture.new'
+$archivePath = Join-Path $env:TEMP "$packageName-$env:ChocolateyPackageVersion-$architecture.zip"
+
+Get-ChocolateyWebFile -PackageName $packageName `
+    -FileFullPath $archivePath `
+    -Url $asset.Url `
+    -Checksum $asset.Checksum `
+    -ChecksumType 'sha256'
+
+try {
+    if (Test-Path -LiteralPath $stagingRoot) {
+        Remove-Item -LiteralPath $stagingRoot -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $stagingRoot -Force | Out-Null
+    Get-ChocolateyUnzip -FileFullPath $archivePath -Destination $stagingRoot -PackageName $packageName
+
+    $stagedApplicationPath = Join-Path $stagingRoot 'current\Snapture.App.exe'
+    if (-not (Test-Path -LiteralPath $stagedApplicationPath)) {
+        throw "Portable archive did not contain '$stagedApplicationPath'."
+    }
+    if (Test-Path -LiteralPath $installRoot) {
+        Remove-Item -LiteralPath $installRoot -Recurse -Force
+    }
+    Move-Item -LiteralPath $stagingRoot -Destination $installRoot
+}
+catch {
+    if (Test-Path -LiteralPath $stagingRoot) {
+        Remove-Item -LiteralPath $stagingRoot -Recurse -Force -ErrorAction SilentlyContinue
+    }
+    throw
+}
+Install-BinFile -Name 'snapture' -Path (Join-Path $installRoot 'current\Snapture.App.exe')

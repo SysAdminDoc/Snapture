@@ -7,6 +7,7 @@ param(
     [switch]$Zip,
     [switch]$Msix,
     [switch]$Velopack,
+    [switch]$Chocolatey,
     [ValidateSet('canary', 'pilot', 'stable')]
     [string]$RolloutRing = 'stable',
     [string]$AppInstallerBaseUri = 'https://sysadmindoc.github.io/Snapture'
@@ -138,18 +139,22 @@ function New-MsixPackage {
 }
 
 function New-VelopackPackage {
+    param(
+        [string]$PackageRuntime = $Runtime
+    )
+
     $version = Get-ProjectVersion
-    if ($Runtime -notin @('win-x64', 'win-arm64')) { throw "Velopack supports win-x64 or win-arm64, not '$Runtime'." }
-    $channel = if ($Runtime -eq 'win-arm64') { 'win-arm64-stable' } else { 'win-x64-stable' }
-    $velopackRoot = Join-Path $root "publish\velopack\$Runtime"
+    if ($PackageRuntime -notin @('win-x64', 'win-arm64')) { throw "Velopack supports win-x64 or win-arm64, not '$PackageRuntime'." }
+    $channel = if ($PackageRuntime -eq 'win-arm64') { 'win-arm64-stable' } else { 'win-x64-stable' }
+    $velopackRoot = Join-Path $root "publish\velopack\$PackageRuntime"
     $payload = Join-Path $velopackRoot 'payload'
     if (Test-Path -LiteralPath $velopackRoot) { [System.IO.Directory]::Delete($velopackRoot, $true) }
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
 
-    Write-Host "==> dotnet publish -c $Configuration -r $Runtime for Velopack" -ForegroundColor Cyan
+    Write-Host "==> dotnet publish -c $Configuration -r $PackageRuntime for Velopack" -ForegroundColor Cyan
     dotnet publish "$root\src\Snapture.App\Snapture.App.csproj" `
         -c $Configuration `
-        -r $Runtime `
+        -r $PackageRuntime `
         --self-contained false `
         -p:PublishSingleFile=false `
         -p:PublishTrimmed=false `
@@ -164,7 +169,7 @@ function New-VelopackPackage {
     dotnet tool run vpk --yes true --legacyConsole true pack `
         --outputDir $velopackRoot `
         --channel $channel `
-        --runtime $Runtime `
+        --runtime $PackageRuntime `
         --packId SysAdminDoc.Snapture `
         --packVersion $version `
         --packDir $payload `
@@ -194,6 +199,180 @@ function New-VelopackPackage {
     }
     Write-Host "==> Wrote Velopack release assets to $velopackRoot" -ForegroundColor Green
     Write-Host '    Signing intentionally omitted; release signing remains an operator-controlled step.' -ForegroundColor Yellow
+}
+
+function Get-FileSha256([string]$Path) {
+    return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+}
+
+function Expand-ChocolateyTemplate {
+    param(
+        [string]$TemplatePath,
+        [string]$DestinationPath,
+        [hashtable]$Replacements
+    )
+
+    $content = [System.IO.File]::ReadAllText($TemplatePath)
+    foreach ($replacement in $Replacements.GetEnumerator()) {
+        $content = $content.Replace([string]$replacement.Key, [string]$replacement.Value)
+    }
+    if ($content -match '__[A-Z0-9_]+__') {
+        throw "Unexpanded Chocolatey template token remains in '$DestinationPath'."
+    }
+    [System.IO.File]::WriteAllText($DestinationPath, $content, [System.Text.UTF8Encoding]::new($false))
+}
+
+function New-ChocolateyPackage {
+    param(
+        [string]$PackageId,
+        [string]$NuspecTemplate,
+        [string]$InstallTemplate,
+        [string]$UninstallTemplate,
+        [hashtable]$Replacements,
+        [string]$VerificationText,
+        [string]$OutputRoot,
+        [string]$Version
+    )
+
+    $stage = Join-Path $OutputRoot "$PackageId-stage"
+    if (Test-Path -LiteralPath $stage) { [System.IO.Directory]::Delete($stage, $true) }
+    $tools = Join-Path $stage 'tools'
+    New-Item -ItemType Directory -Path $tools -Force | Out-Null
+
+    Expand-ChocolateyTemplate $NuspecTemplate (Join-Path $stage "$PackageId.nuspec") $Replacements
+    Expand-ChocolateyTemplate $InstallTemplate (Join-Path $tools 'chocolateyInstall.ps1') $Replacements
+    Expand-ChocolateyTemplate $UninstallTemplate (Join-Path $tools 'chocolateyUninstall.ps1') $Replacements
+    [System.IO.File]::WriteAllText(
+        (Join-Path $tools 'VERIFICATION.txt'),
+        $VerificationText,
+        [System.Text.UTF8Encoding]::new($false))
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $packagePath = Join-Path $OutputRoot "$PackageId.$Version.nupkg"
+    if (Test-Path -LiteralPath $packagePath) { [System.IO.File]::Delete($packagePath) }
+    $choco = Get-Command choco.exe -ErrorAction SilentlyContinue
+    if ($null -ne $choco) {
+        & $choco.Source pack (Join-Path $stage "$PackageId.nuspec") --outputdirectory $OutputRoot --no-progress
+        if ($LASTEXITCODE -ne 0) { throw "Chocolatey pack failed for '$PackageId'." }
+    }
+    else {
+        # The build remains usable on clean developer machines without Chocolatey;
+        # a .nupkg is a NuGet-compatible zip with the nuspec at its root.
+        [System.IO.Compression.ZipFile]::CreateFromDirectory(
+            $stage,
+            $packagePath,
+            [System.IO.Compression.CompressionLevel]::Optimal,
+            $false)
+    }
+
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($packagePath)
+    try {
+        $entries = @($archive.Entries | ForEach-Object { $_.FullName.Replace('\', '/') })
+        if (-not ($entries | Where-Object { $_ -match '\.nuspec$' })) { throw "Chocolatey package '$PackageId' is missing its nuspec." }
+        foreach ($required in @('tools/chocolateyInstall.ps1', 'tools/chocolateyUninstall.ps1', 'tools/VERIFICATION.txt')) {
+            if ($entries -notcontains $required) { throw "Chocolatey package '$PackageId' is missing '$required'." }
+        }
+    }
+    finally { $archive.Dispose() }
+
+    Write-Host "==> Wrote Chocolatey package $packagePath" -ForegroundColor Green
+    return $packagePath
+}
+
+function New-ChocolateyPackages {
+    $version = Get-ProjectVersion
+    New-VelopackPackage -PackageRuntime 'win-x64'
+    New-VelopackPackage -PackageRuntime 'win-arm64'
+    $x64Root = Join-Path $root 'publish\velopack\win-x64'
+    $arm64Root = Join-Path $root 'publish\velopack\win-arm64'
+
+    $releaseBase = "https://github.com/SysAdminDoc/Snapture/releases/download/v$version"
+    $assetNames = @{
+        x64Setup = 'SysAdminDoc.Snapture-win-x64-stable-Setup.exe'
+        arm64Setup = 'SysAdminDoc.Snapture-win-arm64-stable-Setup.exe'
+        x64Portable = 'SysAdminDoc.Snapture-win-x64-stable-Portable.zip'
+        arm64Portable = 'SysAdminDoc.Snapture-win-arm64-stable-Portable.zip'
+    }
+    $assetPaths = @{
+        x64Setup = Join-Path $x64Root $assetNames.x64Setup
+        arm64Setup = Join-Path $arm64Root $assetNames.arm64Setup
+        x64Portable = Join-Path $x64Root $assetNames.x64Portable
+        arm64Portable = Join-Path $arm64Root $assetNames.arm64Portable
+    }
+    foreach ($assetPath in $assetPaths.Values) {
+        if (-not (Test-Path -LiteralPath $assetPath)) { throw "Chocolatey source asset is missing '$assetPath'." }
+    }
+
+    $replacements = @{
+        '__VERSION__' = $version
+        '__X64_URL__' = "$releaseBase/$($assetNames.x64Setup)"
+        '__X64_CHECKSUM__' = Get-FileSha256 $assetPaths.x64Setup
+        '__ARM64_URL__' = "$releaseBase/$($assetNames.arm64Setup)"
+        '__ARM64_CHECKSUM__' = Get-FileSha256 $assetPaths.arm64Setup
+    }
+    $portableReplacements = @{
+        '__VERSION__' = $version
+        '__X64_URL__' = "$releaseBase/$($assetNames.x64Portable)"
+        '__X64_CHECKSUM__' = Get-FileSha256 $assetPaths.x64Portable
+        '__ARM64_URL__' = "$releaseBase/$($assetNames.arm64Portable)"
+        '__ARM64_CHECKSUM__' = Get-FileSha256 $assetPaths.arm64Portable
+    }
+
+    $templateRoot = Join-Path $root 'packaging\chocolatey'
+    $outputRoot = Join-Path $root 'publish\chocolatey'
+    if (Test-Path -LiteralPath $outputRoot) { [System.IO.Directory]::Delete($outputRoot, $true) }
+    New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
+
+    $standardVerification = @"
+Software: Snapture $version
+Package: snapture
+Release: $releaseBase
+Download page: https://github.com/SysAdminDoc/Snapture/releases
+
+32-bit URL: not supported
+x64 URL: $($replacements.__X64_URL__)
+x64 SHA256: $($replacements.__X64_CHECKSUM__)
+ARM64 URL: $($replacements.__ARM64_URL__)
+ARM64 SHA256: $($replacements.__ARM64_CHECKSUM__)
+Checksum type: SHA256
+"@
+    $portableVerification = @"
+Software: Snapture $version
+Package: snapture.portable
+Release: $releaseBase
+Download page: https://github.com/SysAdminDoc/Snapture/releases
+
+32-bit URL: not supported
+x64 URL: $($portableReplacements.__X64_URL__)
+x64 SHA256: $($portableReplacements.__X64_CHECKSUM__)
+ARM64 URL: $($portableReplacements.__ARM64_URL__)
+ARM64 SHA256: $($portableReplacements.__ARM64_CHECKSUM__)
+Checksum type: SHA256
+"@
+
+    $standardPackage = New-ChocolateyPackage `
+        -PackageId 'snapture' `
+        -NuspecTemplate (Join-Path $templateRoot 'snapture.nuspec.template') `
+        -InstallTemplate (Join-Path $templateRoot 'snapture.install.ps1.template') `
+        -UninstallTemplate (Join-Path $templateRoot 'snapture.uninstall.ps1.template') `
+        -Replacements $replacements `
+        -VerificationText $standardVerification `
+        -OutputRoot $outputRoot `
+        -Version $version
+    $portablePackage = New-ChocolateyPackage `
+        -PackageId 'snapture.portable' `
+        -NuspecTemplate (Join-Path $templateRoot 'snapture.portable.nuspec.template') `
+        -InstallTemplate (Join-Path $templateRoot 'snapture.portable.install.ps1.template') `
+        -UninstallTemplate (Join-Path $templateRoot 'snapture.portable.uninstall.ps1.template') `
+        -Replacements $portableReplacements `
+        -VerificationText $portableVerification `
+        -OutputRoot $outputRoot `
+        -Version $version
+
+    [System.IO.Directory]::Delete((Join-Path $outputRoot 'snapture-stage'), $true)
+    [System.IO.Directory]::Delete((Join-Path $outputRoot 'snapture.portable-stage'), $true)
+    Write-Host "    Standard: $standardPackage" -ForegroundColor Green
+    Write-Host "    Portable: $portablePackage" -ForegroundColor Green
 }
 
 if ($Clean) {
@@ -232,6 +411,7 @@ if ($Publish) {
 }
 
 if ($Msix) { New-MsixPackage }
-if ($Velopack) { New-VelopackPackage }
+if ($Velopack -and -not $Chocolatey) { New-VelopackPackage }
+if ($Chocolatey) { New-ChocolateyPackages }
 
 Write-Host "==> Done." -ForegroundColor Green

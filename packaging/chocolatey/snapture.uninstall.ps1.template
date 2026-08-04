@@ -1,0 +1,9 @@
+$ErrorActionPreference = 'Stop'
+
+$updateExe = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'SysAdminDoc.Snapture\Update.exe'
+if (Test-Path -LiteralPath $updateExe) {
+    $process = Start-Process -FilePath $updateExe -ArgumentList @('uninstall', '--silent') -Wait -PassThru
+    if ($process.ExitCode -notin @(0, 3010, 1641)) {
+        throw "Velopack uninstall failed with exit code $($process.ExitCode)."
+    }
+}

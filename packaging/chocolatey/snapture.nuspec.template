@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2015/06/nuspec.xsd">
+  <metadata>
+    <id>snapture</id>
+    <version>__VERSION__</version>
+    <title>Snapture</title>
+    <authors>SysAdminDoc</authors>
+    <owners>SysAdminDoc</owners>
+    <projectUrl>https://github.com/SysAdminDoc/Snapture</projectUrl>
+    <projectSourceUrl>https://github.com/SysAdminDoc/Snapture</projectSourceUrl>
+    <license type="expression">MIT</license>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>All-in-one screenshot capture utility for Windows. The Chocolatey package downloads the matching unsigned Velopack installer from the Snapture GitHub release and verifies its SHA-256 checksum.</description>
+    <summary>Local-first screenshot capture for Windows.</summary>
+    <releaseNotes>https://github.com/SysAdminDoc/Snapture/releases/tag/v__VERSION__</releaseNotes>
+    <tags>screenshot screen-capture annotation OCR Windows local-first</tags>
+  </metadata>
+  <files>
+    <file src="tools\**" target="tools" />
+  </files>
+</package>

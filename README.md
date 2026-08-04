@@ -121,7 +121,7 @@ The existing landscape on Windows in 2026:
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR and Chocolatey + Scoop. The unsigned MSIX and Velopack packaging paths are available for operator-controlled release signing.
+- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR and Scoop. The unsigned MSIX, Velopack, and Chocolatey packaging paths are available for operator-controlled release signing and distribution.
 
 ## Install
 
@@ -143,6 +143,8 @@ Download from [Releases](https://github.com/SysAdminDoc/Snapture/releases) once 
 To produce an unsigned MSIX and a staged App Installer feed locally, run `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Msix -RolloutRing canary`. The package is written under `publish/`; the build intentionally does not sign software. The generated package declares `runFullTrust` and the startup-task extension without requesting `broadFileSystemAccess`. For clean local removal, run `pwsh -File build/uninstall.ps1`; the cleanup window includes a **Keep my settings, history, and plugins** checkbox. Automation can use `-KeepSettings`, `-Quiet`, or the non-destructive `-WhatIf` switches.
 
 To produce unsigned Velopack release assets, run `dotnet tool restore`, then `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Velopack` (repeat with `win-arm64` for the ARM64 package). The assets under `publish/velopack/<runtime>/` include architecture-specific stable feeds (`win-x64-stable` or `win-arm64-stable`), full packages, setup executables, and portable archives; publish both directories' files to the same GitHub Release download root. Installed Velopack builds can check, download, and apply updates from the tray; unpackaged source builds retain the GitHub release-page fallback. Release signing is intentionally operator-controlled and is never performed by the build.
+
+To produce Chocolatey packages for both architectures, run `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Chocolatey`. The command builds the matching Velopack assets, then writes `publish/chocolatey/snapture.<version>.nupkg` and `publish/chocolatey/snapture.portable.<version>.nupkg`. `snapture` downloads the silent Velopack setup executable; `snapture.portable` downloads and extracts the portable archive. Both package scripts select x64 or ARM64 and verify SHA-256 before installing. Publish the generated packages to the Chocolatey feed only after the corresponding versioned GitHub Release assets are available.
 
 ## Usage
 

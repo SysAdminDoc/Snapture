@@ -1,0 +1,11 @@
+$ErrorActionPreference = 'Stop'
+
+Uninstall-BinFile -Name 'snapture'
+$toolsRoot = $env:ChocolateyToolsLocation
+if ([string]::IsNullOrWhiteSpace($toolsRoot)) {
+    $toolsRoot = Join-Path $env:ChocolateyInstall 'tools'
+}
+$installRoot = Join-Path $toolsRoot 'snapture'
+if (Test-Path -LiteralPath $installRoot) {
+    Remove-Item -LiteralPath $installRoot -Recurse -Force
+}

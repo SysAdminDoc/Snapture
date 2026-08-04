@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Chocolatey packages
+
+- `build/build.ps1 -Chocolatey` now builds both x64 and ARM64 Velopack release assets and emits `snapture` and `snapture.portable` packages with architecture-aware GitHub download URLs, SHA-256 verification, silent installer handling, portable extraction, shims, and uninstall scripts.
+
 ### Added — Velopack auto-updates
 
 - Installed builds now use the pinned Velopack 1.2.0 architecture-specific stable channel to check, download, and apply GitHub Release updates from the tray, with an explicit restart prompt.
