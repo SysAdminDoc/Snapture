@@ -48,6 +48,7 @@ The existing landscape on Windows in 2026:
 - **Image combiner** — Tray → Tools → Combine images joins two to 100 local stills vertically, horizontally, or as a configurable grid with gap controls and PNG/JPG/BMP/WebP export.
 - **Before/after comparison GIFs** — Tray → Tools → Before/after GIF creates a bounded local ping-pong cross-fade animation from two still images.
 - **Code-aware export** — Tray → Tools → Code-aware export uses local OCR plus code/monospace heuristics, then renders syntax-highlighted text with the existing gradient, drop-shadow, and code-window chrome.
+- **Edge-detection ruler** — Pixel ruler Alt+click finds the nearest high-contrast UI edge in a frozen local screen sample while preserving the regular distance-and-angle measurement mode.
 - **Polished desktop UX** — shared WPF chrome, calmer settings/editor/history surfaces, explicit empty states, refined capture picker and recording HUDs, consistent overlay guidance, safer pinned captures, and dark-theme controls across the app.
 - **`docs/HOTKEYS.md`** + **`docs/CAPTURE-MATRIX.md`** + **`manifests/`** for winget submission.
 

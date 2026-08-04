@@ -32,7 +32,7 @@
                     Style="{StaticResource OverlayHintBadge}">
                 <StackPanel>
                     <TextBlock Text="Pixel ruler" Style="{StaticResource OverlayHintTitleText}" />
-                    <TextBlock Text="Drag to measure distance and angle. Esc dismisses."
+                    <TextBlock Text="Drag to measure distance and angle. Alt+click finds the nearest UI edge. Esc dismisses."
                                Style="{StaticResource OverlayHintBodyText}" />
                 </StackPanel>
             </Border>

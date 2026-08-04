@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Edge-detection ruler
+
+- Pixel ruler now supports Alt+click nearest-edge measurement against a frozen local screen sample, reporting the closest high-contrast edge and contrast score without changing the normal drag ruler.
+
 ### Added — Code-aware capture export
 
 - Tray → Tools → Code-aware export runs local OCR, scores code and monospace signals, and exports syntax-highlighted code text with the existing gradient, drop-shadow, and code-window chrome.
