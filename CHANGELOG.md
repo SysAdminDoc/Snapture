@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Multi-pin selection and group controls
+
+- Pin overlays support Ctrl+click selection, Ctrl+A select-all, group dragging, group opacity changes through the wheel or context menu, and Delete/context-menu bulk close. Selected pins use an accent border and the menu reports the active group.
+
 ### Added — Capture-safe desktop icon hiding
 
 - Settings → Capture engine can temporarily hide the Windows desktop icon list before capture and restores the prior visibility state on success, cancellation, or failure.

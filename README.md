@@ -114,7 +114,7 @@ The existing landscape on Windows in 2026:
 - **Color picker tool** — HEX / RGB / HSL / APCA-Lc readout (vs white + vs black). Live cursor sample, click anywhere to lock + copy HEX.
 - **Pixel ruler tool** — drag to measure Δx / Δy / pixel length / angle across the entire virtual screen.
 - **Magnifier loupe** in the region overlay — 6× zoom, crosshair, pixel coordinate + HEX readout, auto-flips at screen edges.
-- **Pin window polish** — opacity submenu (25/50/75/100% plus Ctrl-scroll), border / shadow toggles, `Alt+click` click-through, `O` solo mode, `H` hide/show all pins.
+- **Pin window polish** — opacity submenu (25/50/75/100% plus Ctrl-scroll), border / shadow toggles, `Alt+click` click-through, `O` solo mode, `H` hide/show all pins, and Ctrl+click selection with group drag, opacity, and close controls.
 
 ## What's coming (selected)
 

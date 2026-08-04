@@ -4,21 +4,28 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Snapture.App.Services;
 
 namespace Snapture.App.Views;
 
 public partial class PinWindow : Window
 {
     private static readonly List<PinWindow> AllPins = new();
+    private static readonly PinSelectionState<PinWindow> Selection = new();
 
     private double _scale = 1.0;
     private double _opacity = 1.0;
     private bool _clickThrough;
     private bool _borderVisible = true;
     private bool _shadowVisible = true;
+    private double _dragAnchorLeft;
+    private double _dragAnchorTop;
+    private Dictionary<PinWindow, (double Left, double Top)>? _dragOrigins;
     private MenuItem? _borderMenu;
     private MenuItem? _shadowMenu;
     private MenuItem? _clickThroughMenu;
+    private MenuItem? _selectionSummaryMenu;
+    private MenuItem? _closeSelectedMenu;
 
     public PinWindow(BitmapSource image)
     {
@@ -32,8 +39,18 @@ public partial class PinWindow : Window
         KeyDown += OnKeyDown;
         ContextMenu = BuildMenu();
         ContextMenu.Opened += (_, _) => SyncMenuState();
+        ContextMenuOpening += (_, _) =>
+        {
+            if (!Selection.Contains(this))
+                SelectOnly(this);
+        };
         Loaded += OnLoaded;
-        Closed += (_, _) => AllPins.Remove(this);
+        Closed += (_, _) =>
+        {
+            Selection.Remove(this);
+            AllPins.Remove(this);
+            RefreshSelectionVisuals();
+        };
         AllPins.Add(this);
     }
 
@@ -47,6 +64,7 @@ public partial class PinWindow : Window
             Top = pt.Y - 40;
         }
         catch { }
+        UpdateSelectionVisual();
         Focus();
     }
 
@@ -59,15 +77,55 @@ public partial class PinWindow : Window
             e.Handled = true;
             return;
         }
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0)
+        {
+            ToggleSelection(this);
+            Focus();
+            e.Handled = true;
+            return;
+        }
+
+        if (!Selection.Contains(this) || Selection.Count <= 1)
+            SelectOnly(this);
+
+        var dragPins = Selection.TargetsFor(this).ToArray();
+        _dragAnchorLeft = Left;
+        _dragAnchorTop = Top;
+        _dragOrigins = dragPins.ToDictionary(pin => pin, pin => (pin.Left, pin.Top));
+        LocationChanged += OnDragLocationChanged;
         try { DragMove(); } catch { }
+        finally
+        {
+            LocationChanged -= OnDragLocationChanged;
+            _dragOrigins = null;
+        }
+        e.Handled = true;
+    }
+
+    private void OnDragLocationChanged(object? sender, EventArgs e)
+    {
+        if (_dragOrigins is null)
+            return;
+
+        var deltaX = Left - _dragAnchorLeft;
+        var deltaY = Top - _dragAnchorTop;
+        foreach (var (pin, origin) in _dragOrigins)
+        {
+            if (ReferenceEquals(pin, this))
+                continue;
+            pin.Left = origin.Left + deltaX;
+            pin.Top = origin.Top + deltaY;
+        }
     }
 
     private void OnWheel(object sender, MouseWheelEventArgs e)
     {
         if (Keyboard.Modifiers == ModifierKeys.Control)
         {
-            _opacity = Math.Clamp(_opacity + (e.Delta > 0 ? 0.05 : -0.05), 0.2, 1.0);
-            Opacity = _opacity;
+            var delta = e.Delta > 0 ? 0.05 : -0.05;
+            foreach (var pin in Selection.TargetsFor(this))
+                pin.SetOpacity(pin._opacity + delta);
         }
         else
         {
@@ -88,8 +146,53 @@ public partial class PinWindow : Window
             case Key.S when Keyboard.Modifiers == ModifierKeys.None: ToggleShadow(); break;
             case Key.H when Keyboard.Modifiers == ModifierKeys.None: ToggleOtherPinsVisibility(); break;
             case Key.O when Keyboard.Modifiers == ModifierKeys.None: SoloThis(); break;
+            case Key.Delete: CloseSelectedPins(); break;
+            case Key.A when Keyboard.Modifiers == ModifierKeys.Control: SelectAllPins(); break;
         }
     }
+
+    private static void SelectOnly(PinWindow pin)
+    {
+        Selection.SelectOnly(pin);
+        RefreshSelectionVisuals();
+    }
+
+    private static void ToggleSelection(PinWindow pin)
+    {
+        Selection.Toggle(pin);
+        RefreshSelectionVisuals();
+    }
+
+    private static void SelectAllPins()
+    {
+        Selection.SelectAll(AllPins.ToArray());
+        RefreshSelectionVisuals();
+    }
+
+    private static void ClearSelection()
+    {
+        Selection.Clear();
+        RefreshSelectionVisuals();
+    }
+
+    private static void RefreshSelectionVisuals()
+    {
+        foreach (var pin in AllPins.ToArray())
+            pin.UpdateSelectionVisual();
+    }
+
+    private void UpdateSelectionVisual()
+    {
+        var selected = Selection.Contains(this);
+        FrameBorder.BorderThickness = _borderVisible
+            ? new Thickness(selected ? 3 : 2)
+            : new Thickness(0);
+        FrameBorder.BorderBrush = FindBrush(selected ? "AppAccent" : "AppBorderStrong")
+            ?? FrameBorder.BorderBrush;
+    }
+
+    private static Brush? FindBrush(string key) =>
+        Application.Current?.TryFindResource(key) as Brush;
 
     private void ToggleClickThrough()
         => SetClickThrough(!_clickThrough);
@@ -113,7 +216,7 @@ public partial class PinWindow : Window
     private void SetBorderVisible(bool visible)
     {
         _borderVisible = visible;
-        FrameBorder.BorderThickness = _borderVisible ? new Thickness(2) : new Thickness(0);
+        UpdateSelectionVisual();
         if (_borderMenu is not null) _borderMenu.IsChecked = _borderVisible;
     }
 
@@ -131,6 +234,18 @@ public partial class PinWindow : Window
     {
         _opacity = Math.Clamp(v, 0.2, 1.0);
         Opacity = _opacity;
+    }
+
+    private void SetOpacityForSelection(double value)
+    {
+        foreach (var pin in Selection.TargetsFor(this))
+            pin.SetOpacity(value);
+    }
+
+    private void CloseSelectedPins()
+    {
+        foreach (var pin in Selection.TargetsFor(this).ToArray())
+            pin.Close();
     }
 
     private void ToggleOtherPinsVisibility()
@@ -177,10 +292,32 @@ public partial class PinWindow : Window
         {
             int p = pct;
             var mi = new MenuItem { Header = $"{p}% opacity" };
-            mi.Click += (_, _) => SetOpacity(p / 100.0);
+            mi.Click += (_, _) => SetOpacityForSelection(p / 100.0);
             opacityMenu.Items.Add(mi);
         }
         menu.Items.Add(opacityMenu);
+
+        var selectionMenu = new MenuItem { Header = "Selection" };
+        _selectionSummaryMenu = new MenuItem { IsEnabled = false };
+        selectionMenu.Items.Add(_selectionSummaryMenu);
+        selectionMenu.Items.Add(new Separator());
+
+        var selectOnly = new MenuItem { Header = "Select only this pin" };
+        selectOnly.Click += (_, _) => SelectOnly(this);
+        selectionMenu.Items.Add(selectOnly);
+
+        var selectAll = new MenuItem { Header = "Select all pins", InputGestureText = "Ctrl+A" };
+        selectAll.Click += (_, _) => SelectAllPins();
+        selectionMenu.Items.Add(selectAll);
+
+        var clear = new MenuItem { Header = "Clear selection" };
+        clear.Click += (_, _) => ClearSelection();
+        selectionMenu.Items.Add(clear);
+
+        _closeSelectedMenu = new MenuItem { Header = "Close selected pins", InputGestureText = "Delete" };
+        _closeSelectedMenu.Click += (_, _) => CloseSelectedPins();
+        selectionMenu.Items.Add(_closeSelectedMenu);
+        menu.Items.Add(selectionMenu);
 
         _borderMenu = new MenuItem { Header = "Show border", IsCheckable = true, IsChecked = _borderVisible, InputGestureText = "B" };
         _borderMenu.Click += (_, _) => SetBorderVisible(_borderMenu.IsChecked);
@@ -214,6 +351,19 @@ public partial class PinWindow : Window
         if (_borderMenu is not null) _borderMenu.IsChecked = _borderVisible;
         if (_shadowMenu is not null) _shadowMenu.IsChecked = _shadowVisible;
         if (_clickThroughMenu is not null) _clickThroughMenu.IsChecked = _clickThrough;
+        if (_selectionSummaryMenu is not null)
+        {
+            _selectionSummaryMenu.Header = Selection.Count switch
+            {
+                0 => "No pins selected",
+                1 => "1 pin selected — drag to move it",
+                var count => $"{count} pins selected — drag one to move together"
+            };
+        }
+        if (_closeSelectedMenu is not null)
+            _closeSelectedMenu.Header = Selection.Count > 1
+                ? $"Close {Selection.Count} selected pins"
+                : "Close selected pin";
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern nint GetWindowLongPtr(nint hwnd, int nIndex);
