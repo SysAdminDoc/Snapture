@@ -77,6 +77,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The deterministic sloppiness slider now styles rounded rectangles, speech balloons, spotlight cutouts, arrowheads, highlights, blur edges, redaction edges, step markers, ruler details, and text placement in addition to the existing line and freehand geometry. Redaction coverage remains a complete solid fill.
 
+### Added — Spacebar options panel toggle
+
+- The editor now exposes an accessible Options button and a Spacebar toggle for the side panel. Hiding it collapses the panel column so the canvas expands, while focused buttons, sliders, checkboxes, and text controls retain their normal Spacebar behavior.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

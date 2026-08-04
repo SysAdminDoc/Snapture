@@ -65,6 +65,8 @@ public partial class EditorWindow : Window
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
     private SKRect? _cropSelection;
+    private bool _optionsPanelVisible = true;
+    private const double OptionsPanelWidth = 280;
 
     // In-progress shape (during drag)
     private Shape? _draftShape;
@@ -402,6 +404,12 @@ public partial class EditorWindow : Window
             if (e.Key == Key.C) { OnCopyClicked(this, new RoutedEventArgs()); e.Handled = true; return; }
             if (e.Key == Key.D) { DuplicateSelectedShapes(); e.Handled = true; return; }
         }
+        if (e.Key == Key.Space && Keyboard.Modifiers == ModifierKeys.None && CanToggleOptionsPanel())
+        {
+            ToggleOptionsPanel();
+            e.Handled = true;
+            return;
+        }
         foreach (var (tool, _, hk, _) in ToolButtons)
         {
             if (e.Key == hk && Keyboard.Modifiers == ModifierKeys.None)
@@ -706,6 +714,7 @@ public partial class EditorWindow : Window
 
     private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
     {
+        Canvas.Focus();
         var pos = ToImagePoint(e.GetPosition(Canvas));
 
         if (_activeTool == EditorTool.Crop)
@@ -1137,6 +1146,21 @@ public partial class EditorWindow : Window
 
     private void OnUndoClicked(object sender, RoutedEventArgs e) { _commands.Undo(_doc); Canvas.InvalidateVisual(); }
     private void OnRedoClicked(object sender, RoutedEventArgs e) { _commands.Redo(_doc); Canvas.InvalidateVisual(); }
+    private void OnOptionsClicked(object sender, RoutedEventArgs e) => ToggleOptionsPanel();
+
+    private void ToggleOptionsPanel()
+    {
+        _optionsPanelVisible = !_optionsPanelVisible;
+        OptionsPanelBorder.Visibility = _optionsPanelVisible ? Visibility.Visible : Visibility.Collapsed;
+        OptionsColumn.Width = _optionsPanelVisible ? new GridLength(OptionsPanelWidth) : new GridLength(0);
+        StatusText.Text = _optionsPanelVisible
+            ? $"Tool: {_activeTool} · options shown"
+            : "Options hidden · press Space to show";
+    }
+
+    private static bool CanToggleOptionsPanel() => Keyboard.FocusedElement is not
+        (ButtonBase or TextBoxBase or PasswordBox or ComboBox or Slider or ScrollBar);
+
     private void OnStrokeChanged(object sender, RoutedPropertyChangedEventArgs<double> e) => _strokeThickness = (float)e.NewValue;
     private void OnSloppinessChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
     {

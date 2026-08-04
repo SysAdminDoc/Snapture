@@ -13,7 +13,7 @@
         AllowDrop="True"
         DragEnter="OnDragEnter"
         Drop="OnDrop">
-    <Grid>
+    <Grid x:Name="EditorLayoutGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -22,7 +22,7 @@
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="60" />
             <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="280" />
+            <ColumnDefinition x:Name="OptionsColumn" Width="280" />
         </Grid.ColumnDefinitions>
 
         <!--  Top bar  -->
@@ -80,6 +80,11 @@
                             Margin="12,0,0,0">
                     <Button x:Name="UndoButton" Content="Undo" Click="OnUndoClicked" AutomationProperties.Name="Undo" />
                     <Button x:Name="RedoButton" Content="Redo" Click="OnRedoClicked" AutomationProperties.Name="Redo" />
+                    <Button x:Name="OptionsButton"
+                            Content="Options"
+                            Click="OnOptionsClicked"
+                            AutomationProperties.Name="Toggle options panel"
+                            ToolTip="Show or hide the options panel (Spacebar)" />
                     <TextBlock x:Name="DimensionText"
                                Foreground="{DynamicResource AppMutedForeground}"
                                VerticalAlignment="Center"
@@ -107,6 +112,7 @@
                           VerticalScrollBarVisibility="Auto"
                           Background="Transparent">
                 <skia:SKElement x:Name="Canvas"
+                                Focusable="True"
                                 PaintSurface="OnPaintSurface"
                                 MouseDown="OnCanvasMouseDown"
                                 MouseMove="OnCanvasMouseMove"
@@ -120,7 +126,8 @@
         </Border>
 
         <!--  Right panel: properties + adjustments  -->
-        <Border Grid.Row="1"
+        <Border x:Name="OptionsPanelBorder"
+                Grid.Row="1"
                 Grid.Column="2"
                 Background="{DynamicResource AppSurface}"
                 BorderBrush="{DynamicResource AppBorder}"
