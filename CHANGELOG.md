@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — LAN-share QR overlay
+
+- Editor → Share to LAN now opens a scan-ready QR window for the existing single-fetch URL while keeping the URL in the clipboard. QR images are generated locally with the same TTL and network-boundary rules as the share URL.
+
 ### Added — Markdown clipboard integration
 
 - Settings → Output can keep image clipboard behavior or switch automatic copies to a relative Markdown link. Snapture writes a PNG under the configured vault/export folder, discovers the active Obsidian vault when possible, and provides Ctrl+Alt+V plus a tray action to pin the most recent capture. Joplin users can select a Markdown export or attachment folder because live Joplin resources are managed internally.

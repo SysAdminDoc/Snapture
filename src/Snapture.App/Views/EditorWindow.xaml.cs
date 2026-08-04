@@ -1601,6 +1601,8 @@ public partial class EditorWindow : Window
             var url = App.Host.LanShare.Register(path, ttl);
             try { Clipboard.SetText(url); } catch { }
             StatusText.Text = $"LAN URL copied: {url} (expires in {ttl.TotalMinutes:F0}m)";
+            var qr = new QrCodeWindow(url) { Owner = this };
+            qr.Show();
         }
         catch (Exception ex)
         {
