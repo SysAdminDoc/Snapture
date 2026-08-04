@@ -1731,6 +1731,36 @@ public partial class EditorWindow : Window
         }
     }
 
+    private async void OnOcrTableClicked(object sender, RoutedEventArgs e)
+    {
+        OcrTableButton.IsEnabled = false;
+        StatusText.Text = "Reconstructing OCR table…";
+        try
+        {
+            using var flat = _doc.RenderToBitmap();
+            var result = await OcrService.RecognizeAsync(flat);
+            if (result is null || result.Lines.All(line => line.Words.Count == 0))
+            {
+                StatusText.Text = "No positioned OCR words available for a table.";
+                return;
+            }
+
+            var table = OcrTableBuilder.Build(result);
+            StatusText.Text = table.IsEmpty
+                ? "No table geometry found."
+                : $"Reconstructed {table.Rows.Count} rows × {table.ColumnCount} columns.";
+            new OcrTableResultWindow(table) { Owner = DialogOwner }.Show();
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"OCR table failed: {ex.Message}";
+        }
+        finally
+        {
+            OcrTableButton.IsEnabled = true;
+        }
+    }
+
     // ---- BitmapSource <-> SKBitmap converters --------------------------------
 
     private static SKBitmap BitmapSourceToSKBitmap(BitmapSource bs)

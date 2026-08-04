@@ -11,6 +11,10 @@ All notable changes to Snapture will be documented in this file.
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.
 
+### Added — OCR table mode
+
+- Editor → Table reconstructs rows and columns from positioned OCR word boxes and offers a TSV copy action. Text-only OCR engines report that table geometry is unavailable.
+
 ### Added — QR and barcode extraction
 
 - Editor → Codes scans captures locally with ZXing.Net, reports supported QR/barcode formats and image regions in a dedicated result window, and offers one-click payload copying. No network request is made.

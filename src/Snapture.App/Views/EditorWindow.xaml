@@ -73,6 +73,11 @@
                             AutomationProperties.Name="QR and barcode extraction"
                             Click="OnBarcodeClicked"
                             ToolTip="Scan the capture locally for QR codes and barcodes." />
+                    <Button x:Name="OcrTableButton"
+                            Content="Table"
+                            AutomationProperties.Name="OCR table extraction"
+                            Click="OnOcrTableClicked"
+                            ToolTip="Reconstruct positioned OCR words into rows and columns, then copy them as TSV." />
                     <Button x:Name="AutoRedactButton"
                             Content="Auto-redact"
                             Click="OnAutoRedactClicked"
