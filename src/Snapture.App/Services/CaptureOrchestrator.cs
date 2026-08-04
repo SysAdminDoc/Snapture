@@ -264,7 +264,8 @@ public sealed class CaptureOrchestrator
                         try
                         {
                             var pluginCapture = ToPluginCapture(result, path: null);
-                            var processed = await proc.ProcessAsync(pluginCapture, host.PluginHost).ConfigureAwait(true);
+                            var processed = await PluginProcessorInvoker.ProcessAsync(
+                                proc, pluginCapture, host.PluginHost).ConfigureAwait(true);
                             if (!ReferenceEquals(processed, pluginCapture))
                                 result = ApplyPluginCaptureBack(processed, result);
                         }

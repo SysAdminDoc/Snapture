@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Daemon-safe plugin metadata responses
+
+- External processor callers now have a shared invocation boundary that returns dimensions, stride, SHA-256 pixel hash, capture source, timestamp, and optional saved path by default. Processed pixel buffers require an explicit opt-in response mode, while the normal capture flow continues to retain pixels in-process.
+
 ### Changed — Shared RapidOCR redaction path
 
 - Auto-redact now tries the bundled RapidOCR DBNet text-region pipeline first and turns that normalized word geometry directly into findings, so OCR and redaction share one local ONNX pass before the general OCR fallback chain.

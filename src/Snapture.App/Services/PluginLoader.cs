@@ -49,6 +49,29 @@ public sealed class PluginLoader : IDisposable
         }
     }
 
+    /// <summary>
+    /// Invoke a processor by its stable ID for an external caller. The default response is
+    /// metadata-only; explicit pixel requests are opt-in at the call site.
+    /// </summary>
+    public async Task<PluginCaptureResponse?> InvokeProcessorAsync(
+        string processorId,
+        PluginCapture capture,
+        PluginCaptureResponseMode responseMode = PluginCaptureResponseMode.MetadataOnly,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(processorId))
+            throw new ArgumentException("A processor ID is required.", nameof(processorId));
+        ArgumentNullException.ThrowIfNull(capture);
+
+        var processor = _plugins
+            .SelectMany(plugin => plugin.CaptureProcessors)
+            .FirstOrDefault(candidate => string.Equals(candidate.Id, processorId, StringComparison.OrdinalIgnoreCase));
+        return processor is null
+            ? null
+            : await PluginProcessorInvoker.InvokeAsync(processor, capture, _host, responseMode, ct)
+                .ConfigureAwait(false);
+    }
+
     public LoadedPlugin? LoadOne(string dllPath)
     {
         var ctx = new AssemblyLoadContext($"snapture-plugin:{Path.GetFileNameWithoutExtension(dllPath)}",

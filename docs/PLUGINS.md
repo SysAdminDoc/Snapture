@@ -110,6 +110,18 @@ The data object passed to every contract method:
 | `CapturedAtUtc` | `DateTime` | UTC timestamp |
 | `FilePathOnDisk` | `string?` | Path if already saved, null otherwise |
 
+## External processor responses
+
+The host exposes PluginLoader.InvokeProcessorAsync for future external adapters such as the
+CLI, URL handler, or localhost MCP server. It invokes an ICaptureProcessor by stable ID and
+returns a PluginCaptureResponse. MetadataOnly is the default response mode: callers receive
+dimensions, stride, a SHA-256 hash of the processed BGRA buffer, capture source, timestamp, and
+optional saved path without receiving pixel bytes. A caller must explicitly request
+PluginCaptureResponseMode.IncludePixels to receive a defensive copy of the processed buffer.
+
+This default keeps daemon-style responses small and avoids accidentally returning full image
+payloads when an external integration only needs capture identity or dimensions.
+
 ## Plugin compliance
 
 A plugin's compliance posture is the responsibility of the plugin author. If your plugin declares `Network` and transmits data to a remote endpoint, your plugin is operating outside Snapture's privacy boundary. Document your own data handling.

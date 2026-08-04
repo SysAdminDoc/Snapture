@@ -1,3 +1,6 @@
+using System.Globalization;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,6 +27,93 @@ public sealed class PluginCapture
         Source = source;
         CapturedAtUtc = capturedAtUtc;
         FilePathOnDisk = filePathOnDisk;
+    }
+}
+
+/// <summary>Controls how much of a processed capture an external caller receives back.</summary>
+public enum PluginCaptureResponseMode
+{
+    /// <summary>Return dimensions, hash, source, and timestamp without pixel bytes.</summary>
+    MetadataOnly,
+
+    /// <summary>Return metadata plus a copy of the processed BGRA8 pixel buffer.</summary>
+    IncludePixels
+}
+
+/// <summary>Small, serialization-friendly identity for a processed capture.</summary>
+public sealed class PluginCaptureMetadata
+{
+    public int Width { get; }
+    public int Height { get; }
+    public int Stride { get; }
+    public string Sha256 { get; }
+    public string Source { get; }
+    public DateTime CapturedAtUtc { get; }
+    public string? FilePathOnDisk { get; }
+
+    public PluginCaptureMetadata(
+        int width,
+        int height,
+        int stride,
+        string sha256,
+        string source,
+        DateTime capturedAtUtc,
+        string? filePathOnDisk)
+    {
+        Width = width;
+        Height = height;
+        Stride = stride;
+        Sha256 = sha256;
+        Source = source;
+        CapturedAtUtc = capturedAtUtc;
+        FilePathOnDisk = filePathOnDisk;
+    }
+}
+
+/// <summary>
+/// External-caller response for a processed capture. Metadata is always returned; pixel bytes
+/// are omitted unless the caller explicitly selects <see cref="PluginCaptureResponseMode.IncludePixels" />.
+/// </summary>
+public sealed class PluginCaptureResponse
+{
+    public PluginCaptureMetadata Metadata { get; }
+    public byte[]? PixelsBgra { get; }
+    public bool IncludesPixels => PixelsBgra is not null;
+
+    private PluginCaptureResponse(PluginCaptureMetadata metadata, byte[]? pixelsBgra)
+    {
+        Metadata = metadata;
+        PixelsBgra = pixelsBgra;
+    }
+
+    public static PluginCaptureResponse FromCapture(
+        PluginCapture capture,
+        PluginCaptureResponseMode mode = PluginCaptureResponseMode.MetadataOnly)
+    {
+        if (capture is null) throw new ArgumentNullException(nameof(capture));
+
+        var metadata = new PluginCaptureMetadata(
+            capture.Width,
+            capture.Height,
+            capture.Stride,
+            ComputeSha256(capture.PixelsBgra),
+            capture.Source,
+            capture.CapturedAtUtc,
+            capture.FilePathOnDisk);
+        var pixels = mode == PluginCaptureResponseMode.IncludePixels
+            ? (byte[])capture.PixelsBgra.Clone()
+            : null;
+        return new PluginCaptureResponse(metadata, pixels);
+    }
+
+    private static string ComputeSha256(byte[] bytes)
+    {
+        using var sha = SHA256.Create();
+        var hash = sha.ComputeHash(bytes);
+        var builder = new StringBuilder(hash.Length * 2);
+        foreach (var value in hash)
+            builder.Append(value.ToString("x2", CultureInfo.InvariantCulture));
+        return builder.ToString();
     }
 }
 
