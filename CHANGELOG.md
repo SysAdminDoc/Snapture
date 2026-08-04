@@ -69,6 +69,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Annotations can now be tagged None, Blocker, Question, or Nit. Category changes apply to selected shapes through undo/redo, persist in `.snapture` files and clones, and render as compact color-coded badges.
 
+### Added — Crop workflow
+
+- The editor Crop tool now shows a snap-aware selection overlay, crops the background and intersecting annotations as one undoable operation, drops annotations fully outside the crop, and refreshes the canvas dimensions after apply. Escape cancels an in-progress selection.
+
 ### Added — UIA-driven recording auto-tighten
 
 - An opt-in recording setting detects edge-mounted tabs, toolbars, menus, status bars, docks, and Windows taskbars through read-only UI Automation. Safe plans crop those strips before encoding, remap cursor effects into the cropped frame, and leave the full capture untouched when the remaining content would be too small or UIA is unavailable.

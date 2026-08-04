@@ -64,6 +64,7 @@ public partial class EditorWindow : Window
     private AnnotationCategory _annotationCategory = AnnotationCategory.None;
     private readonly List<uint> _recentColors = new();
     private int _stepCounter = 1;
+    private SKRect? _cropSelection;
 
     // In-progress shape (during drag)
     private Shape? _draftShape;
@@ -282,6 +283,7 @@ public partial class EditorWindow : Window
         ArrowOptionsPanel.Visibility = tool == EditorTool.Arrow ? Visibility.Visible : Visibility.Collapsed;
         TextOptionsPanel.Visibility = tool == EditorTool.Text ? Visibility.Visible : Visibility.Collapsed;
         BalloonOptionsPanel.Visibility = tool == EditorTool.SpeechBalloon ? Visibility.Visible : Visibility.Collapsed;
+        CropOptionsPanel.Visibility = tool == EditorTool.Crop ? Visibility.Visible : Visibility.Collapsed;
         StatusText.Text = $"Tool: {tool}";
     }
 
@@ -408,6 +410,15 @@ public partial class EditorWindow : Window
                 e.Handled = true;
                 return;
             }
+        }
+        if (e.Key == Key.Escape && _cropSelection is not null)
+        {
+            _cropSelection = null;
+            _dragging = false;
+            StatusText.Text = "Crop cancelled";
+            Canvas.InvalidateVisual();
+            e.Handled = true;
+            return;
         }
         if (e.Key == Key.Escape && _selectedShapes.Count > 0)
         {
@@ -600,6 +611,26 @@ public partial class EditorWindow : Window
         if (_draftShape is not null)
             _draftShape.Render(canvas, _doc);
 
+        if (_cropSelection is { } cropSelection)
+        {
+            var crop = CropMath.NormalizeAndSnap(cropSelection, _doc.Width, _doc.Height, snapToEdges: false);
+            using var shade = new SKPaint { Style = SKPaintStyle.Fill, Color = new SKColor(17, 17, 27, 110) };
+            canvas.DrawRect(new SKRect(0, 0, _doc.Width, crop.Top), shade);
+            canvas.DrawRect(new SKRect(0, crop.Bottom, _doc.Width, _doc.Height), shade);
+            canvas.DrawRect(new SKRect(0, crop.Top, crop.Left, crop.Bottom), shade);
+            canvas.DrawRect(new SKRect(crop.Right, crop.Top, _doc.Width, crop.Bottom), shade);
+
+            using var outline = new SKPaint
+            {
+                Style = SKPaintStyle.Stroke,
+                Color = new SKColor(203, 166, 247),
+                StrokeWidth = 2,
+                IsAntialias = true,
+                PathEffect = SKPathEffect.CreateDash(new[] { 8f, 5f }, 0)
+            };
+            canvas.DrawRect(crop, outline);
+        }
+
         // Draw selection handles around selected shapes
         if (_selectedShapes.Count > 0)
         {
@@ -676,6 +707,18 @@ public partial class EditorWindow : Window
     private void OnCanvasMouseDown(object sender, MouseButtonEventArgs e)
     {
         var pos = ToImagePoint(e.GetPosition(Canvas));
+
+        if (_activeTool == EditorTool.Crop)
+        {
+            _selectedShapes.Clear();
+            _draftShape = null;
+            _activeHandle = HandlePosition.None;
+            _cropSelection = new SKRect(pos.X, pos.Y, pos.X, pos.Y);
+            _dragStart = pos;
+            _dragging = true;
+            Canvas.InvalidateVisual();
+            return;
+        }
 
         if (_activeTool == EditorTool.Eyedropper)
         {
@@ -874,6 +917,13 @@ public partial class EditorWindow : Window
             return;
         }
 
+        if (_activeTool == EditorTool.Crop && _cropSelection is not null)
+        {
+            _cropSelection = new SKRect(_dragStart.X, _dragStart.Y, pos.X, pos.Y);
+            Canvas.InvalidateVisual();
+            return;
+        }
+
         if (_draftShape is null) return;
         UpdateDraft(_draftShape, _dragStart, pos);
         Canvas.InvalidateVisual();
@@ -889,6 +939,16 @@ public partial class EditorWindow : Window
             _activeHandle = HandlePosition.None;
             _handleShape = null;
             _handleShapeSnapshot = null;
+            Canvas.InvalidateVisual();
+            return;
+        }
+
+        if (_activeTool == EditorTool.Crop)
+        {
+            var selection = _cropSelection;
+            _cropSelection = null;
+            if (selection is { } cropSelection)
+                ApplyCrop(cropSelection);
             Canvas.InvalidateVisual();
             return;
         }
@@ -1087,6 +1147,32 @@ public partial class EditorWindow : Window
             _draftShape.Sloppiness = _sloppiness;
         Canvas.InvalidateVisual();
     }
+
+    private void ApplyCrop(SKRect selection)
+    {
+        _cropSelection = null;
+        _dragging = false;
+        var crop = CropMath.NormalizeAndSnap(selection, _doc.Width, _doc.Height, SnapCropCheck.IsChecked == true);
+        if (crop.Width < 4 || crop.Height < 4)
+        {
+            StatusText.Text = "Crop selection is too small.";
+            return;
+        }
+
+        if (crop.Left == 0 && crop.Top == 0 && crop.Right == _doc.Width && crop.Bottom == _doc.Height)
+        {
+            StatusText.Text = "Crop already covers the whole image.";
+            return;
+        }
+
+        _commands.Do(_doc, new CropDocumentCommand(_doc, crop));
+        _selectedShapes.Clear();
+        Canvas.Width = _doc.Width;
+        Canvas.Height = _doc.Height;
+        DimensionText.Text = $"{_doc.Width} × {_doc.Height}";
+        StatusText.Text = $"Cropped to {_doc.Width} × {_doc.Height}";
+    }
+
     private void OnArrowStyleChanged(object sender, SelectionChangedEventArgs e)
     {
         if (ArrowStyleCombo.SelectedItem is ComboBoxItem { Tag: string tag } &&

@@ -241,6 +241,17 @@
                                         ToolTip="Round the speech balloon body corners; the tail stays crisp." />
                             </StackPanel>
 
+                            <StackPanel x:Name="CropOptionsPanel" Visibility="Collapsed" Margin="0,10,0,0">
+                                <CheckBox x:Name="SnapCropCheck"
+                                          Content="Snap to image edges"
+                                          IsChecked="True"
+                                          ToolTip="Snap a crop edge to the image boundary when it is within 16 pixels." />
+                                <TextBlock Text="Drag a rectangle to crop. Press Escape to cancel."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0" />
+                            </StackPanel>
+
                             <CheckBox x:Name="DashedCheck" Content="Dashed line or arrow" Margin="0,10,0,0" />
                             <CheckBox x:Name="BidirCheck" Content="Arrowheads at both ends" />
                             <CheckBox x:Name="ReversedCheck" Content="Reverse arrow direction" />
