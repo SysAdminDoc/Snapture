@@ -79,6 +79,19 @@ public partial class PluginsWindow : Window
             };
             capabilities.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
             stack.Children.Add(capabilities);
+            if (!string.IsNullOrWhiteSpace(p.Info.MinHostVersion) ||
+                !string.IsNullOrWhiteSpace(p.Info.MaxHostVersion))
+            {
+                var hostRange = new TextBlock
+                {
+                    Text = $"Host range: {p.Info.MinHostVersion ?? "any"} – {p.Info.MaxHostVersion ?? "any"}",
+                    FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
+                    FontSize = 11,
+                    Margin = new Thickness(0, 0, 0, 6)
+                };
+                hostRange.SetResourceReference(TextBlock.ForegroundProperty, "AppSubtleForeground");
+                stack.Children.Add(hostRange);
+            }
             if (p.Info.ContractTypes.Count > 0)
             {
                 var contributes = new TextBlock

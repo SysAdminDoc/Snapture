@@ -28,14 +28,21 @@ public sealed class SnapturePluginAttribute : Attribute
     public string Version { get; }
     public string Description { get; }
     public PluginCapability Capabilities { get; }
+    /// <summary>Inclusive minimum Snapture host version, or null for no lower bound.</summary>
+    public string? MinHostVersion { get; }
+    /// <summary>Inclusive maximum Snapture host version, or null for no upper bound.</summary>
+    public string? MaxHostVersion { get; }
 
     public SnapturePluginAttribute(string name, string author, string version,
-                                   string description, PluginCapability capabilities)
+                                   string description, PluginCapability capabilities,
+                                   string? minHostVersion = null, string? maxHostVersion = null)
     {
         Name = name;
         Author = author;
         Version = version;
         Description = description;
         Capabilities = capabilities;
+        MinHostVersion = minHostVersion;
+        MaxHostVersion = maxHostVersion;
     }
 }

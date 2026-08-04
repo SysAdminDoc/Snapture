@@ -59,7 +59,7 @@ The existing landscape on Windows in 2026:
 - **Auto-redact secrets** — Editor button runs OCR + a Gitleaks-derived rule pack (AWS, GCP, GitHub, Stripe, Slack, JWT, npm) plus PII (Luhn-validated cards, SSN, IBAN, IPs, MACs, emails) and drops solid-fill redactions on every match. Each redaction is its own undo-stack entry so false positives are easy to back out.
 - **LAN-only share server** — Local Kestrel server, binds to a single user-chosen adapter (never `0.0.0.0`), serves single-fetch token URLs that expire after the TTL. Settings tab to toggle / configure / inspect; editor button to share the current document.
 - **Smart Element Capture** — Non-activating overlay highlights individual UIA controls in real time. PgUp climbs the parent chain, click captures the exact element rectangle. The capability no consumer screenshot tool currently ships during capture.
-- **Plugin SDK** — `Snapture.Plugin.Abstractions` ships as a separate multi-target library. Plugins drop into `%APPDATA%\Snapture\Plugins\`, load in collectible `AssemblyLoadContext`s, declare capabilities via `[SnapturePlugin]`. Plugins window in the tray lists what's installed and reloads on demand.
+- **Plugin SDK** — `Snapture.Plugin.Abstractions` ships as a separate multi-target library. Plugins drop into `%APPDATA%\Snapture\Plugins\`, load in collectible `AssemblyLoadContext`s, declare capabilities via `[SnapturePlugin]`, and can declare inclusive `minHostVersion` / `maxHostVersion` bounds. Incompatible or malformed ranges are rejected before plugin constructors run. The Plugins window lists what's installed and reloads on demand.
 
 ## What ships in v0.3.0
 
@@ -223,7 +223,7 @@ Snapture.sln
 │  │  ├─ MonitorEnumerator             ← Per-monitor DPI awareness
 │  │  └─ WindowEnumerator              ← Top-level window listing + hit-test
 │  ├─ Snapture.Plugin.Abstractions/    ← Public plugin surface (multi-target)
-│  │  ├─ PluginAttribute               ← [SnapturePlugin] + capability flags
+│  │  ├─ PluginAttribute               ← [SnapturePlugin] + capability + host-version bounds
 │  │  └─ Contracts                     ← IDestination / ICaptureProcessor / IEditorEffect / IPluginHost
 │  └─ Snapture.App/                    ← WPF shell
 │     ├─ App.xaml(.cs)                 ← Entry, AUMID, crash logging

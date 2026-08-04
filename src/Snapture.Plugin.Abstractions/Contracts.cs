@@ -175,10 +175,13 @@ public sealed class LoadedPluginInfo
     public string Description { get; }
     public PluginCapability Capabilities { get; }
     public IReadOnlyList<string> ContractTypes { get; }
+    public string? MinHostVersion { get; }
+    public string? MaxHostVersion { get; }
 
     public LoadedPluginInfo(string assemblyPath, string name, string author, string version,
                              string description, PluginCapability capabilities,
-                             IReadOnlyList<string> contractTypes)
+                             IReadOnlyList<string> contractTypes,
+                             string? minHostVersion = null, string? maxHostVersion = null)
     {
         AssemblyPath = assemblyPath;
         Name = name;
@@ -187,5 +190,7 @@ public sealed class LoadedPluginInfo
         Description = description;
         Capabilities = capabilities;
         ContractTypes = contractTypes;
+        MinHostVersion = minHostVersion;
+        MaxHostVersion = maxHostVersion;
     }
 }

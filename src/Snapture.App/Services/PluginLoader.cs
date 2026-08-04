@@ -107,6 +107,21 @@ public sealed class PluginLoader : IDisposable
 
         var attr = entry.GetCustomAttribute<SnapturePluginAttribute>()!;
 
+        var hostVersion = typeof(PluginLoader).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
+        if (!PluginCompatibility.TryValidate(
+                attr.MinHostVersion,
+                attr.MaxHostVersion,
+                hostVersion,
+                out var compatibilityReason))
+        {
+            ctx.Unload();
+            string message = $"Plugin skipped (host compatibility): {attr.Name} — {compatibilityReason}";
+            _host.Log(message);
+            Log.Warning("Plugin.SkippedIncompatible {PluginName} {Minimum} {Maximum} {Reason}",
+                attr.Name, attr.MinHostVersion, attr.MaxHostVersion, compatibilityReason);
+            return null;
+        }
+
         var contracts = new List<string>();
         var destinations = InstantiateAll<IDestination>(asm, contracts);
         var processors = InstantiateAll<ICaptureProcessor>(asm, contracts);
@@ -114,7 +129,7 @@ public sealed class PluginLoader : IDisposable
 
         var info = new LoadedPluginInfo(
             dllPath, attr.Name, attr.Author, attr.Version, attr.Description,
-            attr.Capabilities, contracts);
+            attr.Capabilities, contracts, attr.MinHostVersion, attr.MaxHostVersion);
 
         var loaded = new LoadedPlugin(info, destinations, processors, effects, ctx);
         _plugins.Add(loaded);

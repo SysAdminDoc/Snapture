@@ -2,6 +2,10 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Changed — Plugin host compatibility guard
+
+- `[SnapturePlugin]` now accepts inclusive `minHostVersion` and `maxHostVersion` bounds. Snapture rejects invalid, reversed, or out-of-range manifests before instantiating plugin contracts and surfaces the declared range in the Plugins window.
+
 ### Added — Portable mode
 
 - `--portable` is now a startup modifier for GUI, CLI, URI, and conversion flows; portable archives include a colocated `Snapture.ini` marker and keep settings, history, plugins, logs, autosave, crash data, and temporary capture artifacts under `SnaptureData` beside the executable.
