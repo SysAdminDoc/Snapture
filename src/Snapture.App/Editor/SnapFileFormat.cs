@@ -1,6 +1,7 @@
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using System.Text.Json;
 using SkiaSharp;
 
 namespace Snapture.App.Editor;
@@ -16,6 +17,13 @@ public static class SnapFileFormat
 {
     public const int FormatVersion = 1;
     public const string Extension = ".snapture";
+    private const long MaxProjectBytes = 100L * 1024 * 1024;
+    private const long MaxEntryBytes = 50L * 1024 * 1024;
+    private const long MaxDocumentBytes = 8L * 1024 * 1024;
+    private static readonly HashSet<string> AllowedEntries = new(StringComparer.Ordinal)
+    {
+        "background.png", "document.json", "manifest.json"
+    };
 
     public static void Save(string path, AnnotationDocument doc)
     {
@@ -49,7 +57,15 @@ public static class SnapFileFormat
 
     public static AnnotationDocument Load(string path)
     {
-        using var zip = ZipFile.OpenRead(path);
+        ArgumentException.ThrowIfNullOrWhiteSpace(path);
+        var file = new FileInfo(path);
+        if (!file.Exists)
+            throw new FileNotFoundException("The .snapture project does not exist.", path);
+        if (file.Length > MaxProjectBytes)
+            throw new InvalidDataException("The .snapture project exceeds the 100 MB safety limit.");
+
+        using var zip = OpenArchive(path);
+        ValidateEntries(zip);
 
         var bgEntry = zip.GetEntry("background.png")
             ?? throw new InvalidDataException("Missing background.png in .snapture project.");
@@ -57,10 +73,16 @@ public static class SnapFileFormat
         using (var bgStream = bgEntry.Open())
         using (var ms = new MemoryStream())
         {
-            bgStream.CopyTo(ms);
+            CopyBounded(bgStream, ms, MaxEntryBytes, "background.png");
             ms.Position = 0;
             background = SKBitmap.Decode(ms)
                 ?? throw new InvalidDataException("Could not decode background.png.");
+        }
+
+        if (background.Width > 32_768 || background.Height > 32_768)
+        {
+            background.Dispose();
+            throw new InvalidDataException("The .snapture background dimensions exceed the safety limit.");
         }
 
         var doc = new AnnotationDocument(background);
@@ -69,9 +91,69 @@ public static class SnapFileFormat
         if (docEntry is not null)
         {
             using var docStream = docEntry.Open();
-            using var sr = new StreamReader(docStream, Encoding.UTF8);
-            doc.DeserializeShapes(sr.ReadToEnd());
+            using var docBuffer = new MemoryStream();
+            CopyBounded(docStream, docBuffer, MaxDocumentBytes, "document.json");
+            try
+            {
+                doc.DeserializeShapes(Encoding.UTF8.GetString(docBuffer.ToArray()));
+            }
+            catch (JsonException ex)
+            {
+                background.Dispose();
+                throw new InvalidDataException("The .snapture document JSON is invalid.", ex);
+            }
         }
         return doc;
+    }
+
+    private static ZipArchive OpenArchive(string path)
+    {
+        try
+        {
+            return ZipFile.OpenRead(path);
+        }
+        catch (InvalidDataException)
+        {
+            throw;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            throw new InvalidDataException("The .snapture project could not be opened as a ZIP archive.", ex);
+        }
+    }
+
+    private static void ValidateEntries(ZipArchive zip)
+    {
+        if (zip.Entries.Count > AllowedEntries.Count)
+            throw new InvalidDataException("The .snapture project contains unsupported entries.");
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var entry in zip.Entries)
+        {
+            if (entry.FullName.EndsWith("/", StringComparison.Ordinal)
+                || !AllowedEntries.Contains(entry.FullName)
+                || !seen.Add(entry.FullName))
+            {
+                throw new InvalidDataException("The .snapture project contains an unsafe or duplicate entry.");
+            }
+
+            long cap = entry.FullName == "document.json" ? MaxDocumentBytes : MaxEntryBytes;
+            if (entry.Length < 0 || entry.Length > cap)
+                throw new InvalidDataException($"The .snapture entry '{entry.FullName}' exceeds the safety limit.");
+        }
+    }
+
+    private static void CopyBounded(Stream source, Stream destination, long maxBytes, string entryName)
+    {
+        byte[] buffer = new byte[81920];
+        long total = 0;
+        int read;
+        while ((read = source.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            total += read;
+            if (total > maxBytes)
+                throw new InvalidDataException($"The .snapture entry '{entryName}' exceeds the safety limit.");
+            destination.Write(buffer, 0, read);
+        }
     }
 }

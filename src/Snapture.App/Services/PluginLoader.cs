@@ -37,22 +37,25 @@ public sealed class PluginLoader : IDisposable
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly IPluginHost _host;
     private readonly Func<PluginManifestInfo, bool>? _isCapabilityApproved;
+    private readonly string _pluginsDirectory;
 
     public IReadOnlyList<LoadedPlugin> All => _plugins;
 
     public PluginLoader(
         IPluginHost host,
-        Func<PluginManifestInfo, bool>? isCapabilityApproved = null)
+        Func<PluginManifestInfo, bool>? isCapabilityApproved = null,
+        string? pluginsDirectory = null)
     {
         _host = host;
         _isCapabilityApproved = isCapabilityApproved;
-        Directory.CreateDirectory(PluginsDirectory);
+        _pluginsDirectory = Path.GetFullPath(pluginsDirectory ?? PluginsDirectory);
+        Directory.CreateDirectory(_pluginsDirectory);
     }
 
     public void LoadAll()
     {
         UnloadAll();
-        foreach (var dll in Directory.EnumerateFiles(PluginsDirectory, "*.dll", SearchOption.AllDirectories))
+        foreach (var dll in Directory.EnumerateFiles(_pluginsDirectory, "*.dll", SearchOption.AllDirectories))
         {
             try { LoadOne(dll); }
             catch (Exception ex)
@@ -198,9 +201,9 @@ public sealed class PluginLoader : IDisposable
         var existing = _plugins.FirstOrDefault(plugin =>
             string.Equals(plugin.Info.Name, manifest.Name, StringComparison.OrdinalIgnoreCase));
         string destination = existing?.Info.AssemblyPath
-            ?? Path.Combine(PluginsDirectory, Path.GetFileName(source));
+            ?? Path.Combine(_pluginsDirectory, Path.GetFileName(source));
         destination = Path.GetFullPath(destination);
-        Directory.CreateDirectory(PluginsDirectory);
+        Directory.CreateDirectory(_pluginsDirectory);
 
         var pathOwner = _plugins.FirstOrDefault(plugin =>
             string.Equals(plugin.Info.AssemblyPath, destination, StringComparison.OrdinalIgnoreCase));
