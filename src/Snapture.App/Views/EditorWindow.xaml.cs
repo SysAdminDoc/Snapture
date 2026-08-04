@@ -1591,8 +1591,7 @@ public partial class EditorWindow : Window
             using var image = SkiaSharp.SKImage.FromBitmap(flat);
             using var data = image.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
             var dir = System.IO.Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Snapture", "share");
+                PortableMode.LocalDataDirectory, "share");
             System.IO.Directory.CreateDirectory(dir);
             var path = System.IO.Path.Combine(dir, $"share_{DateTime.UtcNow:yyyyMMddHHmmssfff}.png");
             using (var fs = System.IO.File.Create(path)) data.SaveTo(fs);

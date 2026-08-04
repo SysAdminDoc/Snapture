@@ -33,10 +33,8 @@ public sealed record HistoryProject(
 /// </summary>
 public sealed partial class CaptureHistoryService : IDisposable
 {
-    public static string Dir { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Snapture", "history");
-    public static string DbPath { get; } = Path.Combine(Dir, "index.db");
+    public static string Dir => Path.Combine(PortableMode.LocalDataDirectory, "history");
+    public static string DbPath => Path.Combine(Dir, "index.db");
 
     private readonly SqliteConnection _conn;
     private readonly string _dbPath;

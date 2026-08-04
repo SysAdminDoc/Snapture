@@ -35,9 +35,7 @@ public sealed class AppHost : IDisposable
         ApplyEngineSettings(engine);
         Log.Information("Engine.Initialized {EngineName}", name);
         History = new CaptureHistoryService();
-        var scratch = System.IO.Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Snapture", "plugin-scratch");
+        var scratch = System.IO.Path.Combine(PortableMode.LocalDataDirectory, "plugin-scratch");
         PluginHost = new PluginHostBridge(scratch,
             toast: (t, m) => _tray?.ShowToast(t, m),
             log: msg => System.Diagnostics.Debug.WriteLine($"[plugin] {msg}"));

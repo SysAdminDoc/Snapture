@@ -58,11 +58,11 @@ public sealed record CliCommand(
 public static class CliCommandLine
 {
     public const string Usage =
-        "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name]\n" +
-        "snapture --fullscreen [--out file.png] [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share]\n" +
-        "snapture --open image.png\n" +
-        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file]\n" +
-        "snapture --uri \"snapture://capture?mode=region&dest=clipboard\"";
+        "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name] [--portable]\n" +
+        "snapture --fullscreen [--out file.png] [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--portable]\n" +
+        "snapture --open image.png [--portable]\n" +
+        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file] [--portable]\n" +
+        "snapture --uri \"snapture://capture?mode=region&dest=clipboard\" [--portable]";
 
     public static void AttachParentConsole()
     {
@@ -150,6 +150,9 @@ public static class CliCommandLine
         for (int i = 0; i < args.Count; i++)
         {
             string arg = args[i];
+            if (arg.Equals(PortableMode.Flag, StringComparison.OrdinalIgnoreCase))
+                continue;
+
             if (arg.Equals("--new-region", StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("--new-window", StringComparison.OrdinalIgnoreCase)
                 || arg.Equals("--new-fullscreen", StringComparison.OrdinalIgnoreCase))

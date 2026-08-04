@@ -16,9 +16,7 @@ public sealed class AutosaveService : IDisposable
     private static readonly TimeSpan Interval = TimeSpan.FromSeconds(30);
 
     /// <summary>Directory that holds all autosave <c>.snapture-autosave</c> files.</summary>
-    public static string AutosaveDirectory { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "Snapture", "autosave");
+    public static string AutosaveDirectory => Path.Combine(PortableMode.LocalDataDirectory, "autosave");
 
     private readonly AnnotationDocument _doc;
     private readonly DispatcherTimer _timer;

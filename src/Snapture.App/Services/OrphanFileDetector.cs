@@ -10,8 +10,7 @@ namespace Snapture.App.Services;
 /// </summary>
 public static class OrphanFileDetector
 {
-    private static readonly string LocalAppData = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Snapture");
+    private static string LocalAppData => PortableMode.LocalDataDirectory;
 
     public static int Sweep()
     {

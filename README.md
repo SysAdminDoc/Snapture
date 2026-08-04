@@ -150,6 +150,8 @@ To produce Chocolatey packages for both architectures, run `pwsh -File build/bui
 
 The Scoop extras-bucket manifest is [packaging/scoop/snapture.json](packaging/scoop/snapture.json). It installs the same architecture-specific Velopack portable archives through Scoop, pins their SHA-256 hashes, exposes the `snapture` shim and Start Menu shortcut, and lets Scoop manage upgrades. Copy the manifest into the extras bucket after publishing the matching GitHub Release assets; update its version, URLs, and hashes for each release.
 
+Portable archives include a `Snapture.ini` marker beside `Snapture.App.exe`. Launching that copy automatically keeps settings, history, plugins, logs, autosave, and crash data under `SnaptureData` beside the executable. An unpacked copy can opt in explicitly with `Snapture.App.exe --portable`; the flag also works with every headless CLI command.
+
 **MCP integration:** Settings → Integrations can enable the optional Model Context Protocol server. It exposes loopback-only `http://127.0.0.1:<port>/mcp` tools for monitor/window/region/element/scrolling capture, local OCR, history search, and Auto-redact. The server is off by default, never binds the LAN-share adapter, and returns metadata plus a saved local path unless a tool call explicitly sets `include_image=true`.
 
 ## Usage
@@ -184,7 +186,7 @@ Captures are saved to `%USERPROFILE%\Pictures\Snapture\` by default and copied t
 
 ## Configuration
 
-`%APPDATA%\Snapture\settings.json`:
+Installed builds use `%APPDATA%\Snapture\settings.json`. Portable builds use `SnaptureData\settings.json` beside the executable:
 
 ```json
 {
@@ -232,6 +234,7 @@ Snapture.sln
 │     │  ├─ HotkeyService              ← RegisterHotKey on a message-only window
 │     │  ├─ ClipboardIntegrationService ← Markdown links + vault-safe PNG copies
 │     │  ├─ SettingsService            ← JSON load/save
+│     │  ├─ PortableMode               ← --portable + Snapture.ini data-root resolver
 │     │  ├─ TrayIconHost               ← NotifyIcon + context menu
 │     │  ├─ AppIdentity                ← Sets AUMID for borderless-consent persistence
 │     │  ├─ BorderlessConsent          ← Win11 22H2+ first-run prompt

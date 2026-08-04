@@ -11,8 +11,7 @@ public static class CapturePresetService
 {
     public const string CustomKey = "custom";
 
-    private static readonly string CaptureRoot = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Snapture");
+    private static string CaptureRoot => PortableMode.DefaultOutputDirectory;
 
     public static IReadOnlyList<CapturePresetDefinition> Presets { get; } =
     [

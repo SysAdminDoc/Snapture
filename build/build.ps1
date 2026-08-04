@@ -273,6 +273,7 @@ function New-VelopackPackage {
         --releaseNotes "$root\CHANGELOG.md" `
         --mainExe Snapture.App.exe
     if ($LASTEXITCODE -ne 0) { throw 'Velopack pack failed.' }
+    Add-PortableMarkerToArchive (Join-Path $velopackRoot "SysAdminDoc.Snapture-$channel-Portable.zip")
     $expectedAssets = @(
         "SysAdminDoc.Snapture-$version-$channel-full.nupkg",
         "SysAdminDoc.Snapture-$channel-Portable.zip",
@@ -294,6 +295,33 @@ function New-VelopackPackage {
     }
     Write-Host "==> Wrote Velopack release assets to $velopackRoot" -ForegroundColor Green
     Write-Host '    Signing intentionally omitted; release signing remains an operator-controlled step.' -ForegroundColor Yellow
+}
+
+function Add-PortableMarkerToArchive([string]$ArchivePath) {
+    if (-not (Test-Path -LiteralPath $ArchivePath)) { throw "Portable archive '$ArchivePath' was not found." }
+    $stage = Join-Path (Split-Path -Parent $ArchivePath) ([System.IO.Path]::GetRandomFileName())
+    $rewritten = "$ArchivePath.rewritten.zip"
+    try {
+        New-Item -ItemType Directory -Path $stage -Force | Out-Null
+        Expand-Archive -LiteralPath $ArchivePath -DestinationPath $stage -Force
+        Copy-Item -LiteralPath (Join-Path $root 'packaging\portable\Snapture.ini') `
+            -Destination (Join-Path $stage 'Snapture.ini') -Force
+        if (Test-Path -LiteralPath $rewritten) { [System.IO.File]::Delete($rewritten) }
+        Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $rewritten -Force
+        Move-Item -LiteralPath $rewritten -Destination $ArchivePath -Force
+        $archive = [System.IO.Compression.ZipFile]::OpenRead($ArchivePath)
+        try {
+            if ($null -eq $archive.GetEntry('Snapture.ini')) {
+                throw "Portable archive '$ArchivePath' is missing Snapture.ini."
+            }
+        }
+        finally { $archive.Dispose() }
+        Write-Host "    Added Snapture.ini portable marker to $(Split-Path -Leaf $ArchivePath)" -ForegroundColor Green
+    }
+    finally {
+        if (Test-Path -LiteralPath $stage) { [System.IO.Directory]::Delete($stage, $true) }
+        if (Test-Path -LiteralPath $rewritten) { [System.IO.File]::Delete($rewritten) }
+    }
 }
 
 function Get-FileSha256([string]$Path) {
@@ -498,6 +526,7 @@ if ($Publish) {
         $zip = Join-Path $root "publish\Snapture-v$version-$Runtime.zip"
         if (Test-Path $zip) { Remove-Item $zip -Force }
         Compress-Archive -Path "$out\*" -DestinationPath $zip -Force
+        Add-PortableMarkerToArchive $zip
         $sha = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
         Set-Content -Path "$zip.sha256" -Value "$sha  $(Split-Path -Leaf $zip)"
         Write-Host "==> Wrote $zip" -ForegroundColor Green

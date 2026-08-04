@@ -23,6 +23,9 @@ public partial class App : Application
             return;
         }
 
+        // Resolve portable storage before any settings, history, logging, or plugin service is created.
+        PortableMode.Initialize(e.Args);
+
         if (CliCommandLine.IsCliRequest(e.Args))
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
@@ -201,8 +204,7 @@ public partial class App : Application
         try
         {
             var dir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "Snapture", "crashes");
+                PortableMode.LocalDataDirectory, "crashes");
             Directory.CreateDirectory(dir);
             var path = Path.Combine(dir, $"crash_{DateTime.Now:yyyyMMdd_HHmmss}.txt");
             var sb = new System.Text.StringBuilder();
@@ -222,8 +224,7 @@ public partial class App : Application
     private static void ConfigureLogging(string[] args)
     {
         var logDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Snapture", "logs");
+            PortableMode.LocalDataDirectory, "logs");
 
         var level = args.Contains("--verbose", StringComparer.OrdinalIgnoreCase)
             ? LogEventLevel.Debug

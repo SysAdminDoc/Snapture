@@ -7,15 +7,13 @@ using Snapture.Plugin;
 namespace Snapture.App.Services;
 
 /// <summary>
-/// Discovers and loads plugin assemblies from <c>%APPDATA%\Snapture\Plugins\*.dll</c>. Each
+/// Discovers and loads plugin assemblies from Snapture's user-data <c>Plugins\*.dll</c> folder. Each
 /// plugin is hosted in its own collectible <see cref="AssemblyLoadContext"/> so it can be
 /// hot-reloaded without restarting Snapture.
 /// </summary>
 public sealed class PluginLoader : IDisposable
 {
-    public static string PluginsDirectory { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "Snapture", "Plugins");
+    public static string PluginsDirectory => Path.Combine(PortableMode.LocalDataDirectory, "Plugins");
 
     public sealed record LoadedPlugin(
         LoadedPluginInfo Info,

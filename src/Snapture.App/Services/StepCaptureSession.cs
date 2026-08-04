@@ -51,8 +51,7 @@ public sealed class StepCaptureSession : IDisposable
         _engine = engine;
         var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
         SessionFolder = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Snapture", "step-sessions", stamp);
+            PortableMode.LocalDataDirectory, "step-sessions", stamp);
         Directory.CreateDirectory(SessionFolder);
     }
 

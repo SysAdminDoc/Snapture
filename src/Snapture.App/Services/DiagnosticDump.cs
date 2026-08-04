@@ -66,9 +66,7 @@ public static class DiagnosticDump
 
     private static void AddLogs(ZipArchive zip)
     {
-        var logDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "Snapture", "logs");
+        var logDir = Path.Combine(PortableMode.LocalDataDirectory, "logs");
         if (!Directory.Exists(logDir)) return;
 
         foreach (var logFile in Directory.EnumerateFiles(logDir, "snapture-*.log"))

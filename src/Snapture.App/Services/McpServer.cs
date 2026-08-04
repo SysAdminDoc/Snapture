@@ -1273,6 +1273,7 @@ internal static class McpToolOperations
     {
         var roots = new List<string>
         {
+            PortableMode.LocalDataDirectory,
             Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
@@ -1301,7 +1302,7 @@ internal static class McpToolOperations
     private static string CreateRedactedPath(string sourcePath, SettingsService settings)
     {
         string folder = string.IsNullOrWhiteSpace(settings.Current.OutputFolder)
-            ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Snapture")
+            ? PortableMode.DefaultOutputDirectory
             : settings.Current.OutputFolder;
         string stem = Path.GetFileNameWithoutExtension(sourcePath);
         string candidate = Path.Combine(folder, stem + "_redacted.png");

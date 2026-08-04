@@ -9,8 +9,7 @@ public sealed class SnaptureSettings
 {
     public int SchemaVersion { get; set; } = 1;
 
-    public string OutputFolder { get; set; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Snapture");
+    public string OutputFolder { get; set; } = PortableMode.DefaultOutputDirectory;
 
     public string FilenamePattern { get; set; } = "Snapture_{yyyy-MM-dd}_{HH-mm-ss}";
 
@@ -142,12 +141,8 @@ public sealed record HotkeyBinding(uint Modifiers, string KeyName);
 
 public sealed class SettingsService
 {
-    private static readonly string Dir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Snapture");
-
-    private static readonly string FilePath = Path.Combine(Dir, "settings.json");
-
-    public static string GetFilePath() => FilePath;
+    public static string GetFilePath() =>
+        Path.Combine(PortableMode.SettingsDirectory, "settings.json");
 
     private static readonly JsonSerializerOptions JsonOpts = new()
     {
@@ -162,8 +157,9 @@ public sealed class SettingsService
     {
         try
         {
-            if (!File.Exists(FilePath)) { Save(); return; }
-            var json = File.ReadAllText(FilePath);
+            string path = GetFilePath();
+            if (!File.Exists(path)) { Save(); return; }
+            var json = File.ReadAllText(path);
             Current = JsonSerializer.Deserialize<SnaptureSettings>(json, JsonOpts) ?? new SnaptureSettings();
             Current.PerAppCaptureProfiles ??= new();
         }
@@ -174,9 +170,9 @@ public sealed class SettingsService
     {
         try
         {
-            Directory.CreateDirectory(Dir);
+            Directory.CreateDirectory(PortableMode.SettingsDirectory);
             var json = JsonSerializer.Serialize(Current, JsonOpts);
-            File.WriteAllText(FilePath, json);
+            File.WriteAllText(GetFilePath(), json);
         }
         catch { /* non-fatal */ }
     }

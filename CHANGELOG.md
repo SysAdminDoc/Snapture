@@ -2,6 +2,11 @@
 
 All notable changes to Snapture will be documented in this file.
 
+### Added — Portable mode
+
+- `--portable` is now a startup modifier for GUI, CLI, URI, and conversion flows; portable archives include a colocated `Snapture.ini` marker and keep settings, history, plugins, logs, autosave, crash data, and temporary capture artifacts under `SnaptureData` beside the executable.
+- Added portable-mode path coverage and archive verification while keeping installed Velopack packages on the normal per-user data roots.
+
 ### Added — Opt-in local MCP server
 
 - Added a loopback-only Streamable HTTP MCP endpoint at `/mcp` with metadata-first tools for region, window, monitor, UI Automation element, scrolling capture, local OCR, history search, window/monitor discovery, and Auto-redact.

@@ -525,6 +525,7 @@ public static class OcrService
 
         foreach (var dataRoot in new[]
         {
+            PortableMode.LocalDataDirectory,
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData)
         })

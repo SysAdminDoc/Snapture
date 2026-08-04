@@ -408,7 +408,7 @@ public partial class SettingsWindow : Window
             this,
             Directory.Exists(OutputFolderBox.Text)
                 ? OutputFolderBox.Text
-                : Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
+                : PortableMode.DefaultOutputDirectory,
             "Pick a folder for new captures");
         if (path is not null)
             OutputFolderBox.Text = path;
