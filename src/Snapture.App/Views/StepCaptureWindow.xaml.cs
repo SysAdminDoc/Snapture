@@ -202,6 +202,73 @@ public partial class StepCaptureWindow : Window
         }
     }
 
+    private void OnExportDocxClicked(object sender, RoutedEventArgs e) =>
+        ExportOfficeDocument(pptx: false);
+
+    private void OnExportPptxClicked(object sender, RoutedEventArgs e) =>
+        ExportOfficeDocument(pptx: true);
+
+    private void ExportOfficeDocument(bool pptx)
+    {
+        if (_session is null || _session.Frames.Count == 0)
+        {
+            StatusText.Text = "Nothing to export — record some steps first.";
+            return;
+        }
+
+        var extension = pptx ? ".pptx" : ".docx";
+        var label = pptx ? "PowerPoint" : "Word";
+        var dlg = new SaveFileDialog
+        {
+            Filter = pptx
+                ? "PowerPoint presentation (*.pptx)|*.pptx"
+                : "Word document (*.docx)|*.docx",
+            DefaultExt = extension,
+            AddExtension = true,
+            FileName = $"{SafeFileName(TitleBox.Text)}{extension}",
+            InitialDirectory = _session.SessionFolder,
+            Title = $"Choose output location for the {label} document"
+        };
+        if (dlg.ShowDialog(this) != true) return;
+
+        var entries = BuildExportEntries();
+        try
+        {
+            var path = pptx
+                ? StepCaptureOfficeExporter.ExportPptx(dlg.FileName, TitleBox.Text, entries)
+                : StepCaptureOfficeExporter.ExportDocx(dlg.FileName, TitleBox.Text, entries);
+            StatusText.Text = $"Exported {label}: {path}";
+            try
+            {
+                Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"")
+                {
+                    UseShellExecute = true
+                });
+            }
+            catch { }
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"{label} export failed: {ex.Message}";
+        }
+    }
+
+    private List<StepCaptureExporter.StepEntry> BuildExportEntries() =>
+        _session!.Frames
+            .Select(f => new StepCaptureExporter.StepEntry(
+                f.Number,
+                f.FilePath,
+                _captionBoxes.TryGetValue(f.Number, out var box) ? box.Text : string.Empty))
+            .ToList();
+
+    private static string SafeFileName(string? value)
+    {
+        var candidate = string.IsNullOrWhiteSpace(value) ? "steps" : value.Trim();
+        foreach (var invalid in Path.GetInvalidFileNameChars())
+            candidate = candidate.Replace(invalid, '_');
+        return candidate.Length > 80 ? candidate[..80].TrimEnd() : candidate;
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         _session?.Dispose();

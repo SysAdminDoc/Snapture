@@ -18,38 +18,51 @@
 
         <Border Grid.Row="0"
                 Style="{StaticResource HeaderBar}">
-            <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Left"
-                            Margin="0,0,18,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0"
+                            VerticalAlignment="Center">
                     <TextBlock Text="Step Capture"
                                Style="{StaticResource WindowTitleText}"
                                Foreground="{DynamicResource AppAccent}" />
-                    <TextBlock Text="Record a workflow, caption each step, then export a Markdown bundle."
+                    <TextBlock Text="Record a workflow, caption each step, then export Markdown, Word, or PowerPoint."
                                Style="{StaticResource HelpText}"
                                Margin="0,4,0,0" />
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button x:Name="StartStopButton"
+                                Content="Start recording"
+                                Style="{StaticResource AccentButton}"
+                                Click="OnStartStopClicked" />
+                        <TextBlock x:Name="StatusText"
+                                   Foreground="{DynamicResource AppMutedForeground}"
+                                   VerticalAlignment="Center"
+                                   Margin="14,0,0,0" />
+                    </StackPanel>
                 </StackPanel>
-                <Button x:Name="StartStopButton"
-                        DockPanel.Dock="Left"
-                        Content="Start recording"
-                        Style="{StaticResource AccentButton}"
-                        Click="OnStartStopClicked" />
-                <TextBlock x:Name="StatusText"
-                           Foreground="{DynamicResource AppMutedForeground}"
-                           VerticalAlignment="Center"
-                           Margin="14,0,0,0"
-                           DockPanel.Dock="Left" />
-                <StackPanel Orientation="Horizontal"
-                            HorizontalAlignment="Right"
-                            DockPanel.Dock="Right">
+                <StackPanel Grid.Column="1"
+                            Orientation="Horizontal"
+                            VerticalAlignment="Center"
+                            Margin="18,0,0,0">
                     <TextBox x:Name="TitleBox"
-                             Width="260"
-                             ToolTip="Document title used in the exported Markdown"
+                             Width="220"
+                             ToolTip="Document title used in the exported documents"
                              Text="My step-by-step guide" />
                     <Button x:Name="ExportButton"
                             Content="Export Markdown"
                             Click="OnExportClicked" />
+                    <Button x:Name="ExportDocxButton"
+                            Content="Export DOCX"
+                            Click="OnExportDocxClicked"
+                            ToolTip="Export an editable Word document with each step image and caption." />
+                    <Button x:Name="ExportPptxButton"
+                            Content="Export PPTX"
+                            Click="OnExportPptxClicked"
+                            ToolTip="Export a title slide and editable step slides for PowerPoint." />
                 </StackPanel>
-            </DockPanel>
+            </Grid>
         </Border>
 
         <Grid Grid.Row="1" Background="{DynamicResource AppCanvas}">

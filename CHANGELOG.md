@@ -7,6 +7,10 @@ All notable changes to Snapture will be documented in this file.
 - OCR now discovers or accepts a user-supplied `sponeocr.exe` sidecar that follows the community OneOCR pattern (`stdin stdout`). Images remain local, the process is launched without a shell, and bounded timeout/output guards fail back cleanly to RapidOCR.
 - The Windows Snipping Tool DLLs and `.onemodel` are intentionally not redistributed. Settings exposes the optional executable path and reports whether the sidecar is available.
 
+### Added — Step Capture Office exports
+
+- Step Capture now exports editable Word documents and PowerPoint presentations with a title slide, editable captions, and embedded step images alongside the existing Markdown bundle.
+
 ### Added — OCR text overlays
 
 - The editor can now turn positioned OCR lines into editable `TextShape` annotations. Each overlay is anchored to its source image region, adapts between dark/light text for contrast, and lands as one undoable batch; text-only OCR engines report that positions are unavailable instead of guessing.
