@@ -44,7 +44,8 @@ public sealed class AppHost : IDisposable
             log: msg => System.Diagnostics.Debug.WriteLine($"[plugin] {msg}"));
         Plugins = new PluginLoader(
             PluginHost,
-            manifest => PluginCapabilityPolicy.IsApproved(Settings.Current, manifest));
+            manifest => PluginCapabilityPolicy.IsApproved(Settings.Current, manifest),
+            isArtifactTrusted: manifest => PluginArtifactTrustPolicy.IsApproved(Settings.Current, manifest));
         Orchestrator = new CaptureOrchestrator(Settings, Engine, History);
         Mcp = new McpServer(
             Settings,

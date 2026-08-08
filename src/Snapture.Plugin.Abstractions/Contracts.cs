@@ -251,11 +251,13 @@ public sealed class LoadedPluginInfo
     public IReadOnlyList<string> ContractTypes { get; }
     public string? MinHostVersion { get; }
     public string? MaxHostVersion { get; }
+    public string Sha256 { get; }
 
     public LoadedPluginInfo(string assemblyPath, string name, string author, string version,
-                             string description, PluginCapability capabilities,
-                             IReadOnlyList<string> contractTypes,
-                             string? minHostVersion = null, string? maxHostVersion = null)
+                              string description, PluginCapability capabilities,
+                              IReadOnlyList<string> contractTypes,
+                              string? minHostVersion = null, string? maxHostVersion = null,
+                              string sha256 = "")
     {
         AssemblyPath = assemblyPath;
         Name = name;
@@ -266,5 +268,6 @@ public sealed class LoadedPluginInfo
         ContractTypes = contractTypes;
         MinHostVersion = minHostVersion;
         MaxHostVersion = maxHostVersion;
+        Sha256 = sha256;
     }
 }

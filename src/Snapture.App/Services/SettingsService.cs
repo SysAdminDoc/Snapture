@@ -72,7 +72,7 @@ public sealed class SnaptureSettings
     public bool McpEnabled { get; set; } = false;
     public int McpPort { get; set; } = 9287;
 
-    /// <summary>Capability-manifest approvals keyed to plugin name, version, and capability set.</summary>
+    /// <summary>Plugin trust and capability approvals keyed to exact artifact metadata.</summary>
     public List<string> ApprovedPluginManifests { get; set; } = new();
 
     /// <summary>Explicit local CLI destinations available from the editor.</summary>

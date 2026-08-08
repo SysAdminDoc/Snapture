@@ -9,7 +9,8 @@ namespace Snapture.App.Services;
 /// <summary>
 /// Discovers and loads plugin assemblies from Snapture's user-data <c>Plugins\*.dll</c> folder. Each
 /// plugin is hosted in its own collectible <see cref="AssemblyLoadContext"/> so it can be
-/// hot-reloaded without restarting Snapture.
+/// hot-reloaded without restarting Snapture. Production hosts must provide an exact-artifact trust
+/// callback; this is an integrity allowlist and does not sandbox in-process plugin code.
 /// </summary>
 public sealed class PluginLoader : IDisposable
 {
@@ -32,11 +33,13 @@ public sealed class PluginLoader : IDisposable
         string Description,
         PluginCapability Capabilities,
         string? MinHostVersion,
-        string? MaxHostVersion);
+        string? MaxHostVersion,
+        string Sha256 = "");
 
     private readonly List<LoadedPlugin> _plugins = new();
     private readonly IPluginHost _host;
     private readonly Func<PluginManifestInfo, bool>? _isCapabilityApproved;
+    private readonly Func<PluginManifestInfo, bool>? _isArtifactTrusted;
     private readonly string _pluginsDirectory;
 
     public IReadOnlyList<LoadedPlugin> All => _plugins;
@@ -44,10 +47,12 @@ public sealed class PluginLoader : IDisposable
     public PluginLoader(
         IPluginHost host,
         Func<PluginManifestInfo, bool>? isCapabilityApproved = null,
-        string? pluginsDirectory = null)
+        string? pluginsDirectory = null,
+        Func<PluginManifestInfo, bool>? isArtifactTrusted = null)
     {
         _host = host;
         _isCapabilityApproved = isCapabilityApproved;
+        _isArtifactTrusted = isArtifactTrusted;
         _pluginsDirectory = Path.GetFullPath(pluginsDirectory ?? PluginsDirectory);
         Directory.CreateDirectory(_pluginsDirectory);
     }
@@ -92,6 +97,7 @@ public sealed class PluginLoader : IDisposable
 
     public LoadedPlugin? LoadOne(string dllPath)
     {
+        string artifactPath = Path.GetFullPath(dllPath);
         var ctx = new AssemblyLoadContext($"snapture-plugin:{Path.GetFileNameWithoutExtension(dllPath)}",
                                           isCollectible: true);
         // Resolve referenced Snapture.Plugin.Abstractions to the host's already-loaded copy
@@ -106,7 +112,7 @@ public sealed class PluginLoader : IDisposable
         Assembly asm;
         try
         {
-            using var fs = File.OpenRead(dllPath);
+            using var fs = File.OpenRead(artifactPath);
             asm = ctx.LoadFromStream(fs);
         }
         catch
@@ -133,9 +139,21 @@ public sealed class PluginLoader : IDisposable
             attr.Description,
             attr.Capabilities,
             attr.MinHostVersion,
-            attr.MaxHostVersion);
+            attr.MaxHostVersion,
+            PluginArtifactTrustPolicy.ComputeSha256(artifactPath));
 
         var hostVersion = typeof(PluginLoader).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
+        if (_isArtifactTrusted is not null && !_isArtifactTrusted(manifest))
+        {
+            ctx.Unload();
+            string message = $"Plugin skipped (artifact trust not approved): {attr.Name} v{attr.Version} SHA-256 {manifest.Sha256}";
+            _host.Log(message);
+            Log.Warning("Plugin.SkippedUntrustedArtifact {PluginName} {PluginVersion} {Sha256}",
+                attr.Name,
+                attr.Version,
+                manifest.Sha256);
+            return null;
+        }
         if (!PluginCompatibility.TryValidate(
                 attr.MinHostVersion,
                 attr.MaxHostVersion,
@@ -168,8 +186,8 @@ public sealed class PluginLoader : IDisposable
         var configurables = InstantiateAll<IPluginConfigurable>(asm, contracts);
 
         var info = new LoadedPluginInfo(
-            dllPath, attr.Name, attr.Author, attr.Version, attr.Description,
-            attr.Capabilities, contracts, attr.MinHostVersion, attr.MaxHostVersion);
+            artifactPath, attr.Name, attr.Author, attr.Version, attr.Description,
+            attr.Capabilities, contracts, attr.MinHostVersion, attr.MaxHostVersion, manifest.Sha256);
 
         var pluginHost = _host is PluginHostBridge bridge
             ? bridge.ForPlugin(attr.Name)
@@ -182,8 +200,21 @@ public sealed class PluginLoader : IDisposable
         return loaded;
     }
 
-    /// <summary>Install a user-selected DLL, replacing the same plugin by declared name.</summary>
-    public LoadedPlugin InstallOrUpdate(string sourcePath)
+    /// <summary>Install a user-selected, already trusted DLL, replacing the same plugin by name.</summary>
+    public LoadedPlugin InstallOrUpdate(string sourcePath) =>
+        InstallOrUpdateCore(sourcePath, LoadOne);
+
+    internal LoadedPlugin InstallOrUpdateWithLoader(
+        string sourcePath,
+        Func<string, LoadedPlugin?> load)
+    {
+        ArgumentNullException.ThrowIfNull(load);
+        return InstallOrUpdateCore(sourcePath, load);
+    }
+
+    private LoadedPlugin InstallOrUpdateCore(
+        string sourcePath,
+        Func<string, LoadedPlugin?> load)
     {
         string source = Path.GetFullPath(sourcePath);
         if (!File.Exists(source)) throw new FileNotFoundException("The selected plugin DLL does not exist.", source);
@@ -192,6 +223,9 @@ public sealed class PluginLoader : IDisposable
 
         var manifest = ReadManifest(source);
         var hostVersion = typeof(PluginLoader).Assembly.GetName().Version ?? new Version(0, 0, 0, 0);
+        if (_isArtifactTrusted is not null && !_isArtifactTrusted(manifest))
+            throw new InvalidOperationException(
+                $"Plugin '{manifest.Name}' is not trusted. Approve the exact SHA-256 artifact before installation.");
         if (!PluginCompatibility.TryValidate(manifest.MinHostVersion, manifest.MaxHostVersion, hostVersion, out var reason))
             throw new InvalidDataException($"Plugin '{manifest.Name}' is incompatible: {reason}");
         if (manifest.Capabilities != PluginCapability.None
@@ -224,7 +258,7 @@ public sealed class PluginLoader : IDisposable
             File.Copy(source, temporary, overwrite: true);
             File.Move(temporary, destination, overwrite: true);
 
-            var loaded = LoadOne(destination)
+            var loaded = load(destination)
                 ?? throw new InvalidDataException($"Plugin '{manifest.Name}' could not be loaded after installation.");
             if (File.Exists(backup)) File.Delete(backup);
             return loaded;
@@ -311,7 +345,8 @@ public sealed class PluginLoader : IDisposable
                 attr.Description,
                 attr.Capabilities,
                 attr.MinHostVersion,
-                attr.MaxHostVersion);
+                attr.MaxHostVersion,
+                PluginArtifactTrustPolicy.ComputeSha256(dllPath));
         }
         finally { context.Unload(); }
     }

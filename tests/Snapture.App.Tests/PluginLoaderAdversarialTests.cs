@@ -13,7 +13,7 @@ public sealed class PluginLoaderAdversarialTests
         string root = CreateRoot();
         try
         {
-            using var loader = new PluginLoader(new TestHost(), _ => false, root);
+            using var loader = new PluginLoader(new TestHost(), _ => false, root, _ => true);
             Assert.IsNull(loader.LoadOne(typeof(AdversarialProcessor).Assembly.Location));
             Assert.IsEmpty(loader.All);
         }
@@ -26,7 +26,7 @@ public sealed class PluginLoaderAdversarialTests
         string root = CreateRoot();
         try
         {
-            using var loader = new PluginLoader(new TestHost(), _ => true, root);
+            using var loader = new PluginLoader(new TestHost(), _ => true, root, _ => true);
             var loaded = loader.LoadOne(typeof(AdversarialProcessor).Assembly.Location);
             Assert.IsNotNull(loaded);
             Assert.HasCount(1, loaded.CaptureProcessors);
@@ -53,11 +53,79 @@ public sealed class PluginLoaderAdversarialTests
         try
         {
             File.WriteAllBytes(path, new byte[] { 0x4D, 0x5A, 0x00, 0x01, 0xFF });
-            using var loader = new PluginLoader(new TestHost(), _ => true, root);
+            using var loader = new PluginLoader(new TestHost(), _ => true, root, _ => true);
             Assert.Throws<BadImageFormatException>(() => loader.LoadOne(path));
             Assert.IsEmpty(loader.All);
         }
         finally { DeleteRoot(root); }
+    }
+
+    [TestMethod]
+    public void ArtifactTrustIsEnforcedBeforeActivation()
+    {
+        string root = CreateRoot();
+        try
+        {
+            using var loader = new PluginLoader(new TestHost(), _ => true, root, _ => false);
+            Assert.IsNull(loader.LoadOne(typeof(AdversarialProcessor).Assembly.Location));
+            Assert.IsEmpty(loader.All);
+        }
+        finally { DeleteRoot(root); }
+    }
+
+    [TestMethod]
+    public void FailedUpdateRestoresPreviousArtifactAndCleansStaging()
+    {
+        string root = CreateRoot();
+        string sourceRoot = CreateRoot();
+        string source = Path.Combine(sourceRoot, "candidate.dll");
+        string replacement = Path.Combine(sourceRoot, "replacement.dll");
+        try
+        {
+            string fixture = typeof(AdversarialProcessor).Assembly.Location;
+            File.Copy(fixture, source);
+            File.Copy(fixture, replacement);
+            using var loader = new PluginLoader(new TestHost(), _ => true, root, _ => true);
+            var installed = loader.InstallOrUpdate(source);
+            byte[] previous = File.ReadAllBytes(installed.Info.AssemblyPath);
+
+            Assert.ThrowsExactly<InvalidDataException>(() => loader.InstallOrUpdateWithLoader(replacement, _ => null));
+
+            Assert.HasCount(1, loader.All);
+            CollectionAssert.AreEqual(previous, File.ReadAllBytes(installed.Info.AssemblyPath));
+            Assert.IsFalse(Directory.EnumerateFiles(root, "*.backup-*.tmp").Any());
+            Assert.IsFalse(Directory.EnumerateFiles(root, "*.install-*.tmp").Any());
+        }
+        finally
+        {
+            DeleteRoot(root);
+            DeleteRoot(sourceRoot);
+        }
+    }
+
+    [TestMethod]
+    public void UninstallRemovesTheArtifactAndUnloadEntry()
+    {
+        string root = CreateRoot();
+        string sourceRoot = CreateRoot();
+        string source = Path.Combine(sourceRoot, "candidate.dll");
+        try
+        {
+            File.Copy(typeof(AdversarialProcessor).Assembly.Location, source);
+            using var loader = new PluginLoader(new TestHost(), _ => true, root, _ => true);
+            var installed = loader.InstallOrUpdate(source);
+            string installedPath = installed.Info.AssemblyPath;
+
+            Assert.IsTrue(loader.Uninstall(installed));
+            Assert.IsFalse(File.Exists(installedPath));
+            Assert.IsEmpty(loader.All);
+            Assert.IsFalse(loader.Uninstall(installed));
+        }
+        finally
+        {
+            DeleteRoot(root);
+            DeleteRoot(sourceRoot);
+        }
     }
 
     private static string CreateRoot()

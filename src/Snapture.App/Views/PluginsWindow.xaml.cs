@@ -79,6 +79,16 @@ public partial class PluginsWindow : Window
             };
             capabilities.SetResourceReference(TextBlock.ForegroundProperty, "AppMutedForeground");
             stack.Children.Add(capabilities);
+            var trust = new TextBlock
+            {
+                Text = $"Trust: exact artifact approved · SHA-256 {p.Info.Sha256}\nRuns in-process; capability consent is not an OS sandbox.",
+                FontFamily = new FontFamily("Cascadia Code, Consolas, monospace"),
+                FontSize = 11,
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 0, 0, 6)
+            };
+            trust.SetResourceReference(TextBlock.ForegroundProperty, "AppWarning");
+            stack.Children.Add(trust);
             if (!string.IsNullOrWhiteSpace(p.Info.MinHostVersion) ||
                 !string.IsNullOrWhiteSpace(p.Info.MaxHostVersion))
             {
@@ -192,13 +202,39 @@ public partial class PluginsWindow : Window
         try
         {
             var manifest = PluginLoader.InspectManifest(path);
+            bool settingsChanged = false;
+            var trustState = PluginArtifactTrustPolicy.GetState(App.Host.Settings.Current, manifest);
+            if (trustState != PluginTrustState.Approved)
+            {
+                string state = trustState switch
+                {
+                    PluginTrustState.ArtifactChanged => "The artifact hash changed since the previous approval.",
+                    PluginTrustState.VersionChanged => "The plugin version changed since the previous approval.",
+                    _ => "This artifact has not been approved before."
+                };
+                var answer = MessageBox.Show(
+                    $"{manifest.Name} v{manifest.Version}\n\n" +
+                    $"SHA-256:\n{manifest.Sha256}\n\n" +
+                    $"{state}\n\n" +
+                    "This DLL will run as in-process .NET code. Approving the artifact verifies only this exact hash; it does not create an OS sandbox. Capability consent is reviewed separately. Install and trust this artifact?",
+                    "Review plugin artifact trust",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+                if (answer != MessageBoxResult.Yes)
+                {
+                    StatusText.Text = "Plugin installation cancelled; the artifact was not trusted.";
+                    return;
+                }
+                PluginArtifactTrustPolicy.Approve(App.Host.Settings.Current, manifest);
+                settingsChanged = true;
+            }
             if (manifest.Capabilities != Snapture.Plugin.PluginCapability.None
                 && !PluginCapabilityPolicy.IsApproved(App.Host.Settings.Current, manifest))
             {
                 var answer = MessageBox.Show(
                     $"{manifest.Name} v{manifest.Version} requests:\n\n" +
                     $"{manifest.Capabilities}\n\n" +
-                    "Approve these declared capabilities for this plugin version and install it?",
+                    "This is capability consent only. It does not sandbox the already trusted in-process DLL. Approve these declared capabilities for this plugin version and install it?",
                     "Review plugin capabilities",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
@@ -208,8 +244,9 @@ public partial class PluginsWindow : Window
                     return;
                 }
                 PluginCapabilityPolicy.Approve(App.Host.Settings.Current, manifest);
-                App.Host.Settings.Save();
+                settingsChanged = true;
             }
+            if (settingsChanged) App.Host.Settings.Save();
             var installed = App.Host.Plugins.InstallOrUpdate(path);
             Refresh();
             StatusText.Text = $"Installed {installed.Info.Name} v{installed.Info.Version}.";
