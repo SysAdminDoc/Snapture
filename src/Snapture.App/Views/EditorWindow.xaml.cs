@@ -1696,23 +1696,32 @@ public partial class EditorWindow : Window
             using var image = SKImage.FromBitmap(flattened);
             using var data = image.Encode(SKEncodedImageFormat.Png, 100);
             string fileName = BuildUploadFileName();
+            var request = new DeclarativeUploaderRequest(
+                data.ToArray(),
+                fileName,
+                _captureResult?.Source ?? "Editor",
+                _doc.Width,
+                _doc.Height,
+                DateTime.UtcNow);
+            if (MessageBox.Show(
+                    DialogOwner,
+                    DeclarativeUploaderService.BuildDestinationPreview(profile, request),
+                    "Confirm upload",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                StatusText.Text = "Upload canceled.";
+                return;
+            }
             StatusText.Text = $"Uploading to {profile.Name}…";
-            var result = await DeclarativeUploaderService.UploadAsync(
-                profile,
-                new DeclarativeUploaderRequest(
-                    data.ToArray(),
-                    fileName,
-                    _captureResult?.Source ?? "Editor",
-                    _doc.Width,
-                    _doc.Height,
-                    DateTime.UtcNow));
+            var result = await DeclarativeUploaderService.UploadAsync(profile, request);
             StatusText.Text = result.Succeeded
                 ? result.Url is { Length: > 0 } url ? $"Uploaded: {url}" : $"{profile.Name} completed."
                 : $"Upload failed: {result.ErrorMessage ?? $"HTTP {result.StatusCode}"}";
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Upload failed: {ex.Message}";
+            StatusText.Text = $"Upload failed: {OutboundDataFlowAudit.RedactSensitive(ex.Message)}";
         }
     }
 
@@ -1769,6 +1778,16 @@ public partial class EditorWindow : Window
                 _doc.Width,
                 _doc.Height,
                 DateTime.UtcNow);
+            if (MessageBox.Show(
+                    DialogOwner,
+                    SelfHostedDestinationService.BuildDestinationPreview(destination.Value, host.Settings.Current, request),
+                    "Confirm self-hosted upload",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            {
+                StatusText.Text = "Upload canceled.";
+                return;
+            }
             StatusText.Text = $"Uploading to {destination.Value}…";
             var result = destination.Value == SelfHostedDestinationKind.Nextcloud
                 ? await SelfHostedDestinationService.UploadNextcloudAsync(host.Settings.Current.Nextcloud, credential, request)
@@ -1779,7 +1798,7 @@ public partial class EditorWindow : Window
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Upload failed: {ex.Message}";
+            StatusText.Text = $"Upload failed: {OutboundDataFlowAudit.RedactSensitive(ex.Message)}";
         }
     }
 

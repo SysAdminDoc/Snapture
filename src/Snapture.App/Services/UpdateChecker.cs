@@ -51,8 +51,9 @@ public static class UpdateChecker
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "UpdateChecker.Failed");
-            return new UpdateResult(false, current, current, null, Error: ex.Message);
+            string error = OutboundDataFlowAudit.RedactSensitive(ex.Message);
+            Log.Warning("UpdateChecker.Failed {Error}", error);
+            return new UpdateResult(false, current, current, null, Error: error);
         }
     }
 

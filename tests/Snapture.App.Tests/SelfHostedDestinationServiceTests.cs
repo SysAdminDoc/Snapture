@@ -72,6 +72,52 @@ public sealed class SelfHostedDestinationServiceTests
         CollectionAssert.AreEqual(Array.Empty<SelfHostedDestinationKind>(), SelfHostedDestinationService.EnabledDestinations(settings).ToArray());
     }
 
+    [TestMethod]
+    public void DestinationPreviewShowsRemotePathAndHidesCredential()
+    {
+        var settings = new SnaptureSettings
+        {
+            Nextcloud = new NextcloudDestinationSettings
+            {
+                Enabled = true,
+                ServerUrl = "http://cloud.example.test",
+                Username = "alice",
+                RemoteFolder = "Snapture"
+            }
+        };
+
+        string preview = SelfHostedDestinationService.BuildDestinationPreview(
+            SelfHostedDestinationKind.Nextcloud,
+            settings,
+            Request());
+
+        StringAssert.Contains(preview, "cloud.example.test/remote.php/dav/files/alice/Snapture/capture.png");
+        StringAssert.Contains(preview, "WARNING: unencrypted HTTP");
+        StringAssert.Contains(preview, "value hidden");
+        Assert.IsFalse(preview.Contains("app-password", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public async Task TransportExceptionIsVisibleWithoutLeakingCredential()
+    {
+        var settings = new NextcloudDestinationSettings
+        {
+            Enabled = true,
+            ServerUrl = "https://cloud.example.test",
+            Username = "alice"
+        };
+
+        var result = await SelfHostedDestinationService.UploadNextcloudAsync(
+            settings,
+            "secret-password",
+            Request(),
+            new HttpClient(new ThrowingHandler()));
+
+        Assert.IsFalse(result.Succeeded);
+        StringAssert.Contains(result.ErrorMessage!, "HTTP request");
+        Assert.IsFalse(result.ErrorMessage!.Contains("secret-password", StringComparison.Ordinal));
+    }
+
     private static SelfHostedUploadRequest Request() => new(
         new byte[] { 1, 2, 3 },
         "capture.png",
@@ -116,4 +162,10 @@ public sealed class SelfHostedDestinationServiceTests
         IReadOnlyDictionary<string, string> Headers,
         byte[] BodyBytes,
         string BodyText);
+
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new HttpRequestException("connection failed; Authorization: Basic secret-password");
+    }
 }

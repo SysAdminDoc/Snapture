@@ -62,6 +62,15 @@ public sealed class PluginDependencyStoreTests
                 "http://example.test/ffmpeg.exe",
                 new string('a', 64),
                 "ffmpeg.exe")));
+
+        await Assert.ThrowsAsync<ArgumentException>(() => new PluginDependencyStore(
+            Path.GetTempPath(),
+            "Tools").EnsureAsync(new PluginDependency(
+                "ffmpeg",
+                "7.1.1",
+                "https://user:password@example.test/ffmpeg.exe",
+                new string('a', 64),
+                "ffmpeg.exe")));
     }
 
     private sealed class Handler : HttpMessageHandler

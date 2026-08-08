@@ -92,6 +92,64 @@ public sealed class DeclarativeUploaderServiceTests
         Assert.AreEqual("https://example.test/a|https://example.test/redirect", value);
     }
 
+    [TestMethod]
+    public void DestinationPreviewShowsEndpointAndDataWithoutHeaderValues()
+    {
+        var profile = new DeclarativeUploaderProfile
+        {
+            Name = "Preview uploader",
+            RequestUrl = "http://upload.example.test/capture",
+            Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer do-not-show" },
+            Body = DeclarativeUploaderBodyTypes.Binary
+        };
+        var request = new DeclarativeUploaderRequest(
+            new byte[2048],
+            "capture.png",
+            "Editor window",
+            80,
+            40,
+            DateTime.UtcNow);
+
+        string preview = DeclarativeUploaderService.BuildDestinationPreview(profile, request);
+
+        StringAssert.Contains(preview, "http://upload.example.test/capture");
+        StringAssert.Contains(preview, "WARNING: unencrypted HTTP");
+        StringAssert.Contains(preview, "2.0 KB");
+        StringAssert.Contains(preview, "values hidden");
+        Assert.IsFalse(preview.Contains("do-not-show", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void RejectsEmbeddedUrlCredentials()
+    {
+        Assert.ThrowsExactly<DeclarativeUploaderException>(() => DeclarativeUploaderService.ValidateProfile(
+            new DeclarativeUploaderProfile
+            {
+                Name = "Embedded credentials",
+                RequestUrl = "https://alice:secret@upload.example.test/capture"
+            }));
+    }
+
+    [TestMethod]
+    public async Task TransportExceptionIsReturnedVisibleWithoutLeakingAuthorization()
+    {
+        var profile = new DeclarativeUploaderProfile
+        {
+            Name = "Failing uploader",
+            RequestUrl = "https://upload.example.test/capture",
+            Headers = new Dictionary<string, string> { ["Authorization"] = "Bearer secret" }
+        };
+
+        var result = await DeclarativeUploaderService.UploadAsync(
+            profile,
+            new DeclarativeUploaderRequest(new byte[] { 1 }, "capture.png", "Editor", 1, 1, DateTime.UtcNow),
+            new HttpClient(new ThrowingHandler()));
+
+        Assert.IsFalse(result.Succeeded);
+        StringAssert.Contains(result.ErrorMessage!, "HTTP request failed");
+        Assert.IsFalse(result.ErrorMessage!.Contains("Bearer secret", StringComparison.Ordinal));
+    }
+
     private static Dictionary<string, string> ParseQuery(string query)
     {
         return query.TrimStart('?')
@@ -121,5 +179,11 @@ public sealed class DeclarativeUploaderServiceTests
                 Content = new StringContent(_response)
             };
         }
+    }
+
+    private sealed class ThrowingHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
+            throw new HttpRequestException("connection failed; Authorization: Bearer secret");
     }
 }

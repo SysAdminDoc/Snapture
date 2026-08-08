@@ -1055,23 +1055,29 @@ public sealed class TrayIconHost : IDisposable
         if (profile is null) return;
         try
         {
-            ShowToast("Uploader", $"Uploading to {profile.Name}…");
-            var result = await DeclarativeUploaderService.UploadAsync(
-                profile,
-                new DeclarativeUploaderRequest(
-                    await SafeImageInput.ReadAllBytesAsync(latest.FilePath),
-                    Path.GetFileName(latest.FilePath),
-                    latest.Source,
-                    latest.Width,
-                    latest.Height,
-                    latest.CapturedAtUtc));
+            var request = new DeclarativeUploaderRequest(
+                await SafeImageInput.ReadAllBytesAsync(latest.FilePath),
+                Path.GetFileName(latest.FilePath),
+                latest.Source,
+                latest.Width,
+                latest.Height,
+                latest.CapturedAtUtc);
+            if (MessageBox.Show(
+                    DeclarativeUploaderService.BuildDestinationPreview(profile, request),
+                    "Confirm upload",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            ShowToast("Uploader", $"Uploading to {OutboundDataFlowAudit.TrimForDisplay(profile.Name)}…");
+            var result = await DeclarativeUploaderService.UploadAsync(profile, request);
             ShowToast(
                 result.Succeeded ? "Upload complete" : "Upload failed",
-                result.Succeeded ? result.Url ?? $"{profile.Name} completed." : result.ErrorMessage ?? $"HTTP {result.StatusCode}");
+                result.Succeeded ? result.Url ?? $"{OutboundDataFlowAudit.TrimForDisplay(profile.Name)} completed." : result.ErrorMessage is { } error ? OutboundDataFlowAudit.RedactSensitive(error) : $"HTTP {result.StatusCode}");
         }
         catch (Exception ex)
         {
-            ShowToast("Upload failed", ex.Message);
+            ShowToast("Upload failed", OutboundDataFlowAudit.RedactSensitive(ex.Message));
         }
     }
 
@@ -1126,7 +1132,6 @@ public sealed class TrayIconHost : IDisposable
         }
         try
         {
-            ShowToast("Self-hosted upload", $"Uploading to {destination}…");
             var request = new SelfHostedUploadRequest(
                 await SafeImageInput.ReadAllBytesAsync(latest.FilePath),
                 Path.GetFileName(latest.FilePath),
@@ -1134,16 +1139,24 @@ public sealed class TrayIconHost : IDisposable
                 latest.Width,
                 latest.Height,
                 latest.CapturedAtUtc);
+            if (MessageBox.Show(
+                    SelfHostedDestinationService.BuildDestinationPreview(destination, App.Host.Settings.Current, request),
+                    "Confirm self-hosted upload",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning) != MessageBoxResult.Yes)
+                return;
+
+            ShowToast("Self-hosted upload", $"Uploading to {destination}…");
             var result = destination == SelfHostedDestinationKind.Nextcloud
                 ? await SelfHostedDestinationService.UploadNextcloudAsync(App.Host.Settings.Current.Nextcloud, credential, request)
                 : await SelfHostedDestinationService.UploadImmichAsync(App.Host.Settings.Current.Immich, credential, request);
             ShowToast(
                 result.Succeeded ? "Upload complete" : "Upload failed",
-                result.Succeeded ? $"Uploaded to {destination}." : result.ErrorMessage ?? $"HTTP {result.StatusCode}");
+                result.Succeeded ? $"Uploaded to {destination}." : result.ErrorMessage is { } error ? OutboundDataFlowAudit.RedactSensitive(error) : $"HTTP {result.StatusCode}");
         }
         catch (Exception ex)
         {
-            ShowToast("Upload failed", ex.Message);
+            ShowToast("Upload failed", OutboundDataFlowAudit.RedactSensitive(ex.Message));
         }
     }
 

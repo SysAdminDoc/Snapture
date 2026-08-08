@@ -75,7 +75,8 @@ public static class SelfHostedDestinationService
     private static readonly HttpClient DefaultHttp = new(new SocketsHttpHandler
     {
         ConnectTimeout = TimeSpan.FromSeconds(5),
-        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        AllowAutoRedirect = false
     });
 
     public static IReadOnlyList<SelfHostedDestinationKind> EnabledDestinations(SnaptureSettings settings)
@@ -89,27 +90,16 @@ public static class SelfHostedDestinationService
 
     public static void ValidateNextcloud(NextcloudDestinationSettings settings, string credential)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        if (!settings.Enabled)
-            throw new InvalidOperationException("Nextcloud is disabled. Enable it in Settings before uploading.");
-        ValidateServerUrl(settings.ServerUrl, "Nextcloud");
-        if (string.IsNullOrWhiteSpace(settings.Username) || settings.Username.Length > 256)
-            throw new ArgumentException("Nextcloud requires a username of 1-256 characters.", nameof(settings));
+        ValidateNextcloudSettings(settings);
         if (string.IsNullOrWhiteSpace(credential))
             throw new ArgumentException("Nextcloud requires an app password or password.", nameof(credential));
-        _ = NormalizeFolder(settings.RemoteFolder);
     }
 
     public static void ValidateImmich(ImmichDestinationSettings settings, string credential)
     {
-        ArgumentNullException.ThrowIfNull(settings);
-        if (!settings.Enabled)
-            throw new InvalidOperationException("Immich is disabled. Enable it in Settings before uploading.");
-        ValidateServerUrl(settings.ServerUrl, "Immich");
+        ValidateImmichSettings(settings);
         if (string.IsNullOrWhiteSpace(credential))
             throw new ArgumentException("Immich requires an API key.", nameof(credential));
-        if (settings.AlbumId.Length > 128 || settings.AlbumId.Any(char.IsControl))
-            throw new ArgumentException("Immich album ID is invalid.", nameof(settings));
     }
 
     public static string? GetCredential(SelfHostedDestinationKind destination)
@@ -138,6 +128,49 @@ public static class SelfHostedDestinationService
         store.RemoveSecret(SecretKey);
     }
 
+    public static string BuildDestinationPreview(
+        SelfHostedDestinationKind destination,
+        SnaptureSettings settings,
+        SelfHostedUploadRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        ValidateRequest(request);
+
+        string endpoint;
+        string details;
+        string transport;
+        switch (destination)
+        {
+            case SelfHostedDestinationKind.Nextcloud:
+                ValidateNextcloudSettings(settings.Nextcloud);
+                endpoint = BuildNextcloudUri(settings.Nextcloud, request).ToString();
+                transport = TransportDescription(settings.Nextcloud.ServerUrl);
+                details = "WebDAV PUT; DPAPI-stored Basic credential will be sent (value hidden)";
+                break;
+            case SelfHostedDestinationKind.Immich:
+                ValidateImmichSettings(settings.Immich);
+                endpoint = BuildImmichUri(settings.Immich).ToString();
+                transport = TransportDescription(settings.Immich.ServerUrl);
+                details = string.IsNullOrWhiteSpace(settings.Immich.AlbumId)
+                    ? "Asset POST; DPAPI-stored x-api-key will be sent (value hidden)"
+                    : $"Asset POST plus album assignment for '{OutboundDataFlowAudit.TrimForDisplay(settings.Immich.AlbumId, 80)}'; DPAPI-stored x-api-key will be sent (value hidden)";
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(destination));
+        }
+
+        return string.Join(Environment.NewLine,
+        [
+            $"Destination: {destination}",
+            $"Endpoint: {OutboundDataFlowAudit.RedactSensitive(endpoint)}",
+            $"Transport: {transport}",
+            $"Data: {OutboundDataFlowAudit.FormatBytes(request.PngBytes.Length)} flattened PNG '{OutboundDataFlowAudit.TrimForDisplay(request.FileName, 80)}'",
+            $"Capture: {request.Width}×{request.Height}, source '{OutboundDataFlowAudit.TrimForDisplay(request.Source)}'",
+            $"Authentication: {details}",
+            "Failures are shown after the request; credentials are not displayed or written to logs."
+        ]);
+    }
+
     public static async Task<SelfHostedUploadResult> UploadNextcloudAsync(
         NextcloudDestinationSettings settings,
         string credential,
@@ -147,15 +180,7 @@ public static class SelfHostedDestinationService
     {
         ValidateNextcloud(settings, credential);
         ValidateRequest(request);
-        var baseUri = new Uri(settings.ServerUrl.TrimEnd('/') + "/", UriKind.Absolute);
-        string folder = NormalizeFolder(settings.RemoteFolder);
-        var pathSegments = new[] { "remote.php", "dav", "files", settings.Username }
-            .Concat(folder.Split('/', StringSplitOptions.RemoveEmptyEntries))
-            .Append(request.FileName);
-        string relative = string.Join('/', pathSegments
-            .Where(value => !string.IsNullOrWhiteSpace(value))
-            .Select(Uri.EscapeDataString));
-        var uri = new Uri(baseUri, relative);
+        var uri = BuildNextcloudUri(settings, request);
         using var message = new HttpRequestMessage(HttpMethod.Put, uri)
         {
             Content = new ByteArrayContent(request.PngBytes)
@@ -177,7 +202,7 @@ public static class SelfHostedDestinationService
         ValidateImmich(settings, credential);
         ValidateRequest(request);
         var baseUri = new Uri(settings.ServerUrl.TrimEnd('/') + "/", UriKind.Absolute);
-        var uri = new Uri(baseUri, "api/assets");
+        var uri = BuildImmichUri(settings);
         using var multipart = new MultipartFormDataContent();
         var file = new ByteArrayContent(request.PngBytes);
         file.Headers.ContentType = new MediaTypeHeaderValue("image/png");
@@ -217,17 +242,9 @@ public static class SelfHostedDestinationService
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(ct);
         timeout.CancelAfter(TimeSpan.FromSeconds(TimeoutSeconds));
-        HttpResponseMessage response;
         try
         {
-            response = await (httpClient ?? DefaultHttp).SendAsync(message, timeout.Token).ConfigureAwait(false);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            throw new TimeoutException($"{destination} upload exceeded the {TimeoutSeconds}-second timeout.");
-        }
-        using (response)
-        {
+            using var response = await (httpClient ?? DefaultHttp).SendAsync(message, timeout.Token).ConfigureAwait(false);
             string body = Limit(await response.Content.ReadAsStringAsync(timeout.Token).ConfigureAwait(false));
             return new SelfHostedUploadResult(
                 response.IsSuccessStatusCode,
@@ -236,6 +253,21 @@ public static class SelfHostedDestinationService
                 body,
                 null,
                 response.IsSuccessStatusCode ? null : $"HTTP {(int)response.StatusCode} ({response.ReasonPhrase})");
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            throw new TimeoutException($"{destination} upload exceeded the {TimeoutSeconds}-second timeout.");
+        }
+        catch (HttpRequestException ex)
+        {
+            return new SelfHostedUploadResult(
+                false,
+                destination,
+                0,
+                string.Empty,
+                null,
+                $"HTTP request to {OutboundDataFlowAudit.RedactSensitive(requestUri.Host)} failed: " +
+                OutboundDataFlowAudit.RedactSensitive(ex.Message));
         }
     }
 
@@ -252,9 +284,55 @@ public static class SelfHostedDestinationService
     {
         if (!Uri.TryCreate(value?.Trim(), UriKind.Absolute, out var uri)
             || uri.Scheme is not ("http" or "https")
-            || string.IsNullOrWhiteSpace(uri.Host))
+            || string.IsNullOrWhiteSpace(uri.Host)
+            || uri.UserInfo.Length > 0)
             throw new ArgumentException($"{destination} server URL must be an absolute HTTP or HTTPS URL.", nameof(value));
     }
+
+    private static void ValidateNextcloudSettings(NextcloudDestinationSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!settings.Enabled)
+            throw new InvalidOperationException("Nextcloud is disabled. Enable it in Settings before uploading.");
+        ValidateServerUrl(settings.ServerUrl, "Nextcloud");
+        if (string.IsNullOrWhiteSpace(settings.Username) || settings.Username.Length > 256)
+            throw new ArgumentException("Nextcloud requires a username of 1-256 characters.", nameof(settings));
+        _ = NormalizeFolder(settings.RemoteFolder);
+    }
+
+    private static void ValidateImmichSettings(ImmichDestinationSettings settings)
+    {
+        ArgumentNullException.ThrowIfNull(settings);
+        if (!settings.Enabled)
+            throw new InvalidOperationException("Immich is disabled. Enable it in Settings before uploading.");
+        ValidateServerUrl(settings.ServerUrl, "Immich");
+        if (settings.AlbumId.Length > 128 || settings.AlbumId.Any(char.IsControl))
+            throw new ArgumentException("Immich album ID is invalid.", nameof(settings));
+    }
+
+    private static Uri BuildNextcloudUri(
+        NextcloudDestinationSettings settings,
+        SelfHostedUploadRequest request)
+    {
+        var baseUri = new Uri(settings.ServerUrl.TrimEnd('/') + "/", UriKind.Absolute);
+        string folder = NormalizeFolder(settings.RemoteFolder);
+        var pathSegments = new[] { "remote.php", "dav", "files", settings.Username }
+            .Concat(folder.Split('/', StringSplitOptions.RemoveEmptyEntries))
+            .Append(request.FileName);
+        string relative = string.Join('/', pathSegments
+            .Where(value => !string.IsNullOrWhiteSpace(value))
+            .Select(Uri.EscapeDataString));
+        return new Uri(baseUri, relative);
+    }
+
+    private static Uri BuildImmichUri(ImmichDestinationSettings settings) =>
+        new(new Uri(settings.ServerUrl.TrimEnd('/') + "/", UriKind.Absolute), "api/assets");
+
+    private static string TransportDescription(string serverUrl) =>
+        Uri.TryCreate(serverUrl?.Trim(), UriKind.Absolute, out var uri)
+            && uri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            ? "WARNING: unencrypted HTTP"
+            : "HTTPS";
 
     private static string NormalizeFolder(string? folder)
     {

@@ -172,6 +172,17 @@ Portable archives include a `Snapture.ini` marker beside `Snapture.App.exe`. Lau
 
 **MCP integration:** Settings → Integrations can enable the optional Model Context Protocol server. It exposes loopback-only `http://127.0.0.1:<port>/mcp` tools for monitor/window/region/element/scrolling capture, local OCR, history search, and Auto-redact. The server is off by default, never binds the LAN-share adapter, rotates an in-memory bearer token on every start, and shows that token only while the server is running; MCP clients must send `Authorization: Bearer <token>`. Requests return metadata plus a saved local path unless a tool call explicitly sets `include_image=true`.
 
+### Network and process boundaries
+
+Snapture has no telemetry, analytics, or automatic capture uploads. The maintained source inventory is executable in `OutboundDataFlowAudit`; its test fails if a known HTTP, Kestrel, updater, plugin, or child-process boundary is missing destination, payload, credential, transport, retention, and failure metadata.
+
+- Local AI discovery and inference use only validated loopback endpoints. The selected model receives the flattened PNG, prompt, and model ID; no cloud endpoint or API key is accepted. Foundry Local discovery may invoke the local `foundry service status` command.
+- LAN share and MCP are inbound listeners, disabled unless enabled, and never make outbound requests. LAN share serves only explicitly registered files through expiring single-fetch tokens. MCP requires the in-memory bearer token and returns metadata unless pixels are explicitly requested.
+- Check for Updates makes one explicit GitHub request. Installed Velopack builds use the architecture-specific GitHub release feed only after the user confirms download and restart; unpackaged builds open the release page instead.
+- Declarative uploaders, Nextcloud, and Immich are explicit actions. Before any upload, Snapture shows the expanded destination, transport (including an HTTP warning), image size/dimensions/source, body type, and credential/header handling. Header and credential values are hidden, and HTTP/transport failures are shown without writing sensitive values to logs.
+- Plugin dependency downloads occur only when a plugin explicitly calls `EnsureAsync`, require HTTPS and a SHA-256 pin, and use a per-plugin cache. Plugins are third-party in-process code without an OS sandbox; their declared Network/LaunchProcess capabilities require approval, but their own data handling remains their author's responsibility.
+- Explicit external commands, OneOCR, and the magnification fallback are local hidden child processes with shell execution disabled and bounded capture/result paths. Explorer and Windows Settings launches pass only the selected local path or fixed settings URI.
+
 ## Usage
 
 After launching, Snapture lives in the system tray.
@@ -194,9 +205,9 @@ All four hotkeys are rebindable from **Settings → Hotkeys**.
 
 **External command profiles:** Settings → Output → Configure commands supports a full executable path or a command on `PATH`. File mode requires `{file}` and supplies a temporary PNG path; stdin mode pipes PNG bytes directly. From the editor use **External command**, or use Tray → Tools → External commands → **Run on latest capture**. Profiles are user-owned and run only when explicitly selected.
 
-**Declarative uploaders:** Settings → Output → Import uploader accepts the ShareX `.sxcu` schema (or compatible JSON), including self-hosted HTTP endpoints, headers, parameters, multipart file names, and response selectors such as `{json:url}`. From the editor use **Upload**, or use Tray → Tools → Declarative uploaders → **Upload latest capture**. Profiles never run automatically.
+**Declarative uploaders:** Settings → Output → Import uploader accepts the ShareX `.sxcu` schema (or compatible JSON), including self-hosted HTTP endpoints, headers, parameters, multipart file names, and response selectors such as `{json:url}`. From the editor use **Upload**, or use Tray → Tools → Declarative uploaders → **Upload latest capture**. Profiles never run automatically; both actions show a destination/data confirmation before sending.
 
-**Self-hosted destinations:** Settings → Output → Configure Nextcloud / Immich enables either built-in connector. Nextcloud uploads through WebDAV; Immich uploads through `/api/assets` and optionally assigns the returned asset to a configured album. The editor's **Self-hosted** button and Tray → Tools → Self-hosted destinations → **Upload latest capture** are explicit actions only.
+**Self-hosted destinations:** Settings → Output → Configure Nextcloud / Immich enables either built-in connector. Nextcloud uploads through WebDAV; Immich uploads through `/api/assets` and optionally assigns the returned asset to a configured album. The editor's **Self-hosted** button and Tray → Tools → Self-hosted destinations → **Upload latest capture** show the exact server/path, PNG summary, transport warning, and hidden DPAPI credential handling before the explicit upload.
 
 **Plugin tools:** A plugin can request an `IPluginDependencyStore` from its host and call `EnsureAsync` with a versioned HTTPS URL, simple file name, and SHA-256. Snapture downloads the tool only on that feature request, caches it under the plugin's local data root, and never fetches dependencies during startup or plugin discovery.
 

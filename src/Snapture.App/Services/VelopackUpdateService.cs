@@ -64,8 +64,9 @@ public static class VelopackUpdateService
         }
         catch (Exception ex)
         {
-            Log.Warning(ex, "Velopack.UpdateCheckFailed");
-            return new UpdateStatus(true, false, fallbackVersion, fallbackVersion, ex.Message);
+            string error = OutboundDataFlowAudit.RedactSensitive(ex.Message);
+            Log.Warning("Velopack.UpdateCheckFailed {Error}", error);
+            return new UpdateStatus(true, false, fallbackVersion, fallbackVersion, error);
         }
     }
 

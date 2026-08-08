@@ -107,7 +107,8 @@ public static class DeclarativeUploaderService
     private static readonly HttpClient DefaultHttp = new(new SocketsHttpHandler
     {
         ConnectTimeout = TimeSpan.FromSeconds(5),
-        PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+        PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+        AllowAutoRedirect = false
     });
     private static readonly Regex TemplateToken = new(@"\{(?<kind>json|header):(?<value>[^{}]+)\}", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
     private static readonly Regex JsonPathPart = new(@"(?:^|\.)(?<name>[^.\[\]]+)|\[(?<index>\d+)\]", RegexOptions.CultureInvariant);
@@ -164,7 +165,8 @@ public static class DeclarativeUploaderService
             throw new DeclarativeUploaderException("Uploader method must be GET, POST, PUT, PATCH, or DELETE.");
         if (!Uri.TryCreate(profile.RequestUrl.Trim(), UriKind.Absolute, out var uri)
             || uri.Scheme is not ("http" or "https")
-            || string.IsNullOrWhiteSpace(uri.Host))
+            || string.IsNullOrWhiteSpace(uri.Host)
+            || uri.UserInfo.Length > 0)
             throw new DeclarativeUploaderException("Uploader URL must be an absolute HTTP or HTTPS URL.");
         if (profile.TimeoutSeconds is < 1 or > MaxTimeoutSeconds)
             throw new DeclarativeUploaderException($"Uploader timeout must be between 1 and {MaxTimeoutSeconds} seconds.");
@@ -183,6 +185,33 @@ public static class DeclarativeUploaderService
         _ = new HttpMethod(profile.RequestMethod.Trim());
     }
 
+    public static string BuildDestinationPreview(
+        DeclarativeUploaderProfile profile,
+        DeclarativeUploaderRequest request)
+    {
+        ValidateProfile(profile);
+        ValidateRequest(request);
+        var requestUri = BuildRequestUri(profile, request);
+        string body = DeclarativeUploaderBodyTypes.Normalize(profile.Body);
+        string transport = requestUri.Scheme.Equals(Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            ? "WARNING: unencrypted HTTP"
+            : "HTTPS";
+        string headers = profile.Headers.Count == 0
+            ? "none"
+            : $"{profile.Headers.Count} custom header(s); values hidden, including credentials";
+        return string.Join(Environment.NewLine,
+        [
+            $"Destination: {profile.RequestMethod.Trim().ToUpperInvariant()} {OutboundDataFlowAudit.RedactSensitive(requestUri.ToString())}",
+            $"Profile: {OutboundDataFlowAudit.TrimForDisplay(profile.Name)} ({profile.DestinationType})",
+            $"Transport: {transport}",
+            $"Data: {OutboundDataFlowAudit.FormatBytes(request.PngBytes.Length)} flattened PNG '{OutboundDataFlowAudit.TrimForDisplay(request.FileName, 80)}'",
+            $"Capture: {request.Width}×{request.Height}, source '{OutboundDataFlowAudit.TrimForDisplay(request.Source)}'",
+            $"Request body: {body}; {profile.Parameters.Count} query parameter(s), {profile.Arguments.Count} body argument(s)",
+            $"Headers: {headers}",
+            "Failures are shown after the request; credentials and header values are not written to logs."
+        ]);
+    }
+
     public static async Task<DeclarativeUploaderResult> UploadAsync(
         DeclarativeUploaderProfile profile,
         DeclarativeUploaderRequest request,
@@ -190,18 +219,10 @@ public static class DeclarativeUploaderService
         CancellationToken ct = default)
     {
         ValidateProfile(profile);
-        ArgumentNullException.ThrowIfNull(request);
-        if (request.PngBytes.Length == 0 || request.PngBytes.Length > MaxInputBytes)
-            throw new DeclarativeUploaderException("The capture is empty or exceeds the 100 MB uploader limit.");
-        if (string.IsNullOrWhiteSpace(request.FileName) || request.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
-            throw new DeclarativeUploaderException("The capture file name is invalid.");
-
-        var timestamp = request.CapturedAtUtc.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+        ValidateRequest(request);
+        var requestUri = BuildRequestUri(profile, request);
+        string timestamp = request.CapturedAtUtc.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture);
         string input = request.FileName;
-        string requestUrl = ExpandInputTemplate(profile.RequestUrl, request, input, timestamp);
-        requestUrl = AddQueryParameters(requestUrl, profile.Parameters, request, input, timestamp);
-        if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out var requestUri))
-            throw new DeclarativeUploaderException("The expanded uploader URL is invalid.");
 
         using var message = new HttpRequestMessage(new HttpMethod(profile.RequestMethod.Trim()), requestUri)
         {
@@ -232,6 +253,19 @@ public static class DeclarativeUploaderService
         {
             throw new TimeoutException($"Uploader '{profile.Name}' exceeded its {profile.TimeoutSeconds}-second timeout.");
         }
+        catch (HttpRequestException ex)
+        {
+            return new DeclarativeUploaderResult(
+                false,
+                0,
+                string.Empty,
+                requestUri,
+                null,
+                null,
+                null,
+                null,
+                "HTTP request failed: " + OutboundDataFlowAudit.RedactSensitive(ex.Message));
+        }
 
         using (response)
         {
@@ -244,6 +278,19 @@ public static class DeclarativeUploaderService
             {
                 throw new TimeoutException($"Uploader '{profile.Name}' exceeded its {profile.TimeoutSeconds}-second timeout.");
             }
+            catch (HttpRequestException ex)
+            {
+                return new DeclarativeUploaderResult(
+                    false,
+                    0,
+                    string.Empty,
+                    requestUri,
+                    null,
+                    null,
+                    null,
+                    null,
+                    "HTTP response failed: " + OutboundDataFlowAudit.RedactSensitive(ex.Message));
+            }
             Uri? responseUri = response.RequestMessage?.RequestUri;
             var responseHeaders = response.Headers.Concat(response.Content.Headers)
                 .GroupBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
@@ -255,6 +302,7 @@ public static class DeclarativeUploaderService
             bool succeeded = response.IsSuccessStatusCode;
             if (!succeeded && string.IsNullOrWhiteSpace(error))
                 error = $"Uploader returned HTTP {(int)response.StatusCode} ({response.ReasonPhrase}).";
+            error = OutboundDataFlowAudit.RedactSensitive(error);
             return new DeclarativeUploaderResult(
                 succeeded,
                 (int)response.StatusCode,
@@ -288,6 +336,31 @@ public static class DeclarativeUploaderService
         value = value.Replace("{responseurl}", responseUri?.ToString() ?? string.Empty, StringComparison.OrdinalIgnoreCase);
         value = value.Replace("{response}", responseBody, StringComparison.OrdinalIgnoreCase);
         return value.Trim();
+    }
+
+    private static Uri BuildRequestUri(
+        DeclarativeUploaderProfile profile,
+        DeclarativeUploaderRequest request)
+    {
+        string timestamp = request.CapturedAtUtc.ToUniversalTime().ToString("O", System.Globalization.CultureInfo.InvariantCulture);
+        string input = request.FileName;
+        string requestUrl = ExpandInputTemplate(profile.RequestUrl, request, input, timestamp);
+        requestUrl = AddQueryParameters(requestUrl, profile.Parameters, request, input, timestamp);
+        if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out var requestUri)
+            || requestUri.Scheme is not ("http" or "https")
+            || string.IsNullOrWhiteSpace(requestUri.Host)
+            || requestUri.UserInfo.Length > 0)
+            throw new DeclarativeUploaderException("The expanded uploader URL is invalid or contains embedded credentials.");
+        return requestUri;
+    }
+
+    private static void ValidateRequest(DeclarativeUploaderRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+        if (request.PngBytes is null || request.PngBytes.Length == 0 || request.PngBytes.Length > MaxInputBytes)
+            throw new DeclarativeUploaderException("The capture is empty or exceeds the 100 MB uploader limit.");
+        if (string.IsNullOrWhiteSpace(request.FileName) || request.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            throw new DeclarativeUploaderException("The capture file name is invalid.");
     }
 
     private static HttpContent? BuildContent(

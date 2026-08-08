@@ -46,18 +46,26 @@ public sealed class LocalAiInferenceService
         using var content = new ByteArrayContent(payload);
         content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-        using var response = await _http.PostAsync(requestUri, content, cancellationToken);
-        var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
+        try
         {
-            var detail = ParseErrorMessage(responseBody);
-            throw new LocalAiInferenceException(
-                string.IsNullOrWhiteSpace(detail)
-                    ? $"{choice.Reference} returned HTTP {(int)response.StatusCode}."
-                    : $"{choice.Reference}: {detail}");
-        }
+            using var response = await _http.PostAsync(requestUri, content, cancellationToken);
+            var responseBody = await response.Content.ReadAsStringAsync(cancellationToken);
+            if (!response.IsSuccessStatusCode)
+            {
+                var detail = ParseErrorMessage(responseBody);
+                throw new LocalAiInferenceException(
+                    string.IsNullOrWhiteSpace(detail)
+                        ? $"{choice.Reference} returned HTTP {(int)response.StatusCode}."
+                        : $"{choice.Reference}: {OutboundDataFlowAudit.RedactSensitive(detail)}");
+            }
 
-        return ParseResponseText(responseBody);
+            return ParseResponseText(responseBody);
+        }
+        catch (HttpRequestException ex)
+        {
+            throw new LocalAiInferenceException(
+                "Local AI HTTP request failed: " + OutboundDataFlowAudit.RedactSensitive(ex.Message));
+        }
     }
 
     internal static byte[] BuildRequestPayload(
@@ -109,7 +117,8 @@ public sealed class LocalAiInferenceService
         if (TryGetPropertyIgnoreCase(root, "error", out var error))
         {
             var message = GetStringProperty(error, "message");
-            throw new LocalAiInferenceException(message ?? "The local model returned an error.");
+            throw new LocalAiInferenceException(
+                OutboundDataFlowAudit.RedactSensitive(message ?? "The local model returned an error."));
         }
 
         if (!TryGetPropertyIgnoreCase(root, "choices", out var choices) ||

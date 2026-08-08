@@ -30,7 +30,8 @@ public sealed class PluginDependencyStore : IPluginDependencyStore
         _http = httpClient ?? new HttpClient(new SocketsHttpHandler
         {
             ConnectTimeout = TimeSpan.FromSeconds(10),
-            PooledConnectionLifetime = TimeSpan.FromMinutes(2)
+            PooledConnectionLifetime = TimeSpan.FromMinutes(2),
+            AllowAutoRedirect = false
         });
     }
 
@@ -121,7 +122,8 @@ public sealed class PluginDependencyStore : IPluginDependencyStore
             throw new ArgumentException("Dependency ID and version may contain only letters, digits, '.', '_' and '-'.", nameof(dependency));
         if (!Uri.TryCreate(dependency.DownloadUrl, UriKind.Absolute, out var uri)
             || uri.Scheme != Uri.UriSchemeHttps
-            || string.IsNullOrWhiteSpace(uri.Host))
+            || string.IsNullOrWhiteSpace(uri.Host)
+            || uri.UserInfo.Length > 0)
             throw new ArgumentException("Dependency downloads require an absolute HTTPS URL.", nameof(dependency));
         if (!SafePart.IsMatch(dependency.FileName) || Path.GetFileName(dependency.FileName) != dependency.FileName)
             throw new ArgumentException("Dependency file names must be simple safe file names.", nameof(dependency));
