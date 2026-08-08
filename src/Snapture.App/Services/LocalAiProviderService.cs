@@ -16,6 +16,18 @@ public enum LocalAiProviderKind
 public sealed record LocalAiModel(string Id, string? DisplayName = null)
 {
     public string Label => string.IsNullOrWhiteSpace(DisplayName) ? Id : DisplayName;
+
+    /// <summary>
+    /// A provider-advertised value takes precedence. When a provider omits capabilities,
+    /// the conservative name heuristic only admits well-known vision model families.
+    /// </summary>
+    public bool? SupportsVision { get; init; }
+
+    public string? Identity { get; init; }
+
+    public string ModelIdentity => string.IsNullOrWhiteSpace(Identity) ? Id : Identity;
+
+    public bool IsVisionCapable => SupportsVision ?? LocalAiModelCapabilityDetector.IsLikelyVisionModel(Id);
 }
 
 public sealed record LocalAiProviderInfo(
@@ -25,7 +37,10 @@ public sealed record LocalAiProviderInfo(
     Uri? OpenAiBaseUri,
     bool IsAvailable,
     IReadOnlyList<LocalAiModel> Models,
-    string Status);
+    string Status)
+{
+    public LocalAiProviderCapabilities Capabilities { get; init; } = LocalAiProviderCapabilities.For(Kind);
+}
 
 public sealed record LocalAiModelChoice(LocalAiProviderInfo Provider, LocalAiModel Model)
 {
@@ -48,6 +63,7 @@ public static class LocalAiProviderService
     public const string LmStudioKey = "lmstudio";
 
     private const int FoundryCommandTimeoutMs = 1200;
+    private const int MaxDiscoveryResponseBytes = 256 * 1024;
 
     private static readonly Uri OllamaRoot = new("http://127.0.0.1:11434/");
     private static readonly Uri LmStudioRoot = new("http://127.0.0.1:1234/");
@@ -82,19 +98,25 @@ public static class LocalAiProviderService
     public static IReadOnlyList<LocalAiModelChoice> GetModelChoices(
         IEnumerable<LocalAiProviderInfo> providers) =>
         providers
-            .Where(provider => provider.IsAvailable && provider.OpenAiBaseUri is not null)
-            .SelectMany(provider => provider.Models.Select(model => new LocalAiModelChoice(provider, model)))
+            .Where(provider => provider.IsAvailable &&
+                provider.Capabilities.SupportsVision &&
+                provider.OpenAiBaseUri is not null)
+            .SelectMany(provider => provider.Models
+                .Where(model => model.IsVisionCapable)
+                .Select(model => new LocalAiModelChoice(provider, model)))
             .ToArray();
 
     public static LocalAiModel? FindPreferredModel(LocalAiProviderInfo provider)
     {
         var preferred = provider.Kind switch
         {
-            LocalAiProviderKind.Ollama => provider.Models.FirstOrDefault(IsLlavaModel),
-            LocalAiProviderKind.FoundryLocal => provider.Models.FirstOrDefault(IsPhiVisionModel),
+            LocalAiProviderKind.Ollama => provider.Models.FirstOrDefault(model =>
+                model.IsVisionCapable && IsLlavaModel(model)),
+            LocalAiProviderKind.FoundryLocal => provider.Models.FirstOrDefault(model =>
+                model.IsVisionCapable && IsPhiVisionModel(model)),
             _ => null
         };
-        return preferred ?? provider.Models.FirstOrDefault();
+        return preferred ?? provider.Models.FirstOrDefault(model => model.IsVisionCapable);
     }
 
     internal static IReadOnlyList<LocalAiModel> ParseOllamaModels(string json) =>
@@ -297,10 +319,16 @@ public static class LocalAiProviderService
             if (!process.Start())
                 return null;
 
-            var stdoutTask = process.StandardOutput.ReadToEndAsync();
-            var stderrTask = process.StandardError.ReadToEndAsync();
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(FoundryCommandTimeoutMs);
+            var stdoutTask = LocalAiResponseReader.ReadBoundedTextAsync(
+                process.StandardOutput,
+                MaxDiscoveryResponseBytes,
+                timeout.Token);
+            var stderrTask = LocalAiResponseReader.ReadBoundedTextAsync(
+                process.StandardError,
+                MaxDiscoveryResponseBytes,
+                timeout.Token);
 
             try
             {
@@ -317,7 +345,8 @@ public static class LocalAiProviderService
                 return null;
             }
 
-            return (await stdoutTask) + Environment.NewLine + await stderrTask;
+            var output = await Task.WhenAll(stdoutTask, stderrTask);
+            return output[0] + Environment.NewLine + output[1];
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -332,9 +361,15 @@ public static class LocalAiProviderService
 
     private static async Task<string> GetStringAsync(Uri uri, CancellationToken cancellationToken)
     {
-        using var response = await Http.GetAsync(uri, cancellationToken);
+        using var response = await Http.GetAsync(
+            uri,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
         response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsStringAsync(cancellationToken);
+        return await LocalAiResponseReader.ReadBoundedStringAsync(
+            response.Content,
+            MaxDiscoveryResponseBytes,
+            cancellationToken);
     }
 
     private static async Task<string?> TryGetStringAsync(Uri uri, CancellationToken cancellationToken)
@@ -344,10 +379,16 @@ public static class LocalAiProviderService
 
         try
         {
-            using var response = await Http.GetAsync(uri, cancellationToken);
+            using var response = await Http.GetAsync(
+                uri,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
             if (!response.IsSuccessStatusCode)
                 return null;
-            return await response.Content.ReadAsStringAsync(cancellationToken);
+            return await LocalAiResponseReader.ReadBoundedStringAsync(
+                response.Content,
+                MaxDiscoveryResponseBytes,
+                cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -448,7 +489,75 @@ public static class LocalAiProviderService
             }
         }
 
-        return new LocalAiModel(id, displayName);
+        return new LocalAiModel(id, displayName)
+        {
+            SupportsVision = ReadVisionCapability(item),
+            Identity = ReadModelIdentity(item)
+        };
+    }
+
+    private static bool? ReadVisionCapability(JsonElement item)
+    {
+        foreach (var name in new[] { "vision", "supportsVision", "supports_vision", "vision_capable" })
+        {
+            if (!TryGetPropertyIgnoreCase(item, name, out var value))
+                continue;
+            if (value.ValueKind == JsonValueKind.True || value.ValueKind == JsonValueKind.False)
+                return value.GetBoolean();
+            if (value.ValueKind == JsonValueKind.String &&
+                bool.TryParse(value.GetString(), out bool parsed))
+            {
+                return parsed;
+            }
+        }
+
+        foreach (var name in new[] { "modalities", "input_modalities", "capabilities" })
+        {
+            if (!TryGetPropertyIgnoreCase(item, name, out var value))
+                continue;
+
+            if (value.ValueKind == JsonValueKind.Array)
+            {
+                bool sawValue = false;
+                foreach (var modality in value.EnumerateArray())
+                {
+                    if (modality.ValueKind != JsonValueKind.String)
+                        continue;
+                    sawValue = true;
+                    if (modality.GetString()?.Contains("vision", StringComparison.OrdinalIgnoreCase) == true ||
+                        modality.GetString()?.Contains("image", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        return true;
+                    }
+                }
+
+                if (sawValue)
+                    return false;
+            }
+            else if (value.ValueKind == JsonValueKind.Object)
+            {
+                var nested = ReadVisionCapability(value);
+                if (nested is not null)
+                    return nested;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? ReadModelIdentity(JsonElement item)
+    {
+        foreach (var name in new[] { "digest", "sha256", "revision", "version" })
+        {
+            if (TryGetPropertyIgnoreCase(item, name, out var value) &&
+                value.ValueKind == JsonValueKind.String &&
+                !string.IsNullOrWhiteSpace(value.GetString()))
+            {
+                return value.GetString()!.Trim();
+            }
+        }
+
+        return null;
     }
 
     private static bool TryGetPropertyIgnoreCase(
@@ -482,7 +591,8 @@ public static class LocalAiProviderService
         Uri openAiBaseUri,
         IReadOnlyList<LocalAiModel> models) =>
         new(kind, key, displayName, openAiBaseUri, true, models,
-            $"Detected · {models.Count} model{(models.Count == 1 ? string.Empty : "s")}");
+            $"Detected · {models.Count} model{(models.Count == 1 ? string.Empty : "s")} · " +
+            $"{models.Count(model => model.IsVisionCapable)} vision-capable");
 
     private static LocalAiProviderInfo Unavailable(
         LocalAiProviderKind kind,

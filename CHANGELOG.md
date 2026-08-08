@@ -16,6 +16,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Ring-buffer recording now writes an atomic per-session manifest and bounded 30-second fragmented-MP4 segments, keeps the last 90 seconds across segment boundaries, detects interrupted/corrupt/stale sessions on restart, quarantines recoverable media for explicit tray review, and retains failed-save sources instead of deleting them.
 
+### Local AI
+
+- Local-AI discovery now carries provider protocol, vision capability, model identity, image/request/response budgets, prompt limits, and timeout metadata; inference validates decodable PNGs before base64 expansion, reads responses with a hard cap, keeps all requests loopback-only, and classifies unavailable models, non-vision models, provider failures, invalid/oversized responses, cancellation, and timeouts for offline tests and user diagnostics.
+
 ## [v0.7.0] — 2026-08-03
 
 ### Changed

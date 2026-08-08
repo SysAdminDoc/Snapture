@@ -1992,6 +1992,10 @@ public partial class EditorWindow : Window
             new LocalAiResultWindow(choice.Reference, response) { Owner = DialogOwner }.ShowDialog();
             StatusText.Text = $"Local AI response received from {choice.Reference}.";
         }
+        catch (LocalAiInferenceException ex)
+        {
+            StatusText.Text = $"Local AI failed ({ex.Kind}): {ex.Message}";
+        }
         catch (Exception ex)
         {
             StatusText.Text = $"Local AI failed: {ex.Message}";

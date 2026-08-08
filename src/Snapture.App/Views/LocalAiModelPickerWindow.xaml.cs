@@ -54,8 +54,15 @@ public partial class LocalAiModelPickerWindow : Window
     {
         if (ModelCombo.SelectedItem is ComboBoxItem { Tag: LocalAiModelChoice choice })
         {
+            var limits = choice.Provider.Capabilities.Limits;
             EndpointText.Text = choice.Provider.OpenAiBaseUri is { } endpoint
-                ? $"{choice.Reference}\nEndpoint: {endpoint}"
+                ? $"{choice.Reference}\nEndpoint: {endpoint}\n" +
+                  $"Vision: yes · Identity: {choice.Model.ModelIdentity}\n" +
+                  $"Image ≤ {limits.MaxImageBytes / (1024 * 1024):N0} MB, " +
+                  $"request ≤ {limits.MaxRequestBytes / (1024 * 1024):N0} MB, " +
+                  $"response ≤ {limits.MaxResponseBytes / 1024:N0} KB, " +
+                  $"prompt ≤ {limits.MaxPromptCharacters:N0} chars, " +
+                  $"timeout {limits.Timeout.TotalSeconds:N0}s"
                 : choice.Reference;
             StatusText.Text = string.Empty;
         }

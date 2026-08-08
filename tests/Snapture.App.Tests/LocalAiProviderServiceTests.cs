@@ -37,6 +37,38 @@ public sealed class LocalAiProviderServiceTests
     }
 
     [TestMethod]
+    public void ModelPayloadCarriesVisionCapabilityAndIdentity()
+    {
+        var models = LocalAiProviderService.ParseOpenAiModels("""
+            {"data":[
+              {"id":"text-only","modalities":["text"]},
+              {"id":"custom-vlm","modalities":["text","image"],"digest":"sha256:abc"}
+            ]}
+            """);
+
+        Assert.IsFalse(models[0].IsVisionCapable);
+        Assert.IsTrue(models[1].IsVisionCapable);
+        Assert.AreEqual("sha256:abc", models[1].ModelIdentity);
+    }
+
+    [TestMethod]
+    public void ModelChoicesExcludeModelsWithoutVisionCapability()
+    {
+        var provider = new LocalAiProviderInfo(
+            LocalAiProviderKind.Ollama,
+            LocalAiProviderService.OllamaKey,
+            "Ollama",
+            new Uri("http://127.0.0.1:11434/v1/"),
+            true,
+            new[] { new LocalAiModel("phi-4-mini"), new LocalAiModel("llava:latest") },
+            "Detected · 2 models");
+
+        var choices = LocalAiProviderService.GetModelChoices(new[] { provider });
+
+        CollectionAssert.AreEqual(new[] { "llava:latest" }, choices.Select(choice => choice.Model.Id).ToArray());
+    }
+
+    [TestMethod]
     public void FoundryPayloadSupportsCachedModelArrayAndCatalogObjects()
     {
         var cached = LocalAiProviderService.ParseFoundryModels(

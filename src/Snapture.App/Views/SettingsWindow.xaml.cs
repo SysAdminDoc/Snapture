@@ -247,13 +247,29 @@ public partial class SettingsWindow : Window
                 var models = new TextBlock
                 {
                     Text = "Models: " + string.Join(", ", provider.Models.Select(model =>
-                        LocalAiProviderService.FormatModelReference(provider, model))),
+                        $"{LocalAiProviderService.FormatModelReference(provider, model)} " +
+                        $"[{(model.IsVisionCapable ? "vision" : "not vision")}]")),
                     TextWrapping = TextWrapping.Wrap,
                     Margin = new Thickness(0, 6, 0, 0)
                 };
                 models.SetResourceReference(TextBlock.StyleProperty, "MonoCaptionText");
                 panel.Children.Add(models);
             }
+
+            var limits = provider.Capabilities.Limits;
+            var contract = new TextBlock
+            {
+                Text = $"Contract: {provider.Capabilities.Protocol}; " +
+                    $"image ≤ {limits.MaxImageBytes / (1024 * 1024):N0} MB; " +
+                    $"request ≤ {limits.MaxRequestBytes / (1024 * 1024):N0} MB; " +
+                    $"response ≤ {limits.MaxResponseBytes / 1024:N0} KB; " +
+                    $"prompt ≤ {limits.MaxPromptCharacters:N0} chars; " +
+                    $"timeout {limits.Timeout.TotalSeconds:N0}s",
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 6, 0, 0)
+            };
+            contract.SetResourceReference(TextBlock.StyleProperty, "HelpText");
+            panel.Children.Add(contract);
 
             var row = new Border
             {
