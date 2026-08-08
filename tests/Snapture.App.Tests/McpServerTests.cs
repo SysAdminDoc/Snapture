@@ -13,6 +13,32 @@ namespace Snapture.App.Tests;
 public sealed class McpServerTests
 {
     [TestMethod]
+    public void AuthorizationRequiresExactBearerToken()
+    {
+        const string token = "test-token";
+
+        Assert.IsFalse(McpAuthorization.IsValid(null, token));
+        Assert.IsFalse(McpAuthorization.IsValid("Basic test-token", token));
+        Assert.IsFalse(McpAuthorization.IsValid("Bearer wrong-token", token));
+        Assert.IsFalse(McpAuthorization.IsValid("Bearer test-token extra", token));
+        Assert.IsTrue(McpAuthorization.IsValid("Bearer test-token", token));
+        Assert.IsTrue(McpAuthorization.IsValid("bearer test-token", token));
+    }
+
+    [TestMethod]
+    public void AccessTokensAreUrlSafeAndUnique()
+    {
+        string first = McpAuthorization.CreateToken();
+        string second = McpAuthorization.CreateToken();
+
+        Assert.AreEqual(43, first.Length);
+        Assert.IsFalse(first.Any(char.IsWhiteSpace));
+        Assert.AreEqual(-1, first.IndexOf('+'));
+        Assert.AreEqual(-1, first.IndexOf('/'));
+        Assert.AreNotEqual(first, second);
+    }
+
+    [TestMethod]
     public void OriginPolicyAcceptsOnlyLoopbackHttpOrigins()
     {
         Assert.IsTrue(McpOriginPolicy.IsAllowed(null));
@@ -63,10 +89,15 @@ public sealed class McpServerTests
             var orchestrator = new CaptureOrchestrator(settings, engine, history);
             using var server = new McpServer(settings, () => engine, orchestrator, history);
             server.Start(GetFreePort());
+            string accessToken = server.AccessToken!;
 
             using var client = new HttpClient();
             string endpoint = server.BaseUrl!;
-            using var initialize = await PostAsync(client, endpoint,
+            using var unauthorized = await PostAsync(client, endpoint, null,
+                "{\"jsonrpc\":\"2.0\",\"id\":0,\"method\":\"ping\"}");
+            Assert.AreEqual(HttpStatusCode.Unauthorized, unauthorized.StatusCode);
+
+            using var initialize = await PostAsync(client, endpoint, accessToken,
                 "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\"}}");
             Assert.AreEqual(HttpStatusCode.OK, initialize.StatusCode);
             Assert.IsTrue(initialize.Headers.TryGetValues("MCP-Protocol-Version", out var protocolValues));
@@ -78,7 +109,7 @@ public sealed class McpServerTests
                     body.RootElement.GetProperty("result").GetProperty("protocolVersion").GetString());
             }
 
-            using var tools = await PostAsync(client, endpoint,
+            using var tools = await PostAsync(client, endpoint, accessToken,
                 "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/list\",\"params\":{}}");
             Assert.AreEqual(HttpStatusCode.OK, tools.StatusCode);
             using (var body = JsonDocument.Parse(await tools.Content.ReadAsStringAsync()))
@@ -94,6 +125,7 @@ public sealed class McpServerTests
                     "application/json")
             };
             foreign.Headers.TryAddWithoutValidation("Origin", "https://agent.example");
+            foreign.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             using var foreignResponse = await client.SendAsync(foreign);
             Assert.AreEqual(HttpStatusCode.Forbidden, foreignResponse.StatusCode);
         }
@@ -103,13 +135,19 @@ public sealed class McpServerTests
         }
     }
 
-    private static async Task<HttpResponseMessage> PostAsync(HttpClient client, string endpoint, string json)
+    private static async Task<HttpResponseMessage> PostAsync(
+        HttpClient client,
+        string endpoint,
+        string? accessToken,
+        string json)
     {
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        if (accessToken is not null)
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
         return await client.SendAsync(request);
     }
 

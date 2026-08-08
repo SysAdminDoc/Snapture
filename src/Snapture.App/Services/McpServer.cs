@@ -2,6 +2,9 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Net;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows.Automation;
@@ -59,6 +62,7 @@ public sealed class McpServer : IDisposable
 
     public bool IsRunning => _app is not null;
     public int Port { get; private set; }
+    public string? AccessToken { get; private set; }
     public string? BaseUrl => IsRunning ? $"http://127.0.0.1:{Port}{EndpointPath}" : null;
 
     public void Start(int port)
@@ -68,6 +72,7 @@ public sealed class McpServer : IDisposable
             throw new ArgumentOutOfRangeException(nameof(port), "MCP port must be between 1024 and 65535.");
 
         Stop();
+        string accessToken = McpAuthorization.CreateToken();
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions
         {
             ApplicationName = typeof(McpServer).Assembly.GetName().Name
@@ -84,6 +89,13 @@ public sealed class McpServer : IDisposable
                 return;
             }
 
+            if (!McpAuthorization.IsValid(context.Request.Headers.Authorization.FirstOrDefault(), accessToken))
+            {
+                context.Response.Headers.WWWAuthenticate = "Bearer";
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                return;
+            }
+
             await next().ConfigureAwait(false);
         });
         app.MapGet(EndpointPath, () => Results.StatusCode(StatusCodes.Status405MethodNotAllowed));
@@ -94,6 +106,7 @@ public sealed class McpServer : IDisposable
             app.StartAsync().GetAwaiter().GetResult();
             _app = app;
             Port = port;
+            AccessToken = accessToken;
             Log.Information("Mcp.Started {BaseUrl} {ProtocolVersion}", BaseUrl, ProtocolVersion);
         }
         catch
@@ -109,6 +122,7 @@ public sealed class McpServer : IDisposable
         try { _app?.DisposeAsync().AsTask().GetAwaiter().GetResult(); } catch { }
         _app = null;
         Port = 0;
+        AccessToken = null;
     }
 
     private async Task HandlePostAsync(HttpContext context)
@@ -333,6 +347,33 @@ public sealed class McpServer : IDisposable
 internal sealed class McpProtocolException(int code, string message) : Exception(message)
 {
     public int Code { get; } = code;
+}
+
+internal static class McpAuthorization
+{
+    private const int TokenBytes = 32;
+
+    public static string CreateToken() =>
+        Convert.ToBase64String(RandomNumberGenerator.GetBytes(TokenBytes))
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+
+    public static bool IsValid(string? authorizationHeader, string expectedToken)
+    {
+        if (string.IsNullOrWhiteSpace(authorizationHeader) || string.IsNullOrEmpty(expectedToken))
+            return false;
+
+        if (!AuthenticationHeaderValue.TryParse(authorizationHeader, out var header)
+            || !string.Equals(header.Scheme, "Bearer", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrWhiteSpace(header.Parameter))
+            return false;
+
+        byte[] provided = Encoding.UTF8.GetBytes(header.Parameter);
+        byte[] expected = Encoding.UTF8.GetBytes(expectedToken);
+        return provided.Length == expected.Length
+            && CryptographicOperations.FixedTimeEquals(provided, expected);
+    }
 }
 
 internal static class McpOriginPolicy

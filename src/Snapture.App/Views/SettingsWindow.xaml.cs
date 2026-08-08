@@ -631,8 +631,9 @@ public partial class SettingsWindow : Window
     private void UpdateMcpStatus()
     {
         var mcp = App.Host?.Mcp;
+        McpTokenBox.Text = mcp?.IsRunning == true ? mcp.AccessToken : string.Empty;
         McpStatusText.Text = mcp?.IsRunning == true
-            ? $"Running on {mcp.BaseUrl}\nLoopback-only; image bytes are opt-in per tool call."
+            ? $"Running on {mcp.BaseUrl}\nBearer authorization required; image bytes are opt-in per tool call."
             : "Server is stopped.";
     }
 

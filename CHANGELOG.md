@@ -2,6 +2,12 @@
 
 All notable changes to Snapture will be documented in this file.
 
+## [Unreleased]
+
+### Security
+
+- The opt-in loopback MCP endpoint now requires a cryptographically random in-memory bearer token that rotates on every server start; the Settings integration surface shows the token only while the server is running.
+
 ## [v0.7.0] — 2026-08-03
 
 ### Changed

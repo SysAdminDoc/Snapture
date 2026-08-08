@@ -648,6 +648,18 @@
                                             Content="Stop"
                                             Click="OnMcpStopClicked" />
                                 </StackPanel>
+                                <TextBlock Text="Bearer token (rotates every time the server starts)"
+                                           Style="{StaticResource HelpText}"
+                                           Margin="0,12,0,0" />
+                                <TextBox x:Name="McpTokenBox"
+                                         IsReadOnly="True"
+                                         TextWrapping="Wrap"
+                                         HorizontalAlignment="Stretch"
+                                         Margin="0,4,0,0" />
+                                <TextBlock Text="Send it as Authorization: Bearer &lt;token&gt;. Keep it private; it grants access to local capture tools."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,4,0,0" />
                                 <TextBlock x:Name="McpStatusText"
                                            Style="{StaticResource MonoCaptionText}"
                                            Margin="0,12,0,0"

@@ -170,7 +170,7 @@ The Scoop extras-bucket manifest is [packaging/scoop/snapture.json](packaging/sc
 
 Portable archives include a `Snapture.ini` marker beside `Snapture.App.exe`. Launching that copy automatically keeps settings, history, plugins, logs, autosave, and crash data under `SnaptureData` beside the executable. An unpacked copy can opt in explicitly with `Snapture.App.exe --portable`; the flag also works with every headless CLI command.
 
-**MCP integration:** Settings → Integrations can enable the optional Model Context Protocol server. It exposes loopback-only `http://127.0.0.1:<port>/mcp` tools for monitor/window/region/element/scrolling capture, local OCR, history search, and Auto-redact. The server is off by default, never binds the LAN-share adapter, and returns metadata plus a saved local path unless a tool call explicitly sets `include_image=true`.
+**MCP integration:** Settings → Integrations can enable the optional Model Context Protocol server. It exposes loopback-only `http://127.0.0.1:<port>/mcp` tools for monitor/window/region/element/scrolling capture, local OCR, history search, and Auto-redact. The server is off by default, never binds the LAN-share adapter, rotates an in-memory bearer token on every start, and shows that token only while the server is running; MCP clients must send `Authorization: Bearer <token>`. Requests return metadata plus a saved local path unless a tool call explicitly sets `include_image=true`.
 
 ## Usage
 
