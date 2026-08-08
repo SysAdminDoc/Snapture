@@ -8,6 +8,7 @@ param(
     [switch]$Msix,
     [switch]$Msi,
     [switch]$Velopack,
+    [switch]$Sbom,
     [switch]$Chocolatey,
     [switch]$NuGet,
     [ValidateSet('canary', 'pilot', 'stable')]
@@ -535,6 +536,13 @@ function New-NuGetPackage {
     Write-Host '    Publication intentionally remains operator-controlled; no API key is used by this build.' -ForegroundColor Yellow
 }
 
+function Invoke-SbomVerification {
+    $verifier = Join-Path $root 'build\verify-release.ps1'
+    Write-Host "==> Verifying offline SBOM and security floors for $Runtime" -ForegroundColor Cyan
+    & pwsh -NoProfile -File $verifier -Runtime $Runtime -PublishRoot (Join-Path $root 'publish')
+    if ($LASTEXITCODE -ne 0) { throw "Offline SBOM verification failed for $Runtime." }
+}
+
 if ($Clean) {
     Write-Host "==> Cleaning bin/obj/publish" -ForegroundColor Cyan
     Get-ChildItem -Path $root -Recurse -Directory -Force `
@@ -576,5 +584,6 @@ if ($Msi) { New-MsiPackage }
 if ($Velopack -and -not $Chocolatey) { New-VelopackPackage }
 if ($Chocolatey) { New-ChocolateyPackages }
 if ($NuGet) { New-NuGetPackage }
+if ($Sbom) { Invoke-SbomVerification }
 
 Write-Host "==> Done." -ForegroundColor Green
