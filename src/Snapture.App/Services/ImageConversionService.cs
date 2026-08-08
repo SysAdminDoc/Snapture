@@ -30,8 +30,7 @@ internal static class ImageConversionService
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
         string input = Path.GetFullPath(inputPath);
-        if (!File.Exists(input))
-            throw new FileNotFoundException("The source image does not exist.", input);
+        using var sourceInput = SafeImageInput.Open(input);
 
         if (resizePercent != 0 && (resizePercent < 1 || resizePercent > 1000))
             throw new ArgumentOutOfRangeException(nameof(resizePercent), "Resize must be between 1 and 1000 percent.");
@@ -42,7 +41,7 @@ internal static class ImageConversionService
             throw new InvalidOperationException("The output path must differ from the source image.");
 
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
-        using var image = new MagickImage(input);
+        using var image = new MagickImage(sourceInput.Stream);
         if (resizePercent != 0 && resizePercent != 100)
         {
             uint width = Math.Max(1u, (uint)Math.Round(image.Width * resizePercent / 100d));

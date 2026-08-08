@@ -28,7 +28,16 @@ internal sealed class GifLosslessSource
     public static GifLosslessSource Load(string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
-        return Parse(File.ReadAllBytes(path));
+        using var input = SafeImageInput.Open(path);
+        return Load(input.Stream);
+    }
+
+    internal static GifLosslessSource Load(Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        using var buffer = new MemoryStream();
+        stream.CopyTo(buffer);
+        return Parse(buffer.ToArray());
     }
 
     public void Save(string outputPath, IEnumerable<int> sourceFrameIndices)

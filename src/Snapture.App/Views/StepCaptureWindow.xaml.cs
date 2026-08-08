@@ -170,14 +170,7 @@ public partial class StepCaptureWindow : Window
     {
         try
         {
-            var bi = new BitmapImage();
-            bi.BeginInit();
-            bi.CacheOption = BitmapCacheOption.OnLoad;
-            bi.DecodePixelWidth = 360;
-            bi.UriSource = new Uri(path);
-            bi.EndInit();
-            bi.Freeze();
-            return bi;
+            return SafeImageInput.LoadBitmapImage(path, decodePixelWidth: 360);
         }
         catch { return null; }
     }

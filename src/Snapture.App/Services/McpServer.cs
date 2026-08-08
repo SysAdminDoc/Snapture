@@ -787,7 +787,8 @@ internal static class McpToolOperations
         string path = ResolveImagePath(args, settings, history);
         string? language = OptionalString(args, "language");
         bool includeImage = OptionalBool(args, "include_image");
-        using var bitmap = SKBitmap.Decode(path)
+        using var input = SafeImageInput.Open(path);
+        using var bitmap = SKBitmap.Decode(input.Stream)
             ?? throw new InvalidDataException("The selected file is not a readable image.");
         var result = await OcrService.RecognizeAsync(bitmap, language).ConfigureAwait(false);
         if (result is null)
@@ -838,7 +839,8 @@ internal static class McpToolOperations
         if (!outputPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
             outputPath = Path.ChangeExtension(outputPath, ".png");
 
-        using var source = SKBitmap.Decode(path)
+        using var input = SafeImageInput.Open(path);
+        using var source = SKBitmap.Decode(input.Stream)
             ?? throw new InvalidDataException("The selected file is not a readable image.");
         var findings = await AutoRedactor.ScanAsync(source, new HashSet<string>(settings.Current.DisabledRedactRules, StringComparer.OrdinalIgnoreCase))
             .ConfigureAwait(false);
@@ -945,7 +947,8 @@ internal static class McpToolOperations
         if (!includeImage)
             return Success(metadata);
 
-        using var image = SKBitmap.Decode(path)
+        using var input = SafeImageInput.Open(path);
+        using var image = SKBitmap.Decode(input.Stream)
             ?? throw new InvalidDataException("The selected image could not be encoded for MCP.");
         using var encodedImage = SKImage.FromBitmap(image).Encode(SKEncodedImageFormat.Png, 100)
             ?? throw new InvalidDataException("The selected image could not be encoded for MCP.");
@@ -1295,6 +1298,7 @@ internal static class McpToolOperations
             throw new ArgumentException("Only supported image files may be used by MCP.");
         if (!IsPathAllowed(fullPath, settings, includeOutputFolder: true))
             throw new UnauthorizedAccessException("The selected image is outside Snapture's permitted local folders.");
+        SafeImageInput.ValidateFile(fullPath);
         return fullPath;
     }
 

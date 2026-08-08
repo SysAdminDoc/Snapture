@@ -22,7 +22,8 @@ public static class ImageFeatureService
 
         try
         {
-            using var bitmap = SKBitmap.Decode(path);
+            using var input = SafeImageInput.Open(path);
+            using var bitmap = SKBitmap.Decode(input.Stream);
             if (bitmap is null || bitmap.Width <= 0 || bitmap.Height <= 0)
                 return null;
 

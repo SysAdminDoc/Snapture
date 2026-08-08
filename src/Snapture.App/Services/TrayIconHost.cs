@@ -311,7 +311,7 @@ public sealed class TrayIconHost : IDisposable
             if (path is null) return;
             try
             {
-                var bi = new System.Windows.Media.Imaging.BitmapImage(new Uri(path));
+                var bi = SafeImageInput.LoadBitmapImage(path);
                 var result = await OcrService.RecognizeAsync(bi);
                 string text = result?.Text ?? string.Empty;
                 if (!string.IsNullOrEmpty(text))
@@ -1059,7 +1059,7 @@ public sealed class TrayIconHost : IDisposable
             var result = await DeclarativeUploaderService.UploadAsync(
                 profile,
                 new DeclarativeUploaderRequest(
-                    await File.ReadAllBytesAsync(latest.FilePath),
+                    await SafeImageInput.ReadAllBytesAsync(latest.FilePath),
                     Path.GetFileName(latest.FilePath),
                     latest.Source,
                     latest.Width,
@@ -1128,7 +1128,7 @@ public sealed class TrayIconHost : IDisposable
         {
             ShowToast("Self-hosted upload", $"Uploading to {destination}…");
             var request = new SelfHostedUploadRequest(
-                await File.ReadAllBytesAsync(latest.FilePath),
+                await SafeImageInput.ReadAllBytesAsync(latest.FilePath),
                 Path.GetFileName(latest.FilePath),
                 latest.Source,
                 latest.Width,

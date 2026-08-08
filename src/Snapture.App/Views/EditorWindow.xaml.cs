@@ -231,8 +231,8 @@ public partial class EditorWindow : Window
         }
         else
         {
-            using var fs = File.OpenRead(path);
-            var bg = SKBitmap.Decode(fs) ?? throw new InvalidDataException("Could not decode image.");
+            using var input = SafeImageInput.Open(path);
+            var bg = SKBitmap.Decode(input.Stream) ?? throw new InvalidDataException("Could not decode image.");
             doc = new AnnotationDocument(bg);
         }
         return SkiaToBitmapSource(doc.RenderToBitmap());

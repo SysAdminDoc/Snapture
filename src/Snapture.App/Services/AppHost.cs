@@ -258,8 +258,8 @@ public sealed class AppHost : IDisposable
     private async Task ImportWatchedImageAsync(string path)
     {
         await Task.Yield();
-        using var stream = File.OpenRead(path);
-        using var bitmap = SKBitmap.Decode(stream)
+        using var input = SafeImageInput.Open(path);
+        using var bitmap = SKBitmap.Decode(input.Stream)
             ?? throw new InvalidDataException("The watched file is not a supported image.");
         History.Add(path, "Watch folder", null, null, bitmap.Width, bitmap.Height, null);
         _tray?.ShowToast("Watch folder import", Path.GetFileName(path));
@@ -271,6 +271,8 @@ public sealed class AppHost : IDisposable
         string path = Path.GetFullPath(imagePath);
         if (!File.Exists(path))
             throw new FileNotFoundException("The image file does not exist.", path);
+        if (!path.EndsWith(SnapFileFormat.Extension, StringComparison.OrdinalIgnoreCase))
+            SafeImageInput.ValidateFile(path);
 
         EditorTabHostWindow.Open(new EditorWindow(path));
     }

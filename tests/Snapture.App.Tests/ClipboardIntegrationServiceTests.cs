@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SkiaSharp;
 using Snapture.App.Services;
 
 namespace Snapture.App.Tests;
@@ -15,7 +16,8 @@ public sealed class ClipboardIntegrationServiceTests
             var source = Path.Combine(root, "capture.png");
             var vault = Path.Combine(root, "vault");
             Directory.CreateDirectory(vault);
-            File.WriteAllBytes(source, new byte[] { 1, 2, 3, 4 });
+            byte[] sourceBytes = CreatePng();
+            File.WriteAllBytes(source, sourceBytes);
             string? clipboard = null;
 
             var result = ClipboardIntegrationService.TryCopyCaptureAsMarkdown(
@@ -30,7 +32,7 @@ public sealed class ClipboardIntegrationServiceTests
             Assert.AreEqual(result.Markdown, clipboard);
             Assert.IsNotNull(result.DestinationPath);
             Assert.IsTrue(File.Exists(result.DestinationPath));
-            CollectionAssert.AreEqual(new byte[] { 1, 2, 3, 4 }, File.ReadAllBytes(result.DestinationPath!));
+            CollectionAssert.AreEqual(sourceBytes, File.ReadAllBytes(result.DestinationPath!));
         }
         finally
         {
@@ -115,6 +117,15 @@ public sealed class ClipboardIntegrationServiceTests
         var path = Path.Combine(Path.GetTempPath(), "SnaptureClipboardTests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(path);
         return path;
+    }
+
+    private static byte[] CreatePng()
+    {
+        using var bitmap = new SKBitmap(2, 2);
+        bitmap.Erase(new SKColor(42, 48, 64));
+        using var image = SKImage.FromBitmap(bitmap);
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return data.ToArray();
     }
 
     private static void DeleteTempDirectory(string path)

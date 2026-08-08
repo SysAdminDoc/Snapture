@@ -50,8 +50,8 @@ public static class StepCaptureOfficeExporter
             if (dimensions is null) continue;
 
             var imagePart = mainPart.AddImagePart(GetImagePartType(entry.FilePath));
-            using (var stream = File.OpenRead(entry.FilePath))
-                imagePart.FeedData(stream);
+            using (var imageInput = SafeImageInput.Open(entry.FilePath))
+                imagePart.FeedData(imageInput.Stream);
 
             var size = FitInside(dimensions.Value.Width, dimensions.Value.Height, DocxMaxWidth, DocxMaxHeight);
             var drawing = CreateWordImageDrawing(
@@ -150,8 +150,8 @@ public static class StepCaptureOfficeExporter
             if (dimensions is not null)
             {
                 var imagePart = slidePart.AddImagePart(GetImagePartType(sourcePath), "rIdImage");
-                using var stream = File.OpenRead(sourcePath);
-                imagePart.FeedData(stream);
+                using var imageInput = SafeImageInput.Open(sourcePath);
+                imagePart.FeedData(imageInput.Stream);
                 imageRelationship = slidePart.GetIdOfPart(imagePart);
             }
         }
@@ -431,7 +431,8 @@ public static class StepCaptureOfficeExporter
     {
         try
         {
-            using var bitmap = SKBitmap.Decode(path);
+            using var input = SafeImageInput.Open(path);
+            using var bitmap = SKBitmap.Decode(input.Stream);
             return bitmap is null || bitmap.Width <= 0 || bitmap.Height <= 0
                 ? null
                 : new ImageDimensions(bitmap.Width, bitmap.Height);

@@ -7,6 +7,7 @@ All notable changes to Snapture will be documented in this file.
 ### Security
 
 - The opt-in loopback MCP endpoint now requires a cryptographically random in-memory bearer token that rotates on every server start; the Settings integration surface shows the token only while the server is running.
+- File-backed image intake now uses one bounded, content-aware contract across watch-folder, conversion, editor, MCP, batch, GIF, clipboard, Office, and upload paths, rejecting signature mismatches, reparse paths, decoder failures, oversized dimensions, and pixel bombs before history insertion.
 
 ## [v0.7.0] — 2026-08-03
 

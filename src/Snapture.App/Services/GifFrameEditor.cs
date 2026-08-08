@@ -48,8 +48,10 @@ internal sealed class GifFrameEditor : IDisposable
 
     internal static GifFrameEditor LoadGif(string path)
     {
-        var source = GifLosslessSource.Load(path);
-        using var images = new MagickImageCollection(path);
+        using var input = SafeImageInput.Open(path);
+        var source = GifLosslessSource.Load(input.Stream);
+        input.Stream.Position = 0;
+        using var images = new MagickImageCollection(input.Stream);
         if (images.Count != source.Frames.Count)
         {
             throw new InvalidDataException(

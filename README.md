@@ -75,7 +75,7 @@ The existing landscape on Windows in 2026:
 
 The WPF surface uses an embedded `.resx` catalog with deterministic keys, system-culture fallback, and load-time coverage for titles, controls, tooltips, headers, and accessibility names. Reviewed satellite resources can be added without rewriting views.
 
-Settings → Output can also opt into a local watch folder that indexes completed image drops into History without opening or uploading them. Stable-write detection and extension filtering keep partial files out of the index.
+Settings → Output can also opt into a local watch folder that indexes completed image drops into History without opening or uploading them. Stable-write detection plus content-aware signature, decoder, and resource-limit checks keep partial, malformed, and oversized files out of the index.
 
 ## What ships in v0.3.0
 

@@ -44,13 +44,8 @@ public sealed record ImageCombinerResult(
 public static class ImageCombinerService
 {
     private const int MaxInputFiles = 100;
-    private const long MaxInputBytes = 100L * 1024 * 1024;
     private const int MaxDimension = 32_768;
     private const long MaxCanvasPixels = 100_000_000;
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"
-    };
 
     public static ImageCombinerResult Combine(
         IReadOnlyList<string> inputPaths,
@@ -112,16 +107,11 @@ public static class ImageCombinerService
 
     private static Bitmap LoadBitmap(string path)
     {
-        if (!File.Exists(path))
-            throw new FileNotFoundException("The source image does not exist.", path);
-        if (!ImageExtensions.Contains(Path.GetExtension(path)))
-            throw new ArgumentException($"Unsupported image type: {Path.GetFileName(path)}", nameof(path));
-        if (new FileInfo(path).Length > MaxInputBytes)
-            throw new InvalidDataException("A source image exceeds the 100 MB safety limit.");
-
-        using var source = new MagickImage(path);
-        if (source.Width is 0 or > MaxDimension || source.Height is 0 or > MaxDimension)
+        using var input = SafeImageInput.Open(path);
+        if (input.Info.Width is 0 or > MaxDimension || input.Info.Height is 0 or > MaxDimension)
             throw new InvalidDataException($"The source image dimensions exceed {MaxDimension} pixels.");
+
+        using var source = new MagickImage(input.Stream);
         source.Format = MagickFormat.Png;
         using var png = new MemoryStream();
         source.Write(png);

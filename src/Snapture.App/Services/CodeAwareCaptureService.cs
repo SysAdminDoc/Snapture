@@ -28,14 +28,8 @@ public sealed record CodeAwareCaptureResult(
 /// </summary>
 public static class CodeAwareCaptureService
 {
-    private const long MaxInputBytes = 100L * 1024 * 1024;
-    private const int MaxInputDimension = 16_384;
     private const int MaxLines = 400;
     private const int MaxLineLength = 2_000;
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"
-    };
     private static readonly Regex CodeTokenPattern = new(
         "//.*|#.*|\"(?:\\\\.|[^\"])*\"|'(?:\\\\.|[^'])*'|\\b(?:using|namespace|class|public|private|protected|internal|static|void|return|if|else|for|foreach|while|new|var|const|async|await|def|function|import|from|SELECT|FROM|WHERE|let|interface)\\b|\\b\\d+(?:\\.\\d+)?\\b",
         RegexOptions.Compiled | RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -213,20 +207,12 @@ public static class CodeAwareCaptureService
     }
 
     private static void ValidateInput(string input)
-    {
-        if (!File.Exists(input))
-            throw new FileNotFoundException("The source image does not exist.", input);
-        if (!ImageExtensions.Contains(Path.GetExtension(input)))
-            throw new ArgumentException("The source must be a supported still image.", nameof(input));
-        if (new FileInfo(input).Length > MaxInputBytes)
-            throw new InvalidDataException("The source image exceeds the 100 MB safety limit.");
-    }
+        => SafeImageInput.ValidateFile(input);
 
     private static SKBitmap LoadBitmap(string path)
     {
-        using var image = new MagickImage(path);
-        if (image.Width is 0 or > MaxInputDimension || image.Height is 0 or > MaxInputDimension)
-            throw new InvalidDataException($"The source image dimensions exceed {MaxInputDimension} pixels.");
+        using var input = SafeImageInput.Open(path);
+        using var image = new MagickImage(input.Stream);
         image.Format = MagickFormat.Png;
         using var png = new MemoryStream();
         image.Write(png);

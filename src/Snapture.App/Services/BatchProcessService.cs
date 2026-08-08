@@ -37,12 +37,7 @@ public sealed record BatchProcessItemResult(
 /// <summary>Applies a bounded local effect chain to a folder of still images.</summary>
 public static class BatchProcessService
 {
-    private const long MaxInputBytes = 100L * 1024 * 1024;
     private const int MaxFiles = 1_000;
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"
-    };
 
     public static IReadOnlyList<BatchProcessItemResult> ProcessDirectory(
         string inputDirectory,
@@ -59,7 +54,7 @@ public static class BatchProcessService
         Directory.CreateDirectory(output);
 
         var paths = Directory.EnumerateFiles(input, "*.*", SearchOption.TopDirectoryOnly)
-            .Where(path => ImageExtensions.Contains(Path.GetExtension(path)))
+            .Where(path => SafeImageInput.IsSupportedExtension(Path.GetExtension(path)))
             .OrderBy(path => path, StringComparer.OrdinalIgnoreCase)
             .Take(MaxFiles + 1)
             .ToArray();
@@ -79,14 +74,11 @@ public static class BatchProcessService
         try
         {
             options.Validate();
-            if (!File.Exists(fullInput))
-                throw new FileNotFoundException("The source image does not exist.", fullInput);
-            if (new FileInfo(fullInput).Length > MaxInputBytes)
-                throw new InvalidDataException("The source image exceeds the 100 MB safety limit.");
+            using var sourceInput = SafeImageInput.Open(fullInput);
 
             Directory.CreateDirectory(fullOutputDirectory);
             string outputPath = UniqueOutputPath(fullInput, fullOutputDirectory, options.OutputFormat);
-            using var sourceMagick = new MagickImage(fullInput);
+            using var sourceMagick = new MagickImage(sourceInput.Stream);
             sourceMagick.Format = MagickFormat.Png;
             using var sourcePng = new MemoryStream();
             sourceMagick.Write(sourcePng);

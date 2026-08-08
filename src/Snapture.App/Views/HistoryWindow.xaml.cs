@@ -299,14 +299,7 @@ public partial class HistoryWindow : Window
         try
         {
             if (!File.Exists(path)) return null;
-            var bi = new BitmapImage();
-            bi.BeginInit();
-            bi.CacheOption = BitmapCacheOption.OnLoad;
-            bi.DecodePixelWidth = 240;
-            bi.UriSource = new Uri(path);
-            bi.EndInit();
-            bi.Freeze();
-            return bi;
+            return SafeImageInput.LoadBitmapImage(path, decodePixelWidth: 240);
         }
         catch { return null; }
     }
@@ -383,7 +376,7 @@ public partial class HistoryWindow : Window
         {
             try
             {
-                var bi = new BitmapImage(new Uri(row.FilePath));
+                var bi = SafeImageInput.LoadBitmapImage(row.FilePath);
                 new PinWindow(bi).Show();
             }
             catch (Exception ex)
@@ -398,7 +391,7 @@ public partial class HistoryWindow : Window
         if (Selected is not { } row || !File.Exists(row.FilePath)) return;
         try
         {
-            var bi = new BitmapImage(new Uri(row.FilePath));
+            var bi = SafeImageInput.LoadBitmapImage(row.FilePath);
             var result = await OcrService.RecognizeAsync(bi);
             string text = result?.Text ?? "";
             _history.UpdateOcrText(row.Id, text);
@@ -459,7 +452,7 @@ public partial class HistoryWindow : Window
                 if (!File.Exists(entry.FilePath)) continue;
                 try
                 {
-                    var bi = new BitmapImage(new Uri(entry.FilePath));
+                    var bi = SafeImageInput.LoadBitmapImage(entry.FilePath);
                     var r = await OcrService.RecognizeAsync(bi);
                     var text = r?.Text ?? "";
                     _history.UpdateOcrText(entry.Id, text);

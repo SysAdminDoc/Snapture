@@ -133,12 +133,7 @@ public static class ClipboardIntegrationService
             if (string.IsNullOrWhiteSpace(capturePath) || !File.Exists(capturePath))
                 throw new FileNotFoundException("The capture file is not available.", capturePath);
 
-            var image = new BitmapImage();
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.UriSource = new Uri(Path.GetFullPath(capturePath));
-            image.EndInit();
-            image.Freeze();
+            var image = SafeImageInput.LoadBitmapImage(capturePath);
             Clipboard.SetImage(image);
             error = null;
             return true;
@@ -186,14 +181,24 @@ public static class ClipboardIntegrationService
         if (source.Equals(destination, StringComparison.OrdinalIgnoreCase))
             return destination;
 
-        if (Path.GetExtension(source).Equals(".png", StringComparison.OrdinalIgnoreCase))
+        using var input = SafeImageInput.Open(source);
+        try
         {
-            File.Copy(source, destination);
+            if (input.Info.Format == SafeImageFormat.Png)
+            {
+                using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+                input.Stream.CopyTo(output);
+            }
+            else
+            {
+                using var image = Image.FromStream(input.Stream, useEmbeddedColorManagement: false, validateImageData: true);
+                image.Save(destination, ImageFormat.Png);
+            }
         }
-        else
+        catch
         {
-            using var image = Image.FromFile(source);
-            image.Save(destination, ImageFormat.Png);
+            TryDelete(destination);
+            throw;
         }
 
         return destination;
@@ -220,6 +225,19 @@ public static class ClipboardIntegrationService
         for (var index = 1; File.Exists(candidate); index++)
             candidate = Path.Combine(directory, $"{stem}_{index}{extension}");
         return candidate;
+    }
+
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch
+        {
+            // The original error is more useful to the caller than cleanup failure.
+        }
     }
 
     private static bool IsChildOrSame(string path, string root)

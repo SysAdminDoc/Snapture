@@ -11,11 +11,6 @@ namespace Snapture.App.Services;
 /// </summary>
 public sealed class WatchFolderService : IDisposable
 {
-    private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".webp", ".tif", ".tiff"
-    };
-
     private readonly Func<string, Task> _onImageReady;
     private readonly ConcurrentDictionary<string, byte> _queued = new(StringComparer.OrdinalIgnoreCase);
     private readonly ConcurrentDictionary<string, DateTime> _processed = new(StringComparer.OrdinalIgnoreCase);
@@ -97,6 +92,7 @@ public sealed class WatchFolderService : IDisposable
                             if (!_processed.TryGetValue(path, out var processedAt)
                                 || processedAt != current.LastWriteTimeUtc)
                             {
+                                SafeImageInput.ValidateFile(path);
                                 await _onImageReady(path).ConfigureAwait(false);
                                 _processed[path] = current.LastWriteTimeUtc;
                             }
@@ -124,7 +120,8 @@ public sealed class WatchFolderService : IDisposable
         }
     }
 
-    private static bool IsImage(string path) => ImageExtensions.Contains(Path.GetExtension(path));
+    private static bool IsImage(string path)
+        => SafeImageInput.IsSupportedExtension(Path.GetExtension(path));
 
     public void Dispose()
     {
