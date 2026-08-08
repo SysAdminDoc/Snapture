@@ -12,6 +12,11 @@ internal readonly record struct VideoSegmentRange(TimeSpan Start, TimeSpan End)
     public TimeSpan Duration => End - Start;
 }
 
+internal readonly record struct VideoRecentSegmentSelection(int Index, TimeSpan Start, TimeSpan End)
+{
+    public TimeSpan Duration => End - Start;
+}
+
 /// <summary>
 /// Non-destructive MP4 trim and split operations backed by Windows Media Composition.
 /// The source is never overwritten; every operation renders a new file.
@@ -73,6 +78,76 @@ internal static class VideoSegmentService
         var input = await StorageFile.GetFileFromPathAsync(Path.GetFullPath(inputPath));
         var clip = await MediaClip.CreateFromFileAsync(input);
         return clip.OriginalDuration;
+    }
+
+    public static async Task<TimeSpan> RenderRecentAsync(
+        IReadOnlyList<string> inputPaths,
+        IReadOnlyList<TimeSpan> durations,
+        TimeSpan requestedDuration,
+        string outputPath,
+        CancellationToken cancellationToken = default)
+    {
+        if (inputPaths.Count != durations.Count || inputPaths.Count == 0)
+            throw new ArgumentException("At least one video segment and matching duration are required.");
+
+        var selections = BuildRecentSegmentPlan(durations, requestedDuration);
+        if (selections.Count == 0)
+            throw new ArgumentException("The video segments contain no usable duration.", nameof(durations));
+
+        string outputFullPath = Path.GetFullPath(outputPath);
+        string? outputDirectory = Path.GetDirectoryName(outputFullPath);
+        if (string.IsNullOrWhiteSpace(outputDirectory))
+            throw new ArgumentException("Output path must include a directory.", nameof(outputPath));
+        if (inputPaths.Any(path => string.Equals(Path.GetFullPath(path), outputFullPath, StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("The output recording cannot overwrite a ring-buffer segment.", nameof(outputPath));
+
+        var composition = new MediaComposition();
+        foreach (var selection in selections)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var input = await StorageFile.GetFileFromPathAsync(Path.GetFullPath(inputPaths[selection.Index]));
+            var clip = await MediaClip.CreateFromFileAsync(input);
+            clip.TrimTimeFromStart = selection.Start;
+            clip.TrimTimeFromEnd = clip.OriginalDuration - selection.End;
+            composition.Clips.Add(clip);
+        }
+
+        Directory.CreateDirectory(outputDirectory);
+        var folder = await StorageFolder.GetFolderFromPathAsync(outputDirectory);
+        var output = await folder.CreateFileAsync(
+            Path.GetFileName(outputFullPath),
+            CreationCollisionOption.ReplaceExisting);
+        cancellationToken.ThrowIfCancellationRequested();
+        var profile = MediaEncodingProfile.CreateMp4(VideoEncodingQuality.Auto);
+        await composition.RenderToFileAsync(output, MediaTrimmingPreference.Precise, profile);
+        return TimeSpan.FromTicks(selections.Sum(selection => selection.Duration.Ticks));
+    }
+
+    internal static IReadOnlyList<VideoRecentSegmentSelection> BuildRecentSegmentPlan(
+        IReadOnlyList<TimeSpan> durations,
+        TimeSpan requestedDuration)
+    {
+        if (requestedDuration <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(requestedDuration));
+
+        if (durations.Count == 0 || durations.Any(duration => duration <= TimeSpan.Zero))
+            return Array.Empty<VideoRecentSegmentSelection>();
+
+        TimeSpan remaining = TimeSpan.FromTicks(Math.Min(
+            requestedDuration.Ticks,
+            durations.Sum(duration => duration.Ticks)));
+        var selections = new List<VideoRecentSegmentSelection>();
+        for (int index = durations.Count - 1; index >= 0 && remaining > TimeSpan.Zero; index--)
+        {
+            TimeSpan segmentDuration = durations[index];
+            TimeSpan selected = remaining < segmentDuration ? remaining : segmentDuration;
+            TimeSpan start = segmentDuration - selected;
+            selections.Add(new VideoRecentSegmentSelection(index, start, segmentDuration));
+            remaining -= selected;
+        }
+
+        selections.Reverse();
+        return selections;
     }
 
     public static async Task<IReadOnlyList<string>> SplitAsync(

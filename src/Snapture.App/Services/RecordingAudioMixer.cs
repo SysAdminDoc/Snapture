@@ -27,6 +27,8 @@ internal sealed class RecordingAudioMixer : IDisposable
     private bool _paused;
     private bool _disposed;
 
+    public event Action<string>? SourceChanged;
+
     public RecordingAudioMixer(RecordingAudioOptions options, Action<byte[], int, long, long> writePcm)
     {
         _writePcm = writePcm;
@@ -238,10 +240,13 @@ internal sealed class RecordingAudioMixer : IDisposable
         _microphoneSource.Add(e.Buffer, e.BytesRecorded, _microphoneCapture.WaveFormat);
     }
 
-    private static void OnRecordingStopped(object? sender, StoppedEventArgs e)
+    private void OnRecordingStopped(object? sender, StoppedEventArgs e)
     {
         if (e.Exception is not null)
+        {
             Log.Warning(e.Exception, "VideoRecorder.Audio.CaptureStopped");
+            SourceChanged?.Invoke("audio device stopped");
+        }
     }
 
     private void ThrowIfDisposed()

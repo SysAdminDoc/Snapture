@@ -588,6 +588,32 @@ public sealed class TrayIconHost : IDisposable
             ShowToast("Ring buffer stopped", "The temporary rolling recording was discarded.");
         };
         ringMenu.Items.Add(ringStop);
+        var ringReview = new MenuItem { Header = "Review recovered ring buffer…" };
+        ringReview.Click += (_, _) =>
+        {
+            string recoveryDirectory = VideoRingBufferRecovery.DefaultBufferDirectory;
+            if (!VideoRingBufferRecovery.HasRecoveries(recoveryDirectory))
+            {
+                ShowToast("No recovered ring buffer", "No interrupted recording is currently retained.");
+                return;
+            }
+
+            try
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"\"{recoveryDirectory}\"",
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Could not open recovered ring-buffer recordings:\n{ex.Message}", "Snapture",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        };
+        ringMenu.Items.Add(ringReview);
         _ringBuffer.StateChanged += () =>
         {
             if (Application.Current.Dispatcher.CheckAccess())
@@ -604,6 +630,7 @@ public sealed class TrayIconHost : IDisposable
             ringSave60.IsEnabled = running;
             ringSave90.IsEnabled = running;
             ringStop.IsEnabled = running;
+            ringReview.IsEnabled = VideoRingBufferRecovery.HasRecoveries(VideoRingBufferRecovery.DefaultBufferDirectory);
             ringMenu.ToolTip = running
                 ? $"{_ringBuffer.Status} · {_ringBuffer.BufferedDuration:mm\\:ss} buffered"
                 : _ringBuffer.Status;

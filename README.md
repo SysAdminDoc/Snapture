@@ -41,6 +41,7 @@ The existing landscape on Windows in 2026:
 
 - **Sticky-header / sticky-footer detection** in the image stitcher — UI chrome that doesn't scroll appears once at the top + bottom of the stitched output instead of repeating per frame.
 - **Animated GIF recording** — Tray → Tools → Record GIF (foreground window or all monitors). 10 fps default, frames held in memory until you stop, saved through a standard file dialog.
+- **Crash-recoverable ring-buffer recording** — the rolling MP4 uses atomic session manifests and three bounded 30-second segments, retains only the last 90 seconds, quarantines interrupted fragmented media for explicit review, and reports discarded stale/corrupt data without opening it automatically.
 - **GIF clip editing** — Tray → Tools → Edit GIF opens an existing animation for frame deletion and editing; deletion-only changes can be saved as a lossless clip that keeps the source palettes and compressed frame data.
 - **Per-rule auto-redact toggles** — Settings → Auto-redact lists every detector rule as a checkbox. Disabled set is persisted; new rules ship enabled.
 - **Plugin contract resize support** — capture processors may now resize, not just replace pixels. Plugin output lands in the saved file and the history index (the order is now capture → plugins → save).

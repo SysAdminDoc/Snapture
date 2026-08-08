@@ -108,6 +108,8 @@ public sealed class AppHost : IDisposable
         {
             int orphans = OrphanFileDetector.Sweep();
             if (orphans > 0) Log.Information("OrphanDetector.Cleaned {Count} orphan(s)", orphans);
+            if (OrphanFileDetector.LastRingBufferRecovery is { HasAction: true } recovery)
+                _tray?.ShowToast("Ring buffer recovery", recovery.Message);
         }
         catch (Exception ex) { Log.Warning(ex, "OrphanDetector.Failed"); }
 

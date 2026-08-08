@@ -12,6 +12,10 @@ All notable changes to Snapture will be documented in this file.
 - Plugin installation now requires separate approval for the exact DLL SHA-256 artifact and declared capabilities; hash/version changes invalidate trust, rollback restores the previous artifact on failed activation, and the UI states that in-process loading is not an OS sandbox.
 - Release verification now scans the x64 and ARM64 payloads offline, emits deterministic CycloneDX SBOMs with license and native-component inventories, binds each SBOM to a complete artifact manifest hash, and enforces SQLite, ImageMagick, Windows App SDK, ONNX Runtime, SkiaSharp, native codec, and .NET runtime floors.
 
+### Reliability
+
+- Ring-buffer recording now writes an atomic per-session manifest and bounded 30-second fragmented-MP4 segments, keeps the last 90 seconds across segment boundaries, detects interrupted/corrupt/stale sessions on restart, quarantines recoverable media for explicit tray review, and retains failed-save sources instead of deleting them.
+
 ## [v0.7.0] — 2026-08-03
 
 ### Changed
@@ -358,7 +362,7 @@ All notable changes to Snapture will be documented in this file.
 
 ### Added — Ring-buffer recording
 
-- Tools → Record MP4 video → Ring buffer can continuously retain a bounded foreground-window or primary-monitor recording and save the last 30, 60, or 90 seconds on demand. The rolling source rotates at 90 seconds, stays in the Snapture temp area, and is deleted after save, stop, or shutdown.
+- Tools → Record MP4 video → Ring buffer can continuously retain a bounded foreground-window or primary-monitor recording and save the last 30, 60, or 90 seconds on demand. The source uses three 30-second segments in an atomic per-session manifest, stays in the Snapture temp area, and is discarded on an explicit stop; interrupted recoverable sessions are quarantined for explicit tray review.
 
 ### Added — GIF frame editor
 

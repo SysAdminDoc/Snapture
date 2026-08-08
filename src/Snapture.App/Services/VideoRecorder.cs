@@ -79,6 +79,7 @@ public sealed class VideoRecorder : IDisposable
         : $"{_width}x{_height}→{_outputWidth}x{_outputHeight}";
     public bool IsSourceClosed => _sourceClosedFlag;
     public event Action? SourceClosed;
+    public event Action<string>? EnvironmentChanged;
     public event Action<int, TimeSpan>? Progress;
 
     private readonly Stopwatch _sw = new();
@@ -207,8 +208,12 @@ public sealed class VideoRecorder : IDisposable
         _session = null;
         _framePool?.Dispose();
         _framePool = null;
-        _audioCapture?.Dispose();
-        _audioCapture = null;
+        if (_audioCapture is not null)
+        {
+            _audioCapture.SourceChanged -= OnAudioSourceChanged;
+            _audioCapture.Dispose();
+            _audioCapture = null;
+        }
         StopPointerTracking();
         StopKeyboardTracking();
 
@@ -599,6 +604,7 @@ public sealed class VideoRecorder : IDisposable
         try
         {
             _audioCapture = new RecordingAudioMixer(_audioOptions, WriteAudioSample);
+            _audioCapture.SourceChanged += OnAudioSourceChanged;
             _audioCapture.Start();
             AudioDescription = _audioCapture.Description;
         }
@@ -1100,6 +1106,13 @@ public sealed class VideoRecorder : IDisposable
         if (!IsRecording) return;
         Log.Information("VideoRecorder.DisplaySettingsChanged — DPI or monitor topology changed during recording");
         _dirtyRegionFilter.ForceNextFrame();
+        EnvironmentChanged?.Invoke("display settings changed");
+    }
+
+    private void OnAudioSourceChanged(string reason)
+    {
+        if (IsRecording)
+            EnvironmentChanged?.Invoke(reason);
     }
 
     [DllImport("user32.dll")]
@@ -1110,8 +1123,12 @@ public sealed class VideoRecorder : IDisposable
         if (_disposed) return;
         _disposed = true;
         if (IsRecording) Stop();
-        _audioCapture?.Dispose();
-        _audioCapture = null;
+        if (_audioCapture is not null)
+        {
+            _audioCapture.SourceChanged -= OnAudioSourceChanged;
+            _audioCapture.Dispose();
+            _audioCapture = null;
+        }
         StopPointerTracking();
         StopKeyboardTracking();
         if (_d3dContext != 0) { Marshal.Release(_d3dContext); _d3dContext = 0; }

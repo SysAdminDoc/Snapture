@@ -11,6 +11,7 @@ namespace Snapture.App.Services;
 public static class OrphanFileDetector
 {
     private static string LocalAppData => PortableMode.LocalDataDirectory;
+    internal static RingBufferRecoveryResult? LastRingBufferRecovery { get; private set; }
 
     public static int Sweep()
     {
@@ -18,6 +19,16 @@ public static class OrphanFileDetector
         cleaned += CleanStepSessions();
         cleaned += CleanGifTempFrames();
         cleaned += CleanStaleAutosaves();
+        try
+        {
+            LastRingBufferRecovery = VideoRingBufferRecovery.RecoverOrphans(
+                VideoRingBufferRecovery.DefaultBufferDirectory);
+            cleaned += LastRingBufferRecovery.DiscardedCount;
+        }
+        catch (Exception ex)
+        {
+            Log.Warning(ex, "OrphanDetector.RingBufferRecoveryFailed");
+        }
         return cleaned;
     }
 

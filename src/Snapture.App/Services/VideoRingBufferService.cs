@@ -6,19 +6,28 @@ namespace Snapture.App.Services;
 
 /// <summary>
 /// Keeps a bounded rolling MP4 on disk and renders a requested recent range into a
-/// user-selected file. The working file is private temp state; it is never presented
-/// as a completed recording and is deleted after rotation or shutdown.
+/// user-selected file. Each session has an atomic manifest and short fragmented-MP4
+/// segments so an interrupted process can be quarantined instead of silently losing
+/// or exposing stale screen data.
 /// </summary>
 internal sealed class VideoRingBufferService : IDisposable
 {
     private const int MaximumBufferSeconds = 90;
-    private static readonly string BufferDirectory = Path.Combine(Path.GetTempPath(), "Snapture", "ring-buffer");
+    private const int SegmentDurationSeconds = 30;
+    private const int MaximumSegmentCount = 3;
+    private const long MaximumBufferBytes = 256L * 1024 * 1024;
+    private const long MinimumFreeSpaceBytes = 64L * 1024 * 1024;
+    private static readonly string BufferDirectory = VideoRingBufferRecovery.DefaultBufferDirectory;
 
     private readonly SemaphoreSlim _gate = new(1, 1);
     private Timer? _maintenance;
     private VideoRecorder? _recorder;
     private string? _currentPath;
+    private string? _sessionDirectory;
+    private RingBufferSessionManifest? _manifest;
     private RingSource? _source;
+    private int _segmentNumber;
+    private TimeSpan _completedDuration;
     private int _fps;
     private int _bitrateMbps;
     private int _outputWidth;
@@ -30,7 +39,17 @@ internal sealed class VideoRingBufferService : IDisposable
     private bool _disposed;
 
     public bool IsRunning => Volatile.Read(ref _running);
-    public TimeSpan BufferedDuration => _recorder?.Elapsed ?? TimeSpan.Zero;
+    public TimeSpan BufferedDuration
+    {
+        get
+        {
+            TimeSpan duration = _completedDuration + (_recorder?.Elapsed ?? TimeSpan.Zero);
+            return duration > TimeSpan.FromSeconds(MaximumBufferSeconds)
+                ? TimeSpan.FromSeconds(MaximumBufferSeconds)
+                : duration;
+        }
+    }
+
     public string Status { get; private set; } = "Ring buffer off";
     public event Action? StateChanged;
 
@@ -76,7 +95,24 @@ internal sealed class VideoRingBufferService : IDisposable
         {
             _maintenance?.Dispose();
             _maintenance = null;
+            if (_manifest is not null && _sessionDirectory is not null)
+            {
+                try
+                {
+                    _manifest.State = RingBufferSessionState.CleanStop;
+                    _manifest.ActiveFileName = null;
+                    VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning(ex, "VideoRingBuffer.CleanStopManifestFailed");
+                }
+            }
+
             StopCurrentLocked(deleteFile: true);
+            DeleteSessionLocked();
+            _source = null;
+            _completedDuration = TimeSpan.Zero;
             Status = "Ring buffer off";
             RaiseStateChanged();
         }
@@ -97,38 +133,65 @@ internal sealed class VideoRingBufferService : IDisposable
             throw new ArgumentException("An output path is required.", nameof(outputPath));
 
         await _gate.WaitAsync(cancellationToken);
-        string? sourcePath = null;
         RingSource? source = null;
+        string? oldSessionDirectory = null;
+        bool oldSessionDeleted = false;
         try
         {
             ThrowIfDisposed();
-            if (!IsRunning || _recorder is null || _currentPath is null || _source is null)
+            if (!IsRunning || _recorder is null || _currentPath is null || _source is null || _manifest is null || _sessionDirectory is null)
                 throw new InvalidOperationException("The ring buffer is not running.");
 
-            sourcePath = _currentPath;
             source = _source;
+            oldSessionDirectory = _sessionDirectory;
+            _manifest.State = RingBufferSessionState.Saving;
+            VideoRingBufferRecovery.WriteManifest(oldSessionDirectory, _manifest);
             StopCurrentLocked(deleteFile: false);
 
-            var duration = await VideoSegmentService.GetDurationAsync(sourcePath);
-            var start = SelectRecentStart(duration, requestedDuration);
-            await VideoSegmentService.TrimAsync(sourcePath, outputPath, start, duration, cancellationToken);
-            TryDelete(sourcePath);
+            var segments = _manifest.Segments
+                .Where(segment => segment.State == "complete")
+                .Where(segment => File.Exists(Path.Combine(oldSessionDirectory, segment.FileName)))
+                .OrderBy(segment => segment.StartedUtc)
+                .ToArray();
+            if (segments.Length == 0)
+                throw new InvalidOperationException("The ring buffer has no finalized video segment to save.");
 
-            StartCoreLocked(source.Value, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator, _hdrColorCorrection);
+            var paths = segments.Select(segment => Path.Combine(oldSessionDirectory, segment.FileName)).ToArray();
+            var durations = new TimeSpan[paths.Length];
+            for (int i = 0; i < paths.Length; i++)
+                durations[i] = await VideoSegmentService.GetDurationAsync(paths[i]);
+
+            await VideoSegmentService.RenderRecentAsync(paths, durations, requestedDuration, outputPath, cancellationToken);
+            DeleteSessionLocked();
+            oldSessionDeleted = true;
+            _completedDuration = TimeSpan.Zero;
+            StartSessionLocked(source.Value);
             Status = $"Ring buffer saved last {requestedDuration.TotalSeconds:0}s";
             RaiseStateChanged();
             return outputPath;
         }
         catch
         {
-            if (sourcePath is not null)
-                TryDelete(sourcePath);
+            if (!oldSessionDeleted && _recorder is not null)
+                StopCurrentLocked(deleteFile: false);
+
+            if (!oldSessionDeleted && _manifest is not null && oldSessionDirectory is not null)
+            {
+                _manifest.State = RingBufferSessionState.RecoveryRequired;
+                _manifest.ActiveFileName = null;
+                _manifest.LastError = "Saving the requested range failed; the interrupted segments were retained for review.";
+                VideoRingBufferRecovery.WriteManifest(oldSessionDirectory, _manifest);
+                _manifest = null;
+                _sessionDirectory = null;
+                _currentPath = null;
+                _completedDuration = TimeSpan.Zero;
+            }
 
             if (source is { } restartSource)
             {
                 try
                 {
-                    StartCoreLocked(restartSource, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator, _hdrColorCorrection);
+                    StartSessionLocked(restartSource);
                 }
                 catch (Exception ex)
                 {
@@ -174,12 +237,13 @@ internal sealed class VideoRingBufferService : IDisposable
             _autoTighten = autoTighten;
             _toneMapOperator = toneMapOperator;
             _hdrColorCorrection = hdrColorCorrection;
-            StartCoreLocked(source, fps, bitrateMbps, outputWidth, outputHeight, autoTighten, toneMapOperator, hdrColorCorrection);
+            StartSessionLocked(source);
             _maintenance = new Timer(MaintainBuffer, null, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1));
         }
         catch
         {
             StopCurrentLocked(deleteFile: true);
+            DeleteSessionLocked();
             throw;
         }
         finally
@@ -188,41 +252,97 @@ internal sealed class VideoRingBufferService : IDisposable
         }
     }
 
-    private void StartCoreLocked(
-        RingSource source,
-        int fps,
-        int bitrateMbps,
-        int outputWidth,
-        int outputHeight,
-        bool autoTighten,
-        HdrToneMapOperator toneMapOperator,
-        bool hdrColorCorrection)
+    private void StartSessionLocked(RingSource source)
     {
-        Directory.CreateDirectory(BufferDirectory);
-        string path = Path.Combine(BufferDirectory, $"active-{Guid.NewGuid():N}.mp4");
+        if (_sessionDirectory is not null)
+            throw new InvalidOperationException("A ring-buffer session is already allocated.");
+
+        // A failed save can leave a quarantined session while this process starts
+        // a fresh one. Reapply the same age/count/byte policy before allocating it
+        // so repeated failures cannot grow the temp tree without bound.
+        VideoRingBufferRecovery.RecoverOrphans(BufferDirectory);
+        EnsureDiskSpaceLocked();
+        string directory = VideoRingBufferRecovery.CreateSessionDirectory(BufferDirectory);
+        var manifest = new RingBufferSessionManifest
+        {
+            SessionId = Path.GetFileName(directory),
+            State = RingBufferSessionState.Starting,
+            SourceMode = source.Mode.ToString(),
+            SourceHandle = source.Handle.ToInt64(),
+            Fps = _fps,
+            BitrateMbps = _bitrateMbps,
+            OutputWidth = _outputWidth,
+            OutputHeight = _outputHeight,
+            AutoTighten = _autoTighten,
+            ToneMapOperator = _toneMapOperator.ToString(),
+            HdrColorCorrection = _hdrColorCorrection,
+            StartedUtc = DateTime.UtcNow
+        };
+        _sessionDirectory = directory;
+        _manifest = manifest;
+        _source = source;
+        _segmentNumber = 0;
+        _completedDuration = TimeSpan.Zero;
+        try
+        {
+            StartSegmentLocked(source);
+        }
+        catch
+        {
+            DeleteSessionLocked();
+            throw;
+        }
+    }
+
+    private void StartSegmentLocked(RingSource source)
+    {
+        if (_sessionDirectory is null || _manifest is null)
+            throw new InvalidOperationException("No ring-buffer session is allocated.");
+
+        EnsureDiskSpaceLocked();
+        string fileName = $"segment-{++_segmentNumber:000}.mp4";
+        string path = Path.Combine(_sessionDirectory, fileName);
+        var segment = new RingBufferSegmentManifest
+        {
+            FileName = fileName,
+            StartedUtc = DateTime.UtcNow,
+            State = "active"
+        };
+        _manifest.Segments.Add(segment);
+        _manifest.ActiveFileName = fileName;
+        _manifest.State = RingBufferSessionState.Starting;
+        VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+
         var recorder = new VideoRecorder(
             new RecordingAudioOptions { IncludeSystemAudio = false },
-            autoTightenEnabled: autoTighten,
-            toneMapOperator: toneMapOperator,
-            hdrColorCorrection: hdrColorCorrection);
+            autoTightenEnabled: _autoTighten,
+            toneMapOperator: _toneMapOperator,
+            hdrColorCorrection: _hdrColorCorrection);
         try
         {
             if (source.Mode == RingSourceMode.Window)
-                recorder.StartWindow(source.Handle, path, fps, bitrateMbps, outputWidth, outputHeight);
+                recorder.StartWindow(source.Handle, path, _fps, _bitrateMbps, _outputWidth, _outputHeight);
             else
-                recorder.StartMonitor(source.Handle, path, fps, bitrateMbps, outputWidth, outputHeight);
+                recorder.StartMonitor(source.Handle, path, _fps, _bitrateMbps, _outputWidth, _outputHeight);
 
+            recorder.SourceClosed += OnRecorderSourceClosed;
+            recorder.EnvironmentChanged += OnRecorderEnvironmentChanged;
             _recorder = recorder;
             _currentPath = path;
-            _source = source;
             _running = true;
+            _manifest.State = RingBufferSessionState.Recording;
+            VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
             Status = "Ring buffer recording";
             RaiseStateChanged();
-            Log.Information("VideoRingBuffer.Started {Source} {MaxSeconds}s", source.Mode, MaximumBufferSeconds);
+            Log.Information("VideoRingBuffer.Started {Source} {MaxSeconds}s {SegmentSeconds}s", source.Mode, MaximumBufferSeconds, SegmentDurationSeconds);
         }
         catch
         {
             recorder.Dispose();
+            _manifest.Segments.Remove(segment);
+            _manifest.ActiveFileName = null;
+            _manifest.State = RingBufferSessionState.RecoveryRequired;
+            VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
             TryDelete(path);
             throw;
         }
@@ -230,7 +350,7 @@ internal sealed class VideoRingBufferService : IDisposable
 
     private async void MaintainBuffer(object? state)
     {
-        if (_disposed || !IsRunning || BufferedDuration < TimeSpan.FromSeconds(MaximumBufferSeconds))
+        if (_disposed || !IsRunning || (_recorder?.Elapsed ?? TimeSpan.Zero) < TimeSpan.FromSeconds(SegmentDurationSeconds))
             return;
 
         bool acquired = false;
@@ -238,14 +358,20 @@ internal sealed class VideoRingBufferService : IDisposable
         {
             await _gate.WaitAsync();
             acquired = true;
-            if (_disposed || !IsRunning || _source is not { } source)
+            if (_disposed || !IsRunning || _source is not { } source || _manifest is null || _sessionDirectory is null)
                 return;
 
-            StopCurrentLocked(deleteFile: true);
-            StartCoreLocked(source, _fps, _bitrateMbps, _outputWidth, _outputHeight, _autoTighten, _toneMapOperator, _hdrColorCorrection);
+            RotateSegmentLocked(source, "segment reached its 30-second boundary");
         }
         catch (Exception ex)
         {
+            if (_manifest is not null && _sessionDirectory is not null)
+            {
+                _manifest.State = RingBufferSessionState.RecoveryRequired;
+                _manifest.LastError = ex.Message;
+                _manifest.ActiveFileName = null;
+                VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+            }
             Status = $"Ring buffer stopped: {ex.Message}";
             Log.Warning(ex, "VideoRingBuffer.RotationFailed");
             RaiseStateChanged();
@@ -257,6 +383,102 @@ internal sealed class VideoRingBufferService : IDisposable
         }
     }
 
+    private void OnRecorderSourceClosed()
+    {
+        if (_disposed)
+            return;
+
+        _ = Task.Run(() =>
+        {
+            bool acquired = false;
+            try
+            {
+                _gate.Wait();
+                acquired = true;
+                if (!IsRunning || _manifest is null || _sessionDirectory is null)
+                    return;
+
+                _manifest.State = RingBufferSessionState.RecoveryRequired;
+                _manifest.LastError = "The capture source closed or changed before the ring-buffer session stopped.";
+                VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+                StopCurrentLocked(deleteFile: false);
+                Status = "Ring buffer stopped: source changed; recording kept for review";
+                RaiseStateChanged();
+            }
+            catch (Exception ex)
+            {
+                Log.Warning(ex, "VideoRingBuffer.SourceClosedRecoveryFailed");
+            }
+            finally
+            {
+                if (acquired)
+                    _gate.Release();
+            }
+        });
+    }
+
+    private void OnRecorderEnvironmentChanged(string reason)
+    {
+        if (_disposed)
+            return;
+
+        _ = Task.Run(() =>
+        {
+            bool acquired = false;
+            try
+            {
+                _gate.Wait();
+                acquired = true;
+                if (!IsRunning || _source is not { } source || _manifest is null || _sessionDirectory is null)
+                    return;
+
+                RotateSegmentLocked(source, $"recording environment changed: {reason}");
+            }
+            catch (Exception ex)
+            {
+                if (_manifest is not null && _sessionDirectory is not null)
+                {
+                    _manifest.State = RingBufferSessionState.RecoveryRequired;
+                    _manifest.LastError = ex.Message;
+                    _manifest.ActiveFileName = null;
+                    VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+                }
+                Status = $"Ring buffer stopped: {ex.Message}";
+                Log.Warning(ex, "VideoRingBuffer.EnvironmentRotationFailed");
+                RaiseStateChanged();
+            }
+            finally
+            {
+                if (acquired)
+                    _gate.Release();
+            }
+        });
+    }
+
+    private void RotateSegmentLocked(RingSource source, string reason)
+    {
+        if (_manifest is null || _sessionDirectory is null)
+            throw new InvalidOperationException("No ring-buffer session is available for rotation.");
+
+        _manifest.State = RingBufferSessionState.Rotating;
+        _manifest.LastError = reason;
+        VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+        StopCurrentLocked(deleteFile: false);
+        var removed = VideoRingBufferRecovery.PruneSegments(
+            _sessionDirectory,
+            _manifest,
+            MaximumSegmentCount,
+            MaximumBufferBytes,
+            DateTime.UtcNow);
+        foreach (var segment in removed)
+            _completedDuration -= TimeSpan.FromSeconds(Math.Max(0, segment.DurationSeconds));
+        if (_completedDuration < TimeSpan.Zero)
+            _completedDuration = TimeSpan.Zero;
+        StartSegmentLocked(source);
+        Status = $"Ring buffer recording · {reason}";
+        RaiseStateChanged();
+    }
+
     private void StopCurrentLocked(bool deleteFile)
     {
         var recorder = _recorder;
@@ -265,15 +487,81 @@ internal sealed class VideoRingBufferService : IDisposable
         _currentPath = null;
         _running = false;
 
+        TimeSpan duration = recorder?.Elapsed ?? TimeSpan.Zero;
         if (recorder is not null)
         {
+            recorder.SourceClosed -= OnRecorderSourceClosed;
+            recorder.EnvironmentChanged -= OnRecorderEnvironmentChanged;
             try { recorder.Stop(); }
             catch (Exception ex) { Log.Debug(ex, "VideoRingBuffer.StopFailed"); }
             recorder.Dispose();
         }
 
-        if (deleteFile && path is not null)
+        if (path is null)
+            return;
+
+        if (deleteFile)
+        {
             TryDelete(path);
+            return;
+        }
+
+        CompleteActiveSegmentLocked(path, duration);
+    }
+
+    private void CompleteActiveSegmentLocked(string path, TimeSpan duration)
+    {
+        if (_manifest is null || _sessionDirectory is null)
+            return;
+
+        var segment = _manifest.Segments.FirstOrDefault(item =>
+            string.Equals(item.FileName, Path.GetFileName(path), StringComparison.OrdinalIgnoreCase));
+        if (segment is null)
+            return;
+
+        segment.State = "complete";
+        segment.CompletedUtc = DateTime.UtcNow;
+        segment.DurationSeconds = Math.Max(0, duration.TotalSeconds);
+        segment.SizeBytes = File.Exists(path) ? new FileInfo(path).Length : 0;
+        _manifest.ActiveFileName = null;
+        _completedDuration += duration;
+        VideoRingBufferRecovery.WriteManifest(_sessionDirectory, _manifest);
+    }
+
+    private void EnsureDiskSpaceLocked()
+    {
+        string fullDirectory = Path.GetFullPath(BufferDirectory);
+        string root = Path.GetPathRoot(fullDirectory) ?? fullDirectory;
+        var drive = new DriveInfo(root);
+        long estimatedSegmentBytes = Math.Max(
+            MinimumFreeSpaceBytes,
+            (long)Math.Max(1, _bitrateMbps) * 125_000L * SegmentDurationSeconds + 8L * 1024 * 1024);
+        if (!VideoRingBufferRecovery.HasSufficientDiskSpace(drive.AvailableFreeSpace, estimatedSegmentBytes))
+        {
+            throw new IOException($"Not enough free disk space for the ring buffer (need about {estimatedSegmentBytes / (1024 * 1024)} MiB).");
+        }
+    }
+
+    private void DeleteSessionLocked()
+    {
+        string? directory = _sessionDirectory;
+        _sessionDirectory = null;
+        _manifest = null;
+        _currentPath = null;
+        _recorder = null;
+        _running = false;
+        if (directory is null)
+            return;
+
+        try
+        {
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+        }
+        catch (Exception ex)
+        {
+            Log.Debug(ex, "VideoRingBuffer.SessionDeleteFailed {Directory}", directory);
+        }
     }
 
     private void ThrowIfDisposed()
