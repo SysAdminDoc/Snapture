@@ -100,7 +100,7 @@ Multi-target `netstandard2.0` + `net10.0`. Contracts:
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| SkiaSharp.Views.WPF | 2.88.9 | Editor canvas rendering |
+| SkiaSharp.Views.WPF | 3.119.2 | Editor canvas rendering |
 | CommunityToolkit.Mvvm | 8.4.2 | MVVM support |
 | Microsoft.Data.Sqlite | 10.0.9 | History database |
 | NAudio | 2.3.0 | Audio capture (WASAPI) |

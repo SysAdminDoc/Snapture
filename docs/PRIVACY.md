@@ -56,6 +56,56 @@ This call goes only to the Windows runtime. No external network traffic.
 
 Tray menu → "Check for Updates" resolves `https://api.github.com/repos/SysAdminDoc/Snapture/releases/latest` exactly once per click. There is no automatic background poll, no scheduled task, and no toast notification. The request sends a `User-Agent: Snapture-UpdateCheck/1.0` header and nothing else. The response is parsed in memory and discarded; nothing is stored locally.
 
+### MCP listener (opt-in, loopback only)
+
+Settings → Integrations can start the optional Model Context Protocol listener at
+`http://127.0.0.1:<port>/mcp`. It binds only to loopback, requires the in-memory bearer token
+shown while the server is running, rejects foreign origins and non-loopback clients, and is
+disabled by default. Tool calls receive JSON-RPC parameters and return saved local metadata by
+default; pixels are returned only when a call explicitly requests them. The listener makes no
+outbound requests and its token is cleared on stop.
+
+### Installed update feed (manual and user-confirmed)
+
+Installed Velopack builds can check the architecture-specific HTTPS GitHub release feed after an
+explicit tray action. A download and restart require a separate user confirmation. The feed
+request carries release metadata and the selected update package, never captures or settings;
+Velopack stages the package in its local update cache until it is applied. Unpackaged builds use
+the manual GitHub release-page/API check described above.
+
+### User-owned uploaders and self-hosted destinations (explicit actions)
+
+Declarative uploader profiles imported from ShareX-compatible JSON can send a flattened PNG to the
+user's expanded HTTP or HTTPS endpoint. The preview shows the destination, body type, image size,
+transport warning, and redacted headers before an explicit upload. Snapture does not retain the
+response. Nextcloud WebDAV and Immich `/api/assets` destinations are also opt-in, show the exact
+server and transport before sending, and use current-user DPAPI credentials that never enter
+`settings.json`. The remote server owns anything it receives.
+
+### Plugin dependencies and local command boundaries
+
+An installed plugin can request an on-demand dependency download, but the dependency download
+requires an absolute HTTPS URL, a simple file name, and a SHA-256 pin. The artifact is streamed
+through a bounded response into a per-plugin cache and is never fetched during startup or plugin
+discovery. Plugins are third-party in-process code without an OS sandbox; their declared
+capabilities and their own retention remain the author's responsibility.
+
+Explicit external commands, the configured OneOCR sidecar, and the magnification fallback are
+short-lived local child processes with shell execution disabled and bounded input/output. They do
+not make network requests through Snapture. Explorer and Windows Settings launches pass only a
+selected local path or fixed settings URI.
+
+### Executable boundary inventory
+
+The maintained source inventory is `OutboundDataFlowAudit`. Its documentation keys cover
+`privacy.local-ai-discovery`, `privacy.local-ai-foundry`, `privacy.local-ai-inference`,
+`privacy.lan-share`, `privacy.mcp`, `privacy.github-update`, `privacy.velopack`,
+`privacy.declarative-uploader`, `privacy.nextcloud`, `privacy.immich`,
+`privacy.plugin-dependencies`, `privacy.external-command`, `privacy.oneocr`,
+`privacy.magnification-helper`, `privacy.plugins`, and `privacy.windows-shell`. Each entry records
+the trigger, destination, payload, credential handling, transport, retention, and failure behavior;
+the app test suite fails if a boundary loses one of those fields.
+
 ### Plugins (third-party code, optional)
 
 If you drop a plugin DLL into `%APPDATA%\Snapture\Plugins\`, that DLL runs in its own collectible `AssemblyLoadContext`. Plugins declare capabilities via `[SnapturePlugin(..., capabilities: PluginCapability.Network | ...)]`. The Plugins window in the tray shows each plugin's declared capabilities so you can see at a glance whether it claims `Network` access.

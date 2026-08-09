@@ -112,7 +112,7 @@ The data object passed to every contract method:
 
 ## External processor responses
 
-The host exposes PluginLoader.InvokeProcessorAsync for future external adapters such as the
+The host exposes PluginLoader.InvokeProcessorAsync for external adapters such as the
 CLI, URL handler, or localhost MCP server. It invokes an ICaptureProcessor by stable ID and
 returns a PluginCaptureResponse. MetadataOnly is the default response mode: callers receive
 dimensions, stride, a SHA-256 hash of the processed BGRA buffer, capture source, timestamp, and
@@ -128,4 +128,4 @@ A plugin's compliance posture is the responsibility of the plugin author. If you
 
 ## Credential storage
 
-Plugins that store credentials (API keys, tokens, passwords) for uploader destinations must encrypt them at rest. Snapture does not provide a credential store in this release. Use DPAPI (`ProtectedData.Protect`) or the Windows Credential Manager.
+Plugins that store credentials (API keys, tokens, passwords) for uploader destinations must encrypt them at rest. Snapture exposes the `IPluginSecretStore` contract through `PluginHostBridge`; its built-in implementation stores each plugin's values in a per-plugin current-user data root and protects them with Windows DPAPI (`ProtectedData.Protect`). Secrets are not serialized into `settings.json`. A plugin may still use the Windows Credential Manager when it needs a separate operating-system credential boundary.

@@ -139,7 +139,7 @@ Settings → Output can also opt into a local watch folder that indexes complete
 
 See [ROADMAP.md](ROADMAP.md) for the full picture.
 
-- **v0.7** — MP4 / HEVC / AV1 recording is landing on `main` with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay; remaining work includes HDR tonemap (ACES) + AVIF / JPEG XR. The unsigned MSIX, Velopack, Chocolatey, and Scoop packaging paths are available for operator-controlled release signing and distribution.
+- **Post-v0.7 follow-up** — v0.7.0 shipped MP4 / HEVC / AV1 recording with fragmented MP4, hardware encoder discovery, dirty-region skips, system-audio / app-only audio / mic capture, live VU meters, cursor/click effects, and a keystroke overlay. HDR tonemap (ACES) plus AVIF / JPEG XR remain deferred follow-up work. The unsigned MSIX, Velopack, Chocolatey, and Scoop packaging paths are available for operator-controlled distribution.
 
 ## Install
 
@@ -156,13 +156,15 @@ Requirements: Windows 10 1903+ or Windows 11, .NET 10 SDK.
 
 ### Release builds
 
-Download from [Releases](https://github.com/SysAdminDoc/Snapture/releases) once the first tag is cut.
+Download the latest tagged release from [Releases](https://github.com/SysAdminDoc/Snapture/releases).
 
 To produce an unsigned MSIX and a staged App Installer feed locally, run `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Msix -RolloutRing canary`. The package is written under `publish/`; the build intentionally does not sign software. The generated package declares `runFullTrust` and the startup-task extension without requesting `broadFileSystemAccess`. For clean local removal, run `pwsh -File build/uninstall.ps1`; the cleanup window includes a **Keep my settings, history, and plugins** checkbox. Automation can use `-KeepSettings`, `-Quiet`, or the non-destructive `-WhatIf` switches.
 
 To produce unsigned Velopack release assets, run `dotnet tool restore`, then `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Velopack` (repeat with `win-arm64` for the ARM64 package). The assets under `publish/velopack/<runtime>/` include architecture-specific stable feeds (`win-x64-stable` or `win-arm64-stable`), full packages, setup executables, and portable archives; publish both directories' files to the same GitHub Release download root. Installed Velopack builds can check, download, and apply updates from the tray; unpackaged source builds retain the GitHub release-page fallback. Release signing is intentionally operator-controlled and is never performed by the build.
 
 After both payloads are built, run `pwsh -File build/verify-release.ps1`. This offline release gate scans the actual x64 and ARM64 payload files, emits deterministic CycloneDX 1.5 SBOMs, artifact manifests, license inventories, and security-floor reports under `publish/sbom/<runtime>/`, and binds each SBOM to the manifest SHA-256. It fails on stale SQLite, Magick.NET/ImageMagick, Windows App SDK, ONNX Runtime, SkiaSharp, native codec, or .NET runtime versions. Use `pwsh -File build/verify-release.ps1 -SelfTest` to exercise the passing, stale-floor, and artifact-tamper cases without network access.
+
+Before publishing documentation or package metadata, run `pwsh -File build/verify-docs.ps1`. This offline drift gate derives the project/package version, checks the current x64 and ARM64 winget/Scoop inputs, compares the architecture table with the project references, and verifies the README CLI and privacy boundary claims. Use `pwsh -File build/verify-docs.ps1 -SelfTest` to exercise the passing, version, package, architecture, CLI, network, and stale-claim cases without creating a Markdown artifact.
 
 To produce an unsigned enterprise MSI and matching MST transform, run `dotnet tool restore`, then `pwsh -File build/build.ps1 -Configuration Release -Runtime win-x64 -Msi` (repeat with `win-arm64` for the ARM64 package). The output under `publish/msi/<runtime>/` contains a per-machine MSI, an `-enterprise.mst` transform that renames the Start Menu shortcut to `Snapture Enterprise`, and WiX verification artifacts. SCCM/GPO can install the base package silently with `msiexec /i Snapture-v<version>-win-x64.msi /qn /norestart`, or apply the transform with `msiexec /i Snapture-v<version>-win-x64.msi TRANSFORMS=Snapture-v<version>-win-x64-enterprise.mst /qn /norestart`. The MSI payload is framework-dependent, so deploy the .NET 10 Desktop Runtime through the enterprise baseline. Signing is intentionally omitted.
 
@@ -215,7 +217,7 @@ All four hotkeys are rebindable from **Settings → Hotkeys**.
 
 **Plugin tools:** A plugin can request an `IPluginDependencyStore` from its host and call `EnsureAsync` with a versioned HTTPS URL, simple file name, and SHA-256. Snapture downloads the tool only on that feature request, caches it under the plugin's local data root, and never fetches dependencies during startup or plugin discovery.
 
-**Headless CLI capture:** `Snapture.App.exe --region x,y,width,height --out file.png` captures a fixed rectangle without starting the tray or editor. Add `--fullscreen`, `--engine auto|winrt|gdi`, `--copy`/`--clipboard`, `--profile <name>`, `--lan-share`, `--hold`, or `--block <seconds>` as needed. `--lan-share` keeps its local single-fetch server alive; use `--block` for a bounded hold. `--open <image>` opens an existing image in the editor, while `--convert <image> [--format png|jpg|bmp|webp] [--resize percent] [--out file]` writes a local converted copy.
+**Headless CLI capture:** `Snapture.App.exe --region x,y,width,height --out file.png` captures a fixed rectangle without starting the tray or editor. Add `--fullscreen`, `--engine auto|winrt|gdi`, `--metadata strip|source|replace`, `--icc strip|source|display`, `--provenance off|sidecar`, `--copy`/`--clipboard`, `--profile <name>`, `--lan-share`, `--hold`, `--block <seconds>`, or `--portable` as needed. `--lan-share` keeps its local single-fetch server alive; use `--block` for a bounded hold. `--open <image>` opens an existing image in the editor, while `--convert <image> [--format png|jpg|bmp|webp] [--resize percent] [--out file] [--metadata strip|source|replace] [--icc strip|source] [--provenance off|sidecar]` writes a local converted copy. `--uri` accepts a `snapture://` capture request for protocol activation.
 
 **Per-app capture profiles:** Settings → Output → Per-app capture profiles accepts a Win32 window class name and a built-in preset. The mapping is case-insensitive and applies before region, window, fullscreen, monitor, smart-element, and scrolling captures. Leave the list empty to keep the normal settings unchanged.
 

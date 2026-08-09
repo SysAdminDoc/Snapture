@@ -29,7 +29,7 @@ dotnet run --project src/Snapture.App -c Release
 
 Requires the .NET 10 SDK.
 
-## Via winget (when published)
+## Via winget (if published to your configured source)
 
 ```powershell
 winget install SysAdminDoc.Snapture
@@ -37,8 +37,8 @@ winget install SysAdminDoc.Snapture
 
 ## Portable mode
 
-Run from any folder. Settings live in `%APPDATA%\Snapture\settings.json` by default. A future release will add a `--portable` flag that stores settings next to the executable.
+Run from any folder. Installed copies keep settings in `%APPDATA%\Snapture\settings.json` by default. An unpacked copy can opt into portable mode with `Snapture.App.exe --portable`, or by placing the `Snapture.ini` marker beside the executable. Portable mode stores settings, history, plugins, logs, autosave, and crash data under `SnaptureData` beside the executable.
 
 ## ARM64
 
-ARM64 builds are planned for v0.7.5. Until then, the x64 build runs under emulation on ARM64 Windows.
+Release builds include x64 and ARM64 archives. Use the native `win-arm64` archive on ARM64 Windows; the x64 archive remains available for emulation-compatible systems.

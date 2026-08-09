@@ -24,6 +24,11 @@ All notable changes to Snapture will be documented in this file.
 
 - Export settings now make ordinary source metadata, ICC profiles, and provenance separate decisions. PNG/JPEG/WebP capture, editor, HDR, and headless conversion paths support strip/preserve/replace policies, redaction suppression, explicit composite ICC notices, and an opt-in inspectable `.provenance.json` sidecar that makes no C2PA authenticity claim.
 
+### Documentation and release checks
+
+- Corrected the install, plugin, architecture, privacy, and README release claims for shipped portable/ARM64 packages, current-user DPAPI secrets, current package versions, executable network boundaries, and released v0.7 recording.
+- Added the offline `build/verify-docs.ps1` drift gate with version/package extraction, CLI/privacy/architecture checks, and a self-test covering known stale-claim cases without creating Markdown artifacts.
+
 ## [v0.7.0] — 2026-08-03
 
 ### Changed
