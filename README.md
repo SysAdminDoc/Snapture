@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <img alt="Version"  src="https://img.shields.io/badge/version-0.8.0-CBA6F7?style=for-the-badge">
+  <img alt="Version"  src="https://img.shields.io/badge/version-0.8.1-CBA6F7?style=for-the-badge">
   <img alt="License"  src="https://img.shields.io/badge/license-MIT-A6E3A1?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%2010%2F11-89B4FA?style=for-the-badge&logo=windows&logoColor=white">
   <img alt=".NET 10"  src="https://img.shields.io/badge/.NET-10-512BD4?style=for-the-badge&logo=dotnet&logoColor=white">
@@ -37,7 +37,7 @@ The existing landscape on Windows in 2026:
 
 **Auto-redact:** Snipping Tool's "Quick Redact" catches 2 things (phones and emails). Snapture catches 30+ — AWS keys, GCP tokens, GitHub PATs, Stripe keys, Slack webhooks, JWTs, npm tokens, credit cards (Luhn-validated), SSNs, IBANs, IPs, MACs, HIPAA identifiers, and more. All local, all undoable.
 
-## What ships in v0.8.0
+## What ships in v0.8.1
 
 - **Security and release integrity** — loopback MCP bearer authentication, bounded image intake, an executable outbound-data-flow inventory, exact plugin artifact approval, offline SBOM/security-floor verification, recoverable ring-buffer recording, bounded local-AI contracts, explicit export metadata policy, and documentation drift checks.
 - **Dual-architecture distribution** — unsigned x64 and ARM64 portable/release paths, with portable mode keeping settings, history, plugins, logs, autosave, and crash data under `SnaptureData`.

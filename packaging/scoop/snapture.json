@@ -1,5 +1,5 @@
 {
-    "version": "0.8.0",
+    "version": "0.8.1",
     "description": "Local-first screenshot capture and annotation utility for Windows.",
     "homepage": "https://github.com/SysAdminDoc/Snapture",
     "license": "MIT",
@@ -9,12 +9,12 @@
     ],
     "architecture": {
         "64bit": {
-            "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v0.8.0/SysAdminDoc.Snapture-win-x64-stable-Portable.zip",
-            "hash": "c87e5b4f9fa45f76690156286f4458e15d7aa4129cf46e89281598c9b5d2f6ae"
+            "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v0.8.1/SysAdminDoc.Snapture-win-x64-stable-Portable.zip",
+            "hash": "a488b035415d769939ac89f63ff6ffb0d7217e258202ac6da6eb39ae9a3a89f7"
         },
         "arm64": {
-            "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v0.8.0/SysAdminDoc.Snapture-win-arm64-stable-Portable.zip",
-            "hash": "24594ba9b0779b98880b94215abf91b8db09561d4967b8ef4b2c367b49a07103"
+            "url": "https://github.com/SysAdminDoc/Snapture/releases/download/v0.8.1/SysAdminDoc.Snapture-win-arm64-stable-Portable.zip",
+            "hash": "50760160a2735639621f04facdc68e8a9a3e4e5bbb8e493c4a2dd022545bf227"
         }
     },
     "extract_dir": "current",

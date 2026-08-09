@@ -4,9 +4,9 @@
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Version>0.8.0</Version>
-    <AssemblyVersion>0.8.0.0</AssemblyVersion>
-    <FileVersion>0.8.0.0</FileVersion>
+    <Version>0.8.1</Version>
+    <AssemblyVersion>0.8.1.0</AssemblyVersion>
+    <FileVersion>0.8.1.0</FileVersion>
     <RootNamespace>Snapture.Plugin</RootNamespace>
     <Description>Public plugin surface for Snapture. Reference this assembly to ship a Destination, Effect, or CaptureProcessor.</Description>
     <Authors>SysAdminDoc</Authors>

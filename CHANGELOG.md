@@ -4,6 +4,12 @@ All notable changes to Snapture will be documented in this file.
 
 ## [Unreleased]
 
+## [v0.8.1] — 2026-08-09
+
+### Maintenance
+
+- Synchronized application, capture library, plugin SDK, README, and distribution metadata for the v0.8.1 roadmap-drain release. The About dialog continues to report the assembly version dynamically.
+
 ## [v0.8.0] — 2026-08-08
 
 ### Security
