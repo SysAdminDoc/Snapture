@@ -3,8 +3,8 @@ using Snapture.Plugin;
 namespace Snapture.App.Services;
 
 /// <summary>
-/// Shared processor invocation boundary for the normal capture flow and future external
-/// callers such as the CLI, URL handler, or localhost MCP server.
+/// Shared processor invocation boundary for the normal capture flow and external callers such as
+/// the CLI, URL handler, or localhost MCP server.
 /// </summary>
 public static class PluginProcessorInvoker
 {

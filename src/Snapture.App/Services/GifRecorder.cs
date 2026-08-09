@@ -8,8 +8,8 @@ namespace Snapture.App.Services;
 /// every frame into an animated GIF on stop. Encoding happens in-memory while recording is
 /// active to keep the on-disk footprint small until the user explicitly saves.
 ///
-/// This is the v0.6 minimum-viable recorder. MP4 / HEVC / AV1 ship in v0.7 once Media
-/// Foundation SinkWriter integration lands.
+/// This is the v0.6 minimum-viable GIF recorder. MP4 / HEVC / AV1 recording is provided by the
+/// Media Foundation pipeline in the current release.
 /// </summary>
 public sealed class GifRecorder : IDisposable
 {
