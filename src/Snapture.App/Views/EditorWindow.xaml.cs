@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using ImageMagick;
 using SkiaSharp;
 using SkiaSharp.Views.Desktop;
 using SkiaSharp.Views.WPF;
@@ -53,6 +54,8 @@ public partial class EditorWindow : Window
     private readonly CommandStack _commands = new();
     private string? _projectPath;
     private string? _exportPath;
+    private string? _sourceMetadataPath;
+    private ExportMetadataSnapshot? _sourceMetadata;
     private EditorTool _activeTool = EditorTool.Select;
     private uint _activeColor = 0xFFE74C3C;
     private float _strokeThickness = 3f;
@@ -162,6 +165,11 @@ public partial class EditorWindow : Window
         _doc = doc;
         _projectPath = path.EndsWith(SnapFileFormat.Extension, StringComparison.OrdinalIgnoreCase) ? path : null;
         _exportPath = _projectPath is null ? path : null;
+        if (_projectPath is null)
+        {
+            _sourceMetadataPath = path;
+            _sourceMetadata = ExportMetadataService.TryReadSource(path);
+        }
         BuildToolButtons();
         BuildColorPalette();
         UpdateRecentColors();
@@ -1372,7 +1380,7 @@ public partial class EditorWindow : Window
             OnExportAsClicked(sender, e);
             return;
         }
-        ExportTo(_exportPath);
+        ExportTo(_exportPath, GetExportMetadataOptions());
     }
 
     private async void OnExportAsClicked(object sender, RoutedEventArgs e)
@@ -1392,12 +1400,15 @@ public partial class EditorWindow : Window
             },
             title: "Export capture");
         if (path is null) return;
-        ExportTo(path);
+        var policy = new ExportMetadataDialog(GetExportMetadataOptions()) { Owner = DialogOwner };
+        if (policy.ShowDialog() != true)
+            return;
+        ExportTo(path, policy.Options);
         _exportPath = path;
         NotifyDocumentTitleChanged();
     }
 
-    private void ExportTo(string path)
+    private void ExportTo(string path, ExportMetadataOptions? metadataOptions = null)
     {
         try
         {
@@ -1417,10 +1428,56 @@ public partial class EditorWindow : Window
             };
             int quality = fmt == SKEncodedImageFormat.Jpeg ? 92 : (fmt == SKEncodedImageFormat.Webp ? 88 : 100);
             using var data = image.Encode(fmt, quality);
-            using var fs = File.Create(path);
-            data.SaveTo(fs);
+            if (data is null)
+                throw new InvalidDataException("The selected image format could not be encoded.");
+
+            var options = metadataOptions ?? GetExportMetadataOptions();
+            bool isRedacted = _autoRedactionShapes.Count > 0
+                || _doc.Shapes.OfType<RedactShape>().Any();
+            bool isComposite = _captureResult is { } capture
+                && ExportMetadataService.IsComposite(capture.SourceBounds);
+            byte[]? displayIcc = null;
+            string? displayProfilePath = null;
+            if (options.Icc == ExportIccMode.EmbedDisplay && _captureResult is { } source)
+                displayIcc = ExportMetadataService.TryGetDisplayIccProfile(
+                    source.SourceBounds, out displayProfilePath);
+
+            if (!ExportMetadataService.TryGetFormat(path, out var exportFormat)
+                || exportFormat == MagickFormat.Unknown
+                || exportFormat == MagickFormat.Svg)
+                exportFormat = MagickFormat.Png;
+
+            var metadata = ExportMetadataService.Apply(
+                data.ToArray(),
+                exportFormat,
+                options,
+                _sourceMetadata,
+                displayIcc,
+                isComposite,
+                isRedacted);
+            File.WriteAllBytes(path, metadata.Bytes);
+            string? provenancePath = ExportMetadataService.WriteProvenanceSidecar(
+                path,
+                metadata.Bytes,
+                exportFormat,
+                options,
+                metadata,
+                isRedacted ? null : _sourceMetadataPath,
+                isComposite,
+                isRedacted,
+                flat.Width,
+                flat.Height);
             MarkHistoryExport(path);
-            StatusText.Text = $"Exported {Path.GetFileName(path)}";
+            string status = $"Exported {Path.GetFileName(path)}";
+            if (metadata.IccUnavailableForComposite)
+                status += " (composite: no single display ICC profile)";
+            else if (displayProfilePath is not null && metadata.IccEmbedded)
+                status += " (display ICC embedded)";
+            if (provenancePath is not null)
+                status += " + provenance sidecar";
+            if (metadata.SourceMetadataSuppressed)
+                status += " (source metadata suppressed for redaction)";
+            StatusText.Text = status;
             PathText.Text = path;
         }
         catch (Exception ex)
@@ -1452,6 +1509,9 @@ public partial class EditorWindow : Window
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
+
+    private static ExportMetadataOptions GetExportMetadataOptions() =>
+        ExportMetadataService.FromSettings(App.Host?.Settings.Current ?? new SnaptureSettings());
 
     private void MarkHistoryExport(string path)
     {

@@ -52,6 +52,35 @@ public sealed class CliCommandLineTests
     }
 
     [TestMethod]
+    public void ParsesIndependentExportMetadataPolicies()
+    {
+        var ok = CliCommandLine.TryParse(
+            new[]
+            {
+                "--fullscreen",
+                "--metadata", "source",
+                "--icc=display",
+                "--provenance", "sidecar"
+            },
+            out var command,
+            out var error);
+
+        Assert.IsTrue(ok, error);
+        Assert.AreEqual(ExportMetadataMode.PreserveSource, command.Capture!.Metadata);
+        Assert.AreEqual(ExportIccMode.EmbedDisplay, command.Capture.Icc);
+        Assert.AreEqual(ExportProvenanceMode.Sidecar, command.Capture.Provenance);
+
+        ok = CliCommandLine.TryParse(
+            new[] { "--convert", "source.png", "--format", "webp", "--metadata", "strip", "--icc", "source", "--provenance", "sidecar" },
+            out var conversion,
+            out error);
+        Assert.IsTrue(ok, error);
+        Assert.AreEqual(ExportMetadataMode.Strip, conversion.Convert!.Metadata);
+        Assert.AreEqual(ExportIccMode.PreserveSource, conversion.Convert.Icc);
+        Assert.AreEqual(ExportProvenanceMode.Sidecar, conversion.Convert.Provenance);
+    }
+
+    [TestMethod]
     public void HelpAndVersionAreStandaloneCommands()
     {
         Assert.IsTrue(CliCommandLine.TryParse(new[] { "--help" }, out var help, out var helpError), helpError);

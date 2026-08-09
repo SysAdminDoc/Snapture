@@ -26,7 +26,8 @@ internal static class ImageConversionService
         string inputPath,
         string? requestedFormat = null,
         int resizePercent = 0,
-        string? outputPath = null)
+        string? outputPath = null,
+        ExportMetadataOptions? metadataOptions = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(inputPath);
         string input = Path.GetFullPath(inputPath);
@@ -41,6 +42,7 @@ internal static class ImageConversionService
             throw new InvalidOperationException("The output path must differ from the source image.");
 
         Directory.CreateDirectory(Path.GetDirectoryName(output)!);
+        var sourceMetadata = ExportMetadataService.TryReadSource(input);
         using var image = new MagickImage(sourceInput.Stream);
         if (resizePercent != 0 && resizePercent != 100)
         {
@@ -56,7 +58,26 @@ internal static class ImageConversionService
             image.Alpha(AlphaOption.Remove);
         }
         image.Quality = targetFormat == MagickFormat.Jpeg ? 92u : image.Quality;
-        image.Write(output, targetFormat);
+        using var encoded = new MemoryStream();
+        image.Write(encoded, targetFormat);
+        var policy = metadataOptions ?? ExportMetadataOptions.Default;
+        var metadata = ExportMetadataService.Apply(
+            encoded.ToArray(),
+            targetFormat,
+            policy,
+            sourceMetadata);
+        File.WriteAllBytes(output, metadata.Bytes);
+        ExportMetadataService.WriteProvenanceSidecar(
+            output,
+            metadata.Bytes,
+            targetFormat,
+            policy,
+            metadata,
+            input,
+            isComposite: false,
+            isRedacted: false,
+            checked((int)image.Width),
+            checked((int)image.Height));
         return new ImageConversionResult(output, format, checked((int)image.Width), checked((int)image.Height));
     }
 

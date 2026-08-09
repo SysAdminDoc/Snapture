@@ -56,6 +56,9 @@ public partial class SettingsWindow : Window
         OneOcrStatusText.Text = $"OneOCR: {OcrService.OneOcrStatus}";
         BindHdrCalibrationWarning();
         SelectComboByTag(FormatCombo, _draft.OutputFormat);
+        SelectComboByTag(ExportMetadataCombo, _draft.ExportMetadata.ToString());
+        SelectComboByTag(ExportIccCombo, _draft.ExportIcc.ToString());
+        SelectComboByTag(ExportProvenanceCombo, _draft.ExportProvenance.ToString());
         SelectComboByTag(CapturePresetCombo, _draft.ActiveCapturePreset);
         SelectComboByTag(AppProfilePresetCombo, "bug-report");
         UpdateCapturePresetDescription();
@@ -296,6 +299,16 @@ public partial class SettingsWindow : Window
             }
         }
         if (combo.Items.Count > 0) combo.SelectedIndex = 0;
+    }
+
+    private static T ReadEnumCombo<T>(ComboBox combo, T fallback)
+        where T : struct, Enum
+    {
+        string? tag = (combo.SelectedItem as ComboBoxItem)?.Tag as string;
+        return Enum.TryParse(tag, ignoreCase: true, out T value)
+            && Enum.IsDefined(typeof(T), value)
+            ? value
+            : fallback;
     }
 
     private void OnCapturePresetSelectionChanged(object sender, SelectionChangedEventArgs e) =>
@@ -846,6 +859,9 @@ public partial class SettingsWindow : Window
         _draft.WatchFolderEnabled = WatchFolderEnabledCheck.IsChecked == true;
         _draft.WatchFolderPath = WatchFolderPathBox.Text.Trim();
         _draft.OutputFormat           = ((ComboBoxItem)FormatCombo.SelectedItem).Tag as string ?? "PNG";
+        _draft.ExportMetadata         = ReadEnumCombo(ExportMetadataCombo, ExportMetadataMode.Strip);
+        _draft.ExportIcc              = ReadEnumCombo(ExportIccCombo, ExportIccMode.EmbedDisplay);
+        _draft.ExportProvenance       = ReadEnumCombo(ExportProvenanceCombo, ExportProvenanceMode.Disabled);
         _draft.HdrToneMapOperator     = ((ComboBoxItem)ToneMapCombo.SelectedItem).Tag as string ?? HdrToneMapOperators.DefaultKey;
         _draft.HdrColorCorrection    = HdrColorCorrectionCheck.IsChecked == true;
         _draft.HdrWriteJxr            = HdrWriteJxrCheck.IsChecked == true;
@@ -941,6 +957,9 @@ public partial class SettingsWindow : Window
         dst.ActiveCapturePreset = src.ActiveCapturePreset;
         dst.PerAppCaptureProfiles = CaptureAppProfileService.Normalize(src.PerAppCaptureProfiles).ToList();
         dst.OutputFormat = src.OutputFormat;
+        dst.ExportMetadata = src.ExportMetadata;
+        dst.ExportIcc = src.ExportIcc;
+        dst.ExportProvenance = src.ExportProvenance;
         dst.CopyToClipboard = src.CopyToClipboard;
         dst.ClipboardCopyMode = src.ClipboardCopyMode;
         dst.MarkdownVaultFolder = src.MarkdownVaultFolder;

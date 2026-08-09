@@ -10,7 +10,9 @@ internal sealed record HdrSaveResult(
     string PngPath,
     string? JxlPath,
     string? AvifPath,
-    string? JxrPath)
+    string? JxrPath,
+    string? ProvenancePath = null,
+    bool IccUnavailableForComposite = false)
 {
     public int WrittenCount => 1
         + (JxlPath is null ? 0 : 1)
@@ -33,21 +35,48 @@ internal static class HdrSavePolicy
         string outputStem,
         Bitmap bitmap,
         bool writeJxr,
-        byte[]? iccProfile = null)
+        byte[]? iccProfile = null,
+        ExportMetadataOptions? metadataOptions = null,
+        bool isComposite = false)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(outputStem);
         ArgumentNullException.ThrowIfNull(bitmap);
 
         string stem = ResolveUniqueStem(outputStem, writeJxr);
         string pngPath = stem + ".png";
-        byte[] pngBytes = PngIccProfileEmbedder.Encode(bitmap, iccProfile);
+        var options = metadataOptions ?? ExportMetadataOptions.Default;
+        byte[] rawPng = PngIccProfileEmbedder.Encode(bitmap, profile: null);
+        var metadata = ExportMetadataService.Apply(
+            rawPng,
+            MagickFormat.Png,
+            options,
+            displayIccProfile: iccProfile,
+            isComposite: isComposite);
+        byte[] pngBytes = metadata.Bytes;
         File.WriteAllBytes(pngPath, pngBytes);
+        string? provenancePath = ExportMetadataService.WriteProvenanceSidecar(
+            pngPath,
+            pngBytes,
+            MagickFormat.Png,
+            options,
+            metadata,
+            sourcePath: null,
+            isComposite,
+            isRedacted: false,
+            bitmap.Width,
+            bitmap.Height);
 
         string? jxlPath = TryWriteMagickVariant(pngBytes, stem + ".jxl", MagickFormat.Jxl, quality: 100);
         string? avifPath = TryWriteMagickVariant(pngBytes, stem + ".avif", MagickFormat.Avif, quality: 90);
         string? jxrPath = writeJxr ? TryWriteJxrVariant(pngBytes, stem + ".jxr") : null;
 
-        return new HdrSaveResult(pngPath, jxlPath, avifPath, jxrPath);
+        return new HdrSaveResult(
+            pngPath,
+            jxlPath,
+            avifPath,
+            jxrPath,
+            provenancePath,
+            metadata.IccUnavailableForComposite);
     }
 
     private static string? TryWriteMagickVariant(

@@ -21,6 +21,18 @@ public sealed class SnaptureSettings
 
     public string OutputFormat { get; set; } = "PNG"; // PNG, JPG, BMP, WEBP
 
+    /// <summary>Ordinary source metadata policy for raster exports.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public ExportMetadataMode ExportMetadata { get; set; } = ExportMetadataMode.Strip;
+
+    /// <summary>ICC policy is independent from ordinary metadata and provenance.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public ExportIccMode ExportIcc { get; set; } = ExportIccMode.EmbedDisplay;
+
+    /// <summary>Opt-in descriptive sidecar; this is not a signed C2PA assertion.</summary>
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public ExportProvenanceMode ExportProvenance { get; set; } = ExportProvenanceMode.Disabled;
+
     public bool CopyToClipboard { get; set; } = true;
 
     /// <summary>Automatic clipboard payload: image or a relative Markdown link.</summary>

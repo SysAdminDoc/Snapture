@@ -61,11 +61,21 @@ public partial class App : Application
                 {
                     var options = command.Convert
                         ?? throw new InvalidOperationException("Conversion options are missing.");
+                    var settings = new SettingsService();
+                    settings.Load();
+                    var defaults = ExportMetadataService.FromSettings(settings.Current);
+                    var metadataOptions = defaults with
+                    {
+                        Metadata = options.Metadata ?? defaults.Metadata,
+                        Icc = options.Icc ?? defaults.Icc,
+                        Provenance = options.Provenance ?? defaults.Provenance
+                    };
                     var conversion = ImageConversionService.Convert(
                         options.InputPath,
                         options.Format,
                         options.ResizePercent,
-                        options.OutputPath);
+                        options.OutputPath,
+                        metadataOptions);
                     Console.WriteLine($"Saved: {conversion.OutputPath}");
                     Environment.ExitCode = 0;
                 }

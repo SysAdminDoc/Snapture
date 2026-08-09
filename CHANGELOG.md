@@ -20,6 +20,10 @@ All notable changes to Snapture will be documented in this file.
 
 - Local-AI discovery now carries provider protocol, vision capability, model identity, image/request/response budgets, prompt limits, and timeout metadata; inference validates decodable PNGs before base64 expansion, reads responses with a hard cap, keeps all requests loopback-only, and classifies unavailable models, non-vision models, provider failures, invalid/oversized responses, cancellation, and timeouts for offline tests and user diagnostics.
 
+### Export metadata
+
+- Export settings now make ordinary source metadata, ICC profiles, and provenance separate decisions. PNG/JPEG/WebP capture, editor, HDR, and headless conversion paths support strip/preserve/replace policies, redaction suppression, explicit composite ICC notices, and an opt-in inspectable `.provenance.json` sidecar that makes no C2PA authenticity claim.
+
 ## [v0.7.0] — 2026-08-03
 
 ### Changed

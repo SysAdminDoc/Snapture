@@ -3,13 +3,17 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using ImageMagick;
 using Serilog;
 using Snapture.App.Views;
 using Snapture.Capture;
 
 namespace Snapture.App.Services;
 
-public sealed record CaptureDeliveryResult(string? SavedPath, string? LanUrl);
+public sealed record CaptureDeliveryResult(
+    string? SavedPath,
+    string? LanUrl,
+    string? MetadataNotice = null);
 
 public sealed class CaptureOrchestrator
 {
@@ -364,14 +368,16 @@ public sealed class CaptureOrchestrator
         CaptureResult result,
         string? outputPath,
         bool? copyToClipboard,
-        LanShareServer? lanShare = null) =>
+        LanShareServer? lanShare = null,
+        ExportMetadataOptions? metadataOptions = null) =>
         DeliverCaptureAsync(
             result,
             outputPath,
             copyToClipboardOverride: copyToClipboard,
             openEditorOverride: false,
             lanShare: lanShare,
-            showUi: false);
+            showUi: false,
+            metadataOptions: metadataOptions);
 
     private async Task<CaptureDeliveryResult> DeliverCaptureAsync(
         CaptureResult result,
@@ -379,7 +385,8 @@ public sealed class CaptureOrchestrator
         bool? copyToClipboardOverride = null,
         bool? openEditorOverride = null,
         LanShareServer? lanShare = null,
-        bool showUi = true)
+        bool showUi = true,
+        ExportMetadataOptions? metadataOptions = null)
     {
         // Run plugin capture-processors first so any resize/redact lands in the saved file
         // and the history index. Failures are non-fatal.
@@ -437,6 +444,7 @@ public sealed class CaptureOrchestrator
 
         // Save to disk
         string? savedPath = null;
+        string? metadataNotice = null;
         try
         {
             string configuredPath = outputPathOverride is null
@@ -444,12 +452,19 @@ public sealed class CaptureOrchestrator
                 : ResolveExplicitOutputPath(outputPathOverride, _settings.Current);
             Directory.CreateDirectory(
                 Path.GetDirectoryName(configuredPath) ?? _settings.Current.OutputFolder);
+            var exportOptions = metadataOptions ?? ExportMetadataService.FromSettings(_settings.Current);
             string extension = Path.GetExtension(configuredPath);
-            bool writesPng = result.IsHdr
-                || !(extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
-                    || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase));
+            if (!ExportMetadataService.TryGetFormat(configuredPath, out var exportFormat)
+                || exportFormat is MagickFormat.Jxl or MagickFormat.Avif)
+            {
+                exportFormat = extension.Equals(".jpg", StringComparison.OrdinalIgnoreCase)
+                    || extension.Equals(".jpeg", StringComparison.OrdinalIgnoreCase)
+                    ? MagickFormat.Jpeg
+                    : MagickFormat.Png;
+            }
             string? colorProfilePath = null;
-            byte[]? iccProfile = writesPng
+            bool isComposite = ExportMetadataService.IsComposite(result.SourceBounds);
+            byte[]? iccProfile = exportOptions.Icc == ExportIccMode.EmbedDisplay
                 ? TryGetIccProfile(result.SourceBounds, out colorProfilePath)
                 : null;
             if (result.IsHdr)
@@ -458,29 +473,49 @@ public sealed class CaptureOrchestrator
                     Path.GetDirectoryName(configuredPath) ?? _settings.Current.OutputFolder,
                     Path.GetFileNameWithoutExtension(configuredPath));
                 var variants = HdrSavePolicy.Save(
-                    stem, result.Bitmap, _settings.Current.HdrWriteJxr, iccProfile);
+                    stem,
+                    result.Bitmap,
+                    _settings.Current.HdrWriteJxr,
+                    iccProfile,
+                    exportOptions,
+                    isComposite);
                 savedPath = variants.PngPath;
+                if (variants.IccUnavailableForComposite)
+                    metadataNotice = "Composite capture: no single display ICC profile was embedded.";
                 Log.Information(
-                    "Capture.SavedHdr {Source} {Width}x{Height} Variants={Variants} ColorProfile={ColorProfile}",
+                    "Capture.SavedHdr {Source} {Width}x{Height} Variants={Variants} ColorProfile={ColorProfile} Composite={Composite} Provenance={Provenance}",
                     result.Source, result.Bitmap.Width, result.Bitmap.Height,
-                    variants.WrittenCount, colorProfilePath ?? "none");
+                    variants.WrittenCount, colorProfilePath ?? "none", isComposite,
+                    variants.ProvenancePath ?? "none");
             }
             else
             {
                 savedPath = configuredPath;
-                var fmt = writesPng ? ImageFormat.Png : ImageFormat.Jpeg;
-                if (fmt == ImageFormat.Png)
-                {
-                    File.WriteAllBytes(savedPath, PngIccProfileEmbedder.Encode(result.Bitmap, iccProfile));
-                }
-                else
-                {
-                    using var fs = File.Create(savedPath);
-                    result.Bitmap.Save(fs, fmt);
-                }
-                Log.Information("Capture.Saved {Source} {Width}x{Height} ColorProfile={ColorProfile}",
+                byte[] rawPng = PngIccProfileEmbedder.Encode(result.Bitmap, profile: null);
+                var metadata = ExportMetadataService.Apply(
+                    rawPng,
+                    exportFormat,
+                    exportOptions,
+                    displayIccProfile: iccProfile,
+                    isComposite: isComposite);
+                File.WriteAllBytes(savedPath, metadata.Bytes);
+                if (metadata.IccUnavailableForComposite)
+                    metadataNotice = "Composite capture: no single display ICC profile was embedded.";
+                string? provenancePath = ExportMetadataService.WriteProvenanceSidecar(
+                    savedPath,
+                    metadata.Bytes,
+                    exportFormat,
+                    exportOptions,
+                    metadata,
+                    sourcePath: null,
+                    isComposite,
+                    isRedacted: false,
+                    result.Bitmap.Width,
+                    result.Bitmap.Height);
+                Log.Information("Capture.Saved {Source} {Width}x{Height} Format={Format} ColorProfile={ColorProfile} Composite={Composite} Provenance={Provenance}",
                     result.Source, result.Bitmap.Width, result.Bitmap.Height,
-                    colorProfilePath ?? "none");
+                    exportFormat, colorProfilePath ?? "none", isComposite,
+                    provenancePath ?? "none");
             }
         }
         catch (Exception ex)
@@ -562,7 +597,7 @@ public sealed class CaptureOrchestrator
         }
 
         await Task.CompletedTask;
-        return new CaptureDeliveryResult(savedPath, lanUrl);
+        return new CaptureDeliveryResult(savedPath, lanUrl, metadataNotice);
     }
 
     private static string ResolveExplicitOutputPath(string requested, SnaptureSettings settings)
@@ -578,22 +613,7 @@ public sealed class CaptureOrchestrator
     }
 
     private static byte[]? TryGetIccProfile(Rectangle bounds, out string? profilePath)
-    {
-        profilePath = null;
-        try
-        {
-            if (!DisplayColorProfileProbe.TryGetForBounds(bounds, out var profile))
-                return null;
-
-            profilePath = profile.ProfilePath;
-            return profile.Data;
-        }
-        catch (Exception ex)
-        {
-            Log.Debug(ex, "Capture.ColorProfile.Unavailable");
-            return null;
-        }
-    }
+        => ExportMetadataService.TryGetDisplayIccProfile(bounds, out profilePath);
 
     private static string BuildOutputPath(SnaptureSettings s, CaptureResult? capture = null)
     {

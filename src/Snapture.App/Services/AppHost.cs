@@ -208,16 +208,31 @@ public sealed class AppHost : IDisposable
                 return 1;
             }
 
+            ExportMetadataOptions? metadataOptions = null;
+            if (options.Metadata is not null || options.Icc is not null || options.Provenance is not null)
+            {
+                var defaults = ExportMetadataService.FromSettings(Settings.Current);
+                metadataOptions = defaults with
+                {
+                    Metadata = options.Metadata ?? defaults.Metadata,
+                    Icc = options.Icc ?? defaults.Icc,
+                    Provenance = options.Provenance ?? defaults.Provenance
+                };
+            }
+
             var delivery = await Orchestrator.DeliverCaptureForCliAsync(
                 result,
                 options.OutputPath,
                 options.CopyToClipboard ? true : null,
-                options.LanShare ? LanShare : null).ConfigureAwait(true);
+                options.LanShare ? LanShare : null,
+                metadataOptions).ConfigureAwait(true);
 
             if (delivery.SavedPath is not null)
                 Console.WriteLine($"Saved: {delivery.SavedPath}");
             if (delivery.LanUrl is not null)
                 Console.WriteLine($"LAN URL: {delivery.LanUrl}");
+            if (delivery.MetadataNotice is not null)
+                Console.WriteLine($"Notice: {delivery.MetadataNotice}");
 
             if (options.Hold)
             {

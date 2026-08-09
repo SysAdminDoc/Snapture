@@ -25,7 +25,10 @@ public sealed record CliCaptureOptions(
     int BlockSeconds,
     bool LanShare,
     string? Profile,
-    string? Engine);
+    string? Engine,
+    ExportMetadataMode? Metadata = null,
+    ExportIccMode? Icc = null,
+    ExportProvenanceMode? Provenance = null);
 
 public sealed record CliOpenOptions(string Path);
 
@@ -33,7 +36,10 @@ public sealed record CliConvertOptions(
     string InputPath,
     string? Format,
     int ResizePercent,
-    string? OutputPath);
+    string? OutputPath,
+    ExportMetadataMode? Metadata = null,
+    ExportIccMode? Icc = null,
+    ExportProvenanceMode? Provenance = null);
 
 public sealed record CliUriOptions(CaptureUriRequest Request);
 
@@ -58,10 +64,10 @@ public sealed record CliCommand(
 public static class CliCommandLine
 {
     public const string Usage =
-        "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name] [--portable]\n" +
-        "snapture --fullscreen [--out file.png] [--engine auto|winrt|gdi] [--copy] [--hold] [--block seconds] [--lan-share] [--portable]\n" +
+        "snapture --region x,y,width,height --out file.png [--engine auto|winrt|gdi] [--metadata strip|source|replace] [--icc strip|source|display] [--provenance off|sidecar] [--copy] [--hold] [--block seconds] [--lan-share] [--profile name] [--portable]\n" +
+        "snapture --fullscreen [--out file.png] [--engine auto|winrt|gdi] [--metadata strip|source|replace] [--icc strip|source|display] [--provenance off|sidecar] [--copy] [--hold] [--block seconds] [--lan-share] [--portable]\n" +
         "snapture --open image.png [--portable]\n" +
-        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file] [--portable]\n" +
+        "snapture --convert image.png [--format png|jpg|bmp|webp] [--resize percent] [--out file] [--metadata strip|source|replace] [--icc strip|source] [--provenance off|sidecar] [--portable]\n" +
         "snapture --uri \"snapture://capture?mode=region&dest=clipboard\" [--portable]";
 
     public static void AttachParentConsole()
@@ -103,6 +109,9 @@ public static class CliCommandLine
             || arg.StartsWith("--engine", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--block", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--profile", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--metadata", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--icc", StringComparison.OrdinalIgnoreCase)
+            || arg.StartsWith("--provenance", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--format", StringComparison.OrdinalIgnoreCase)
             || arg.StartsWith("--resize", StringComparison.OrdinalIgnoreCase));
 
@@ -139,6 +148,9 @@ public static class CliCommandLine
         bool lanShare = false;
         string? profile = null;
         string? engine = null;
+        ExportMetadataMode? metadata = null;
+        ExportIccMode? icc = null;
+        ExportProvenanceMode? provenance = null;
         string? openPath = null;
         string? convertPath = null;
         string? format = null;
@@ -313,6 +325,42 @@ public static class CliCommandLine
                 continue;
             }
 
+            if (TryReadOptionValue(args, ref i, arg, "--metadata", out var metadataValue))
+            {
+                if (metadata is not null
+                    || !ExportMetadataService.TryParseMetadataMode(metadataValue, out var parsedMetadata))
+                {
+                    error = "--metadata must be strip, source, or replace and may only be specified once.";
+                    return false;
+                }
+                metadata = parsedMetadata;
+                continue;
+            }
+
+            if (TryReadOptionValue(args, ref i, arg, "--icc", out var iccValue))
+            {
+                if (icc is not null
+                    || !ExportMetadataService.TryParseIccMode(iccValue, out var parsedIcc))
+                {
+                    error = "--icc must be strip, source, or display and may only be specified once.";
+                    return false;
+                }
+                icc = parsedIcc;
+                continue;
+            }
+
+            if (TryReadOptionValue(args, ref i, arg, "--provenance", out var provenanceValue))
+            {
+                if (provenance is not null
+                    || !ExportMetadataService.TryParseProvenanceMode(provenanceValue, out var parsedProvenance))
+                {
+                    error = "--provenance must be off or sidecar and may only be specified once.";
+                    return false;
+                }
+                provenance = parsedProvenance;
+                continue;
+            }
+
             if (arg.Equals("--lan-share", StringComparison.OrdinalIgnoreCase))
             {
                 lanShare = true;
@@ -327,7 +375,8 @@ public static class CliCommandLine
         {
             if (rawUri is not null || openPath is not null || convertPath is not null || format is not null || resizeSpecified
                 || region is not null || fullscreen || outputPath is not null || copy || hold || blockSeconds != 0
-                || lanShare || profile is not null || engine is not null)
+                || lanShare || profile is not null || engine is not null
+                || metadata is not null || icc is not null || provenance is not null)
             {
                 error = "Interactive capture verbs cannot be combined with other options.";
                 return false;
@@ -343,7 +392,8 @@ public static class CliCommandLine
         {
             if (openPath is not null || convertPath is not null || format is not null || resizeSpecified
                 || region is not null || fullscreen || outputPath is not null || copy || hold || blockSeconds != 0
-                || lanShare || profile is not null || engine is not null)
+                || lanShare || profile is not null || engine is not null
+                || metadata is not null || icc is not null || provenance is not null)
             {
                 error = "--uri cannot be combined with capture, conversion, or delivery options.";
                 return false;
@@ -370,7 +420,8 @@ public static class CliCommandLine
             if (openPath is not null)
             {
                 if (region is not null || fullscreen || outputPath is not null || copy || hold || blockSeconds != 0
-                    || lanShare || profile is not null || engine is not null || format is not null || resizeSpecified)
+                    || lanShare || profile is not null || engine is not null || format is not null || resizeSpecified
+                    || metadata is not null || icc is not null || provenance is not null)
                 {
                     error = "--open cannot be combined with capture, conversion, or delivery options.";
                     return false;
@@ -395,7 +446,14 @@ public static class CliCommandLine
 
             command = new CliCommand(
                 CliCommandKind.Convert,
-                Convert: new CliConvertOptions(convertPath, format, resizePercent, outputPath));
+                Convert: new CliConvertOptions(
+                    convertPath,
+                    format,
+                    resizePercent,
+                    outputPath,
+                    metadata,
+                    icc,
+                    provenance));
             return true;
         }
 
@@ -410,7 +468,19 @@ public static class CliCommandLine
 
         command = new CliCommand(
             CliCommandKind.Capture,
-            new CliCaptureOptions(region, fullscreen, outputPath, copy, hold, blockSeconds, lanShare, profile, engine));
+            new CliCaptureOptions(
+                region,
+                fullscreen,
+                outputPath,
+                copy,
+                hold,
+                blockSeconds,
+                lanShare,
+                profile,
+                engine,
+                metadata,
+                icc,
+                provenance));
         return true;
     }
 

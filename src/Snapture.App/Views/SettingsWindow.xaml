@@ -507,6 +507,43 @@
 
                         <Border Style="{StaticResource SectionPanel}">
                             <StackPanel>
+                                <TextBlock Text="Export metadata policy" Style="{StaticResource SectionTitleText}" />
+                                <TextBlock Text="These controls are independent: ordinary source metadata, display ICC data, and the optional descriptive provenance sidecar. Composite captures do not have one display ICC profile."
+                                           Style="{StaticResource HelpText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,0,0,12" />
+                                <TextBlock Text="Ordinary metadata" Style="{StaticResource HelpText}" />
+                                <ComboBox x:Name="ExportMetadataCombo"
+                                          Width="300"
+                                          HorizontalAlignment="Left">
+                                    <ComboBoxItem Tag="Strip" Content="Strip source metadata (default)" />
+                                    <ComboBoxItem Tag="PreserveSource" Content="Preserve source metadata" />
+                                    <ComboBoxItem Tag="ReplaceWithSnapture" Content="Replace with Snapture metadata" />
+                                </ComboBox>
+                                <TextBlock Text="Display ICC profile" Style="{StaticResource HelpText}" Margin="0,12,0,0" />
+                                <ComboBox x:Name="ExportIccCombo"
+                                          Width="300"
+                                          HorizontalAlignment="Left">
+                                    <ComboBoxItem Tag="Strip" Content="Strip ICC data" />
+                                    <ComboBoxItem Tag="PreserveSource" Content="Preserve source ICC" />
+                                    <ComboBoxItem Tag="EmbedDisplay" Content="Embed display ICC when available (default)" />
+                                </ComboBox>
+                                <TextBlock Text="Provenance" Style="{StaticResource HelpText}" Margin="0,12,0,0" />
+                                <ComboBox x:Name="ExportProvenanceCombo"
+                                          Width="300"
+                                          HorizontalAlignment="Left">
+                                    <ComboBoxItem Tag="Disabled" Content="Disabled (default)" />
+                                    <ComboBoxItem Tag="Sidecar" Content="Write descriptive .provenance.json sidecar" />
+                                </ComboBox>
+                                <TextBlock Text="The sidecar is inspectable local export metadata, not a signed C2PA authenticity assertion."
+                                           Style="{StaticResource MonoCaptionText}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,10,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SectionPanel}">
+                            <StackPanel>
                                 <TextBlock Text="Clipboard integration" Style="{StaticResource SectionTitleText}" />
                                 <TextBlock Text="Image keeps the normal PNG clipboard. Markdown copies a relative link and writes the capture PNG into the configured vault folder. Ctrl+Alt+V always runs the Markdown pin for the most recent capture."
                                            Style="{StaticResource HelpText}"
